@@ -1,8 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { ConfigService } from '@nestjs/config';
+import { ValidationPipe } from '@nestjs/common';
 
-async function bootstrap() {
+async function main() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
+  const config = app.get<ConfigService>(ConfigService);
+  const port = config.get<number>('PORT') || 3000
+  const host = config.get<string>('HOST') || '0.0.0.0'
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.setGlobalPrefix(`api/${config.get<string>('API_VERSION')}`);
+  app.enableCors();
+  await app.listen(port, host);
 }
-bootstrap();
+main();
