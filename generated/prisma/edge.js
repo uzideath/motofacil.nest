@@ -172,6 +172,10 @@ const config = {
         "fromEnvVar": null,
         "value": "darwin-arm64",
         "native": true
+      },
+      {
+        "fromEnvVar": null,
+        "value": "debian-openssl-3.0.x"
       }
     ],
     "previewFeatures": [],
@@ -189,16 +193,17 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
         "fromEnvVar": "DATABASE_URL",
-        "value": "postgresql://postgres:fmw3wlladc9vwhqz@168.231.69.75:5432/postgres"
+        "value": null
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id             String   @id @default(uuid())\n  name           String\n  identification String   @unique\n  age            Int\n  phone          String\n  address        String\n  createdAt      DateTime @default(now())\n\n  loans Loan[]\n}\n\nmodel Motorcycle {\n  id    String @id @default(uuid())\n  brand String\n  model String\n  plate String @unique\n\n  loans Loan[]\n}\n\nmodel Loan {\n  id     String @id @default(uuid())\n  user   User   @relation(fields: [userId], references: [id])\n  userId String\n\n  motorcycle   Motorcycle @relation(fields: [motorcycleId], references: [id])\n  motorcycleId String\n\n  totalAmount           Float\n  installments          Int\n  paidInstallments      Int   @default(0)\n  remainingInstallments Int\n  totalPaid             Float @default(0.0)\n  debtRemaining         Float\n\n  startDate DateTime   @default(now())\n  status    LoanStatus @default(PENDING)\n\n  payments Installment[]\n}\n\nmodel Installment {\n  id     String @id @default(uuid())\n  loan   Loan   @relation(fields: [loanId], references: [id])\n  loanId String\n\n  amount      Float\n  paymentDate DateTime @default(now())\n  isLate      Boolean  @default(false)\n}\n\nenum LoanStatus {\n  PENDING\n  ACTIVE\n  COMPLETED\n  DEFAULTED\n}\n",
-  "inlineSchemaHash": "f817ea72613366af2752760d2aa207813adbdbd82b5f40bf1072073acaac5a6c",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  binaryTargets = [\"native\", \"debian-openssl-3.0.x\"]\n  output        = \"../generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id             String   @id @default(uuid())\n  name           String\n  identification String   @unique\n  age            Int\n  phone          String\n  address        String\n  createdAt      DateTime @default(now())\n\n  loans Loan[]\n}\n\nmodel Motorcycle {\n  id    String @id @default(uuid())\n  brand String\n  model String\n  plate String @unique\n\n  loans Loan[]\n}\n\nmodel Loan {\n  id     String @id @default(uuid())\n  user   User   @relation(fields: [userId], references: [id])\n  userId String\n\n  motorcycle   Motorcycle @relation(fields: [motorcycleId], references: [id])\n  motorcycleId String\n\n  totalAmount           Float\n  installments          Int\n  paidInstallments      Int   @default(0)\n  remainingInstallments Int\n  totalPaid             Float @default(0.0)\n  debtRemaining         Float\n\n  startDate DateTime   @default(now())\n  status    LoanStatus @default(PENDING)\n\n  payments Installment[]\n}\n\nmodel Installment {\n  id     String @id @default(uuid())\n  loan   Loan   @relation(fields: [loanId], references: [id])\n  loanId String\n\n  amount      Float\n  paymentDate DateTime @default(now())\n  isLate      Boolean  @default(false)\n}\n\nenum LoanStatus {\n  PENDING\n  ACTIVE\n  COMPLETED\n  DEFAULTED\n}\n",
+  "inlineSchemaHash": "c52eeb8d722e89570bf4dd2c3d2a0a0167134b5e73832a18d4c697a38f78cb9b",
   "copyEngine": true
 }
 config.dirname = '/'
