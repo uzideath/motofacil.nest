@@ -10,7 +10,9 @@ async function main() {
   const host = config.get<string>('HOST') || '0.0.0.0'
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.setGlobalPrefix(`api/${config.get<string>('API_VERSION')}`);
-  app.enableCors();
+  app.enableCors({
+    origin: '*'
+  });
   await app.listen(port, host);
 }
 main();

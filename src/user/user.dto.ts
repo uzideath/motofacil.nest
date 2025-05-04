@@ -18,7 +18,20 @@ export class CreateUserDto {
     phone: string;
 
     @IsString()
+    @IsNotEmpty()
     address: string;
+
+    @IsString()
+    @IsNotEmpty()
+    refName: string;
+
+    @IsString()
+    @IsNotEmpty()
+    refID: string
+
+    @IsString()
+    @IsNotEmpty()
+    refPhone: string
 }
 
 export class UpdateUserDto extends PartialType(CreateUserDto) { }

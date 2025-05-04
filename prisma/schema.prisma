@@ -31,6 +31,9 @@ model User {
   age            Int
   phone          String
   address        String
+  refName        String
+  refID          String
+  refPhone       String
   createdAt      DateTime @default(now())
 
   loans Loan[]
@@ -43,6 +46,7 @@ model Motorcycle {
   plate String  @unique
   color String?
   cc    Int?
+  gps   Float?
   loans Loan[]
 }
 

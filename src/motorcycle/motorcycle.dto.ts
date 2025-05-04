@@ -16,6 +16,9 @@ export class CreateMotorcycleDto {
 
     @IsNumber()
     cc: number
+
+    @IsNumber()
+    gps: number
 }
 
 export class UpdateMotorcycleDto extends PartialType(CreateMotorcycleDto) { }
