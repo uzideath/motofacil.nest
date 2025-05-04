@@ -6,10 +6,12 @@ import {
     Request,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Roles } from './roles.decorator';
+import { Roles } from './decorators/roles.decorator';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { RegisterDto, LoginDto } from './data/dto';
+import { Request as Req } from 'express';
+import { Public } from './decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -21,6 +23,7 @@ export class AuthController {
     }
 
     @Post('login')
+    @Public()
     login(@Body() { username, password }: LoginDto) {
         return this.auth.login(username, password);
     }
@@ -28,7 +31,7 @@ export class AuthController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('USER', 'ADMIN')
     @Post('me')
-    profile(@Request() req) {
+    profile(@Request() req: Req) {
         return req.user;
     }
 
