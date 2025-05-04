@@ -37,11 +37,12 @@ model User {
 }
 
 model Motorcycle {
-  id    String @id @default(uuid())
+  id    String  @id @default(uuid())
   brand String
   model String
-  plate String @unique
-
+  plate String  @unique
+  color String?
+  cc    Int?
   loans Loan[]
 }
 
