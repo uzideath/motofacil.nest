@@ -10,12 +10,13 @@ import { AuthModule } from './auth/auth.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
+import { OwnersModule } from './owners/owners.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
     isGlobal: true,
   }),
-    UserModule, LoanModule, InstallmentModule, MotorcycleModule, AuthModule],
+    UserModule, LoanModule, InstallmentModule, MotorcycleModule, AuthModule, OwnersModule],
   controllers: [AppController],
   providers: [AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
