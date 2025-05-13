@@ -179,13 +179,13 @@ export class ClosingService {
 
 
     async summary(dto: GetResumenDto): Promise<ResumenResponse> {
-        const baseDate = dto.date ? new Date(dto.date) : new Date()
+        const baseDate = dto.date ? new Date(dto.date) : new Date();
 
-        const todayStart = startOfDay(baseDate)
-        const todayEnd = endOfDay(baseDate)
+        const todayStart = startOfDay(baseDate);
+        const todayEnd = endOfDay(baseDate);
 
-        const yesterdayStart = startOfDay(subDays(baseDate, 1))
-        const yesterdayEnd = endOfDay(subDays(baseDate, 1))
+        const yesterdayStart = startOfDay(subDays(baseDate, 1));
+        const yesterdayEnd = endOfDay(subDays(baseDate, 1));
 
         const [todayInstallments, yesterdayInstallments, todayExpenses] = await Promise.all([
             this.prisma.installment.findMany({
@@ -195,49 +195,49 @@ export class ClosingService {
                 where: { paymentDate: { gte: yesterdayStart, lte: yesterdayEnd } },
             }),
             this.prisma.expense.findMany({
-                where: { date: { gte: todayStart, lte: todayEnd } },
+                where: { createdAt: { gte: todayStart, lte: todayEnd } }, // CAMBIO AQUÍ
             }),
-        ])
+        ]);
 
-        const sum = (arr: { amount: number }[]) => arr.reduce((acc, i) => acc + i.amount, 0)
+        const sum = (arr: { amount: number }[]) => arr.reduce((acc, i) => acc + i.amount, 0);
 
-        const totalIncome = sum(todayInstallments)
-        const totalExpenses = sum(todayExpenses)
-        const balance = totalIncome - totalExpenses
+        const totalIncome = sum(todayInstallments);
+        const totalExpenses = sum(todayExpenses);
+        const balance = totalIncome - totalExpenses;
 
         const sumByMethod = (method: string) =>
             todayInstallments
                 .filter(i => i.paymentMethod === method)
-                .reduce((acc, i) => acc + i.amount, 0)
+                .reduce((acc, i) => acc + i.amount, 0);
 
         const paymentMethods = {
             cash: sumByMethod("CASH"),
             transfer: sumByMethod("TRANSACTION"),
             card: sumByMethod("CARD"),
             other: 0,
-        }
+        };
 
         const expenseByCategory = todayExpenses.reduce((acc, e) => {
-            acc[e.category] = (acc[e.category] || 0) + e.amount
-            return acc
-        }, {} as Record<string, number>)
+            acc[e.category] = (acc[e.category] || 0) + e.amount;
+            return acc;
+        }, {} as Record<string, number>);
 
         const expenseByMethod = todayExpenses.reduce((acc, e) => {
-            acc[e.paymentMethod] = (acc[e.paymentMethod] || 0) + e.amount
-            return acc
-        }, {} as Record<string, number>)
+            acc[e.paymentMethod] = (acc[e.paymentMethod] || 0) + e.amount;
+            return acc;
+        }, {} as Record<string, number>);
 
         const categories = {
             loanPayments: totalIncome,
             otherIncome: 0,
             expenses: expenseByCategory,
-        }
+        };
 
-        const previousTotal = sum(yesterdayInstallments)
+        const previousTotal = sum(yesterdayInstallments);
         const previousDayComparison =
             previousTotal > 0
                 ? Math.round(((totalIncome - previousTotal) / previousTotal) * 100)
-                : 100
+                : 100;
 
         return {
             totalIncome,
@@ -247,7 +247,7 @@ export class ClosingService {
             expenseMethods: expenseByMethod,
             categories,
             previousDayComparison,
-        }
+        };
     }
 
 }
