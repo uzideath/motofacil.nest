@@ -59,11 +59,17 @@ model Loan {
   motorcycleId String
 
   totalAmount           Float
+  downPayment           Float // ✅ Added this field
   installments          Int
   paidInstallments      Int   @default(0)
   remainingInstallments Int
   totalPaid             Float @default(0.0)
   debtRemaining         Float
+
+  interestRate       Float // If you use this field
+  interestType       String // (e.g., "FIXED", consider using an enum!)
+  paymentFrequency   String // (e.g., "DAILY", consider using an enum!)
+  dailyPaymentAmount Float
 
   startDate DateTime   @default(now())
   status    LoanStatus @default(PENDING)
