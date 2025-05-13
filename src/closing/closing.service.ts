@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { CashRegister, Installment, Loan, Motorcycle, Prisma, User } from "generated/prisma";
 import { PrismaService } from "src/prisma.service";
-import { CreateCashRegisterDto, FilterCashRegisterDto, FilterInstallmentsDto } from "./dto";
+import { CreateCashRegisterDto, FilterCashRegisterDto, FilterInstallmentsDto, GetResumenDto } from "./dto";
+import { startOfDay, endOfDay, subDays } from "date-fns";
+import { ResumenResponse } from "./types";
 
 @Injectable()
 export class ClosingService {
@@ -86,7 +88,7 @@ export class ClosingService {
 
         return cierre
     }
-    
+
     async getUnassignedPayments(
         filter: FilterInstallmentsDto
     ): Promise<(Installment & {
@@ -125,5 +127,62 @@ export class ClosingService {
             },
             orderBy: { paymentDate: 'asc' },
         })
+    }
+    
+    async summary(dto: GetResumenDto): Promise<ResumenResponse> {
+        const baseDate = dto.date ? new Date(dto.date) : new Date()
+
+        const todayStart = startOfDay(baseDate)
+        const todayEnd = endOfDay(baseDate)
+
+        const yesterdayStart = startOfDay(subDays(baseDate, 1))
+        const yesterdayEnd = endOfDay(subDays(baseDate, 1))
+
+        const [todayInstallments, yesterdayInstallments] = await Promise.all([
+            this.prisma.installment.findMany({
+                where: { paymentDate: { gte: todayStart, lte: todayEnd } }
+            }),
+            this.prisma.installment.findMany({
+                where: { paymentDate: { gte: yesterdayStart, lte: yesterdayEnd } }
+            })
+        ])
+
+        const sum = (arr: typeof todayInstallments) =>
+            arr.reduce((acc, i) => acc + i.amount, 0)
+
+        const totalIncome = sum(todayInstallments)
+        const totalExpenses = 0 // podrías sumar aquí gastos si los tienes
+        const balance = totalIncome - totalExpenses
+
+        const sumByMethod = (method: string) =>
+            todayInstallments
+                .filter(i => i.paymentMethod === method)
+                .reduce((acc, i) => acc + i.amount, 0)
+
+        const paymentMethods = {
+            cash: sumByMethod('CASH'),
+            transfer: sumByMethod('TRANSACTION'),
+            card: sumByMethod('CARD'),
+            other: 0
+        }
+
+        const categories = {
+            loanPayments: totalIncome, // en el futuro puedes dividir esto si agregas campo de categoría
+            otherIncome: 0
+        }
+
+        const previousTotal = sum(yesterdayInstallments)
+        const previousDayComparison = previousTotal > 0
+            ? Math.round(((totalIncome - previousTotal) / previousTotal) * 100)
+            : 100
+
+        return {
+            totalIncome,
+            totalExpenses,
+            balance,
+            paymentMethods,
+            categories,
+            previousDayComparison
+        }
     }
 }

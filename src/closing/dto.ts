@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator'
+import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator'
 import { PaymentMethod } from 'generated/prisma'
 
 export class CreateCashRegisterDto {
@@ -21,10 +21,9 @@ export class CreateCashRegisterDto {
 
 export class GetResumenDto {
     @IsOptional()
-    @IsString()
-    fecha?: string // formato ISO, ej. '2024-05-13'
+    @IsDateString()
+    date?: string
 }
-
 export class GetTransaccionesDto {
     @IsOptional()
     @IsString()
@@ -54,3 +53,4 @@ export class FilterInstallmentsDto {
     @IsEnum(PaymentMethod)
     paymentMethod?: PaymentMethod
 }
+

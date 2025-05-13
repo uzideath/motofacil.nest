@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { ClosingService } from "./closing.service";
-import { CreateCashRegisterDto, FilterCashRegisterDto, FilterInstallmentsDto } from "./dto";
+import { CreateCashRegisterDto, FilterCashRegisterDto, FilterInstallmentsDto, GetResumenDto } from "./dto";
 import { CashRegister, Installment } from "generated/prisma";
+import { ResumenResponse } from "./types";
 
 @Controller('closing')
 export class ClosingController {
@@ -40,5 +41,10 @@ export class ClosingController {
         @Query() filter: FilterInstallmentsDto
     ): ReturnType<ClosingService['getUnassignedPayments']> {
         return this.closingService.getUnassignedPayments(filter)
+    }
+
+    @Get('summary')
+    getResumen(@Query() query: GetResumenDto): Promise<ResumenResponse> {
+        return this.closingService.summary(query)
     }
 }
