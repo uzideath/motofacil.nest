@@ -56,9 +56,18 @@ export class InstallmentService {
 
     async findAll() {
         return this.prisma.installment.findMany({
-            include: { loan: true },
+            include: {
+                loan: {
+                    include: {
+                        user: true,
+                        motorcycle: true,
+                    },
+                },
+            },
+            orderBy: { paymentDate: 'desc' },
         });
     }
+
 
     async findOne(id: string) {
         const record = await this.prisma.installment.findUnique({
