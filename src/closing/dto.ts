@@ -1,4 +1,4 @@
-import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator'
+import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator'
 import { PaymentMethod } from 'generated/prisma'
 
 export class CreateCashRegisterDto {
@@ -17,6 +17,11 @@ export class CreateCashRegisterDto {
 
     @IsArray()
     installmentIds: string[]
+
+    @IsOptional()
+    @IsArray()
+    @IsUUID("all", { each: true })
+    expenseIds?: string[]
 }
 
 export class GetResumenDto {

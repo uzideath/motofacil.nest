@@ -10,7 +10,14 @@ export class ClosingService {
     constructor(private readonly prisma: PrismaService) { }
 
     async create(dto: CreateCashRegisterDto): Promise<CashRegister & { payments: Installment[] }> {
-        const { cashInRegister, cashFromTransfers, cashFromCards, notes, installmentIds } = dto
+        const {
+            cashInRegister,
+            cashFromTransfers,
+            cashFromCards,
+            notes,
+            installmentIds,
+            expenseIds = [],
+        } = dto
 
         const installments = await this.prisma.installment.findMany({
             where: { id: { in: installmentIds } },
@@ -18,6 +25,16 @@ export class ClosingService {
 
         if (installments.length !== installmentIds.length) {
             throw new NotFoundException('Algunos pagos no fueron encontrados')
+        }
+
+        if (expenseIds.length > 0) {
+            const expenses = await this.prisma.expense.findMany({
+                where: { id: { in: expenseIds } },
+            })
+
+            if (expenses.length !== expenseIds.length) {
+                throw new NotFoundException('Algunos egresos no fueron encontrados')
+            }
         }
 
         const cashRegister = await this.prisma.cashRegister.create({
@@ -29,12 +46,19 @@ export class ClosingService {
                 payments: {
                     connect: installmentIds.map(id => ({ id })),
                 },
+                expense: {
+                    connect: expenseIds.map(id => ({ id })),
+                },
             },
-            include: { payments: true },
+            include: {
+                payments: true,
+                expense: true,
+            },
         })
 
         return cashRegister
     }
+
 
     async findAll(filter: FilterCashRegisterDto): Promise<(CashRegister & { payments: Installment[] })[]> {
         let dateRange: { gte: Date; lte: Date } | undefined
