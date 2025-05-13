@@ -1,5 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsUUID, IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import { IsUUID, IsNumber, IsOptional, IsBoolean, IsString } from 'class-validator';
+import { PaymentMethod } from 'generated/prisma';
 
 export class CreateInstallmentDto {
     @IsUUID()
@@ -7,6 +8,9 @@ export class CreateInstallmentDto {
 
     @IsNumber()
     amount: number;
+
+    @IsString()
+    paymentMethod: PaymentMethod;
 
     @IsOptional()
     @IsBoolean()

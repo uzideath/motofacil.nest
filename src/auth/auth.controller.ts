@@ -17,6 +17,7 @@ import { Public } from './decorators/public.decorator';
 export class AuthController {
     constructor(private readonly auth: AuthService) { }
 
+    @Public()
     @Post('register')
     register(@Body() dto: RegisterDto) {
         return this.auth.register(dto.username, dto.password, dto.roles);

@@ -28,6 +28,7 @@ export class InstallmentService {
             data: {
                 loanId: dto.loanId,
                 amount: dto.amount,
+                paymentMethod: dto.paymentMethod,
                 isLate: dto.isLate ?? false,
             },
         });
