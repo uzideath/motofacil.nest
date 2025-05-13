@@ -22,7 +22,7 @@ export class ClosingController {
         return this.closingService.findAll(filter)
     }
 
-    @Get('/search/:id')
+    @Get('search/:id')
     findOne(
         @Param('id') id: string
     ): Promise<CashRegister & {
