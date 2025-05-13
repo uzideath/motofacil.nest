@@ -13,12 +13,13 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { OwnersModule } from './owners/owners.module';
 import { ClosingModule } from './closing/closing.module';
 import { ExpenseModule } from './expense/expense.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
     isGlobal: true,
   }),
-    UserModule, LoanModule, InstallmentModule, MotorcycleModule, AuthModule, OwnersModule, ClosingModule, ExpenseModule],
+    UserModule, LoanModule, InstallmentModule, MotorcycleModule, AuthModule, OwnersModule, ClosingModule, ExpenseModule, CloudinaryModule],
   controllers: [AppController],
   providers: [AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
