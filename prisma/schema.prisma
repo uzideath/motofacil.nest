@@ -84,6 +84,22 @@ model Installment {
   amount        Float
   paymentDate   DateTime      @default(now())
   isLate        Boolean       @default(false)
+
+  cashRegister   CashRegister? @relation("CashRegisterPayments", fields: [cashRegisterId], references: [id])
+  cashRegisterId String?
+}
+
+model CashRegister {
+  id                String   @id @default(uuid())
+  date              DateTime @default(now())
+  cashInRegister    Float
+  cashFromTransfers Float
+  cashFromCards     Float
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  payments Installment[] @relation("CashRegisterPayments")
 }
 
 enum PaymentMethod {
