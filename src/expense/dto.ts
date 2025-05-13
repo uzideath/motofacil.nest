@@ -41,5 +41,6 @@ export class CreateExpenseDto {
     attachments?: string[] // links o nombres de archivos
 
     @IsUUID()
+    @IsOptional()
     cashRegisterId: string
 }
