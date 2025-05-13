@@ -100,6 +100,36 @@ model CashRegister {
   updatedAt         DateTime @updatedAt
 
   payments Installment[] @relation("CashRegisterPayments")
+  Expense  Expense[]
+}
+
+model Expense {
+  id             String          @id @default(uuid())
+  amount         Float
+  date           DateTime
+  category       ExpenseCategory
+  paymentMethod  PaymentMethod
+  beneficiary    String
+  reference      String?
+  description    String
+  attachments    String[] // Array de archivos relacionados (recibos, facturas)
+  cashRegister   CashRegister    @relation(fields: [cashRegisterId], references: [id])
+  cashRegisterId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ExpenseCategory {
+  RENT // Alquiler
+  SERVICES // Servicios
+  SALARIES // Salarios
+  TAXES // Impuestos
+  MAINTENANCE // Mantenimiento
+  PURCHASES // Compras
+  MARKETING // Marketing
+  TRANSPORT // Transporte
+  OTHER // Otros
 }
 
 enum PaymentMethod {
