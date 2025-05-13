@@ -100,7 +100,7 @@ model CashRegister {
   updatedAt         DateTime @updatedAt
 
   payments Installment[] @relation("CashRegisterPayments")
-  Expense  Expense[]
+  expense  Expense[]
 }
 
 model Expense {

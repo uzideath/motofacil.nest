@@ -53,6 +53,7 @@ export class ClosingService {
             },
             include: {
                 payments: true,
+                expense: true
             },
             orderBy: { date: 'desc' },
         })
@@ -128,7 +129,7 @@ export class ClosingService {
             orderBy: { paymentDate: 'asc' },
         })
     }
-    
+
     async summary(dto: GetResumenDto): Promise<ResumenResponse> {
         const baseDate = dto.date ? new Date(dto.date) : new Date()
 
