@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { CashRegister, Installment, Loan, Motorcycle, Prisma, User } from "generated/prisma";
+import { CashRegister, Expense, Installment, Loan, Motorcycle, Prisma, User } from "generated/prisma";
 import { PrismaService } from "src/prisma.service";
 import { CreateCashRegisterDto, FilterCashRegisterDto, FilterInstallmentsDto, GetResumenDto } from "./dto";
 import { startOfDay, endOfDay, subDays } from "date-fns";
@@ -92,32 +92,35 @@ export class ClosingService {
 
     async getUnassignedPayments(
         filter: FilterInstallmentsDto
-    ): Promise<(Installment & {
-        loan: Loan & {
-            user: Pick<User, 'id' | 'name'>
-            motorcycle: Pick<Motorcycle, 'id' | 'plate'>
-        }
-    })[]> {
-        const where: Prisma.InstallmentWhereInput = {
+    ): Promise<{
+        installments: (Installment & {
+            loan: Loan & {
+                user: Pick<User, 'id' | 'name'>
+                motorcycle: Pick<Motorcycle, 'id' | 'plate'>
+            }
+        })[],
+        expenses: Expense[]
+    }> {
+        const whereInstallments: Prisma.InstallmentWhereInput = {
             cashRegisterId: null,
         }
 
         if (filter.paymentMethod) {
-            where.paymentMethod = filter.paymentMethod
+            whereInstallments.paymentMethod = filter.paymentMethod
         }
 
         if (filter.startDate || filter.endDate) {
-            where.paymentDate = {}
+            whereInstallments.paymentDate = {}
             if (filter.startDate) {
-                where.paymentDate.gte = new Date(filter.startDate)
+                whereInstallments.paymentDate.gte = new Date(filter.startDate)
             }
             if (filter.endDate) {
-                where.paymentDate.lte = new Date(filter.endDate)
+                whereInstallments.paymentDate.lte = new Date(filter.endDate)
             }
         }
 
-        return this.prisma.installment.findMany({
-            where,
+        const installments = await this.prisma.installment.findMany({
+            where: whereInstallments,
             include: {
                 loan: {
                     include: {
@@ -128,7 +131,29 @@ export class ClosingService {
             },
             orderBy: { paymentDate: 'asc' },
         })
+
+        const whereExpenses: Prisma.ExpenseWhereInput = {
+            cashRegisterId: null,
+        }
+
+        if (filter.startDate || filter.endDate) {
+            whereExpenses.date = {}
+            if (filter.startDate) {
+                whereExpenses.date.gte = new Date(filter.startDate)
+            }
+            if (filter.endDate) {
+                whereExpenses.date.lte = new Date(filter.endDate)
+            }
+        }
+
+        const expenses = await this.prisma.expense.findMany({
+            where: whereExpenses,
+            orderBy: { date: 'asc' },
+        })
+
+        return { installments, expenses }
     }
+
 
     async summary(dto: GetResumenDto): Promise<ResumenResponse> {
         const baseDate = dto.date ? new Date(dto.date) : new Date()
