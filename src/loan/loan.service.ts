@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { CreateLoanDto, UpdateLoanDto } from './loan.dto';
+import { CreateLoanDto, InterestType, PaymentFrequency, UpdateLoanDto } from './loan.dto';
 
 
 @Injectable()
@@ -12,20 +12,38 @@ export class LoanService {
             where: { id: dto.userId },
         });
         if (!user) throw new NotFoundException('User does not exist');
+
         const motorcycle = await this.prisma.motorcycle.findUnique({
             where: { id: dto.motorcycleId },
         });
         if (!motorcycle) throw new NotFoundException('Motorcycle does not exist');
+
+        const debtRemaining = dto.totalAmount - dto.downPayment;
+
+        const dailyPaymentAmount =
+            dto.dailyPaymentAmount ??
+            parseFloat((debtRemaining / dto.installments).toFixed(2));
+
         return this.prisma.loan.create({
             data: {
-                ...dto,
+                userId: dto.userId,
+                motorcycleId: dto.motorcycleId,
+                totalAmount: dto.totalAmount,
+                downPayment: dto.downPayment,
+                installments: dto.installments,
+                interestRate: dto.interestRate,
+                interestType: dto.interestType ?? InterestType.FIXED,
+                paymentFrequency: dto.paymentFrequency ?? PaymentFrequency.DAILY,
+                dailyPaymentAmount,
+
                 paidInstallments: 0,
                 remainingInstallments: dto.installments,
                 totalPaid: 0,
-                debtRemaining: dto.totalAmount,
+                debtRemaining,
             },
         });
     }
+
 
 
     async findAll() {
