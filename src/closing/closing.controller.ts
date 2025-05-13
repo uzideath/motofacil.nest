@@ -2,7 +2,6 @@ import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { ClosingService } from "./closing.service";
 import { CreateCashRegisterDto, FilterCashRegisterDto, FilterInstallmentsDto, GetResumenDto } from "./dto";
 import { CashRegister, Installment } from "generated/prisma";
-import { ResumenResponse } from "./types";
 
 @Controller('closing')
 export class ClosingController {
