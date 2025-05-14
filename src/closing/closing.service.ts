@@ -193,9 +193,10 @@ export class ClosingService {
             this.prisma.installment.findMany({
                 where: { paymentDate: { gte: yesterdayStart, lte: yesterdayEnd } },
             }),
+
             this.prisma.expense.findMany({
-                where: { createdAt: { gte: todayStart, lte: todayEnd } },
-            }),
+                where: { date: { gte: todayStart, lte: todayEnd } },
+            })
         ])
 
         const sum = (arr: { amount: number }[]) => arr.reduce((acc, i) => acc + i.amount, 0)
@@ -238,6 +239,7 @@ export class ClosingService {
                 ? Math.round(((totalIncome - previousTotal) / previousTotal) * 100)
                 : 100
 
+        // Incluir los listados completos de cuotas y gastos del día
         return {
             totalIncome,
             totalExpenses,
@@ -246,7 +248,8 @@ export class ClosingService {
             expenseMethods: expenseByMethod,
             categories,
             previousDayComparison,
+            allTodayInstallments: todayInstallments,
+            allTodayExpenses: todayExpenses
         }
     }
-
 }

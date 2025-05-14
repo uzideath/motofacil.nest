@@ -1,17 +1,20 @@
-import { startOfDay, endOfDay } from "date-fns"
-import { toZonedTime } from "date-fns-tz"
+import { startOfDay, endOfDay } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
-const timeZone = "America/Bogota"
+const timeZone = "America/Bogota";
 
 export function getColombiaDayRange(date: Date = new Date()) {
-    const zoned = toZonedTime(date, timeZone)
+    // Convert the input date to Colombia timezone
+    const zonedDate = toZonedTime(date, timeZone);
 
-    const start = startOfDay(zoned)
-    const end = endOfDay(zoned)
+    // Get start and end of the day in Colombia timezone
+    const startDay = startOfDay(zonedDate);
+    const endDay = endOfDay(zonedDate);
 
-    // Convertimos la hora local de Colombia a UTC para que encaje con datos en la base
-    const startUtc = new Date(start.getTime() - start.getTimezoneOffset() * 60000)
-    const endUtc = new Date(end.getTime() - end.getTimezoneOffset() * 60000)
+    // These times are already in UTC internally, just with Colombia timezone representation
+    // We just need to create new Date objects to get the UTC equivalents
+    const startUtc = new Date(startDay);
+    const endUtc = new Date(endDay);
 
-    return { startUtc, endUtc }
+    return { startUtc, endUtc };
 }
