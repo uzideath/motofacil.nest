@@ -71,6 +71,7 @@ model Loan {
   dailyPaymentAmount Float
 
   startDate DateTime   @default(now())
+  endDate   DateTime?
   status    LoanStatus @default(PENDING)
 
   payments Installment[]
