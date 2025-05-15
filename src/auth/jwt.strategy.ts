@@ -5,16 +5,20 @@ import { JwtPayload } from './auth.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-    constructor() {
-        super({
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            ignoreExpiration: false,
-            secretOrKey: process.env.JWT_SECRET ?? 'CHANGE_ME',
-        });
-    }
+  constructor() {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: process.env.JWT_SECRET ?? 'CHANGE_ME',
+    });
+  }
 
-    async validate(payload: JwtPayload) {
-        // attach user info (including roles) to request.user
-        return { userId: payload.sub, username: payload.username, roles: payload.roles };
-    }
+  async validate(payload: JwtPayload) {
+    // attach user info (including roles) to request.user
+    return {
+      userId: payload.sub,
+      username: payload.username,
+      roles: payload.roles,
+    };
+  }
 }

@@ -1,49 +1,54 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
-import { ClosingService } from "./closing.service";
-import { CreateCashRegisterDto, FilterCashRegisterDto, FilterInstallmentsDto, GetResumenDto } from "./dto";
-import { CashRegister, Installment } from "generated/prisma";
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { ClosingService } from './closing.service';
+import {
+  CreateCashRegisterDto,
+  FilterCashRegisterDto,
+  FilterInstallmentsDto,
+  GetResumenDto,
+} from './dto';
+import { CashRegister, Installment } from 'generated/prisma';
 
 @Controller('closing')
 export class ClosingController {
-    constructor(private readonly closingService: ClosingService) { }
+  constructor(private readonly closingService: ClosingService) {}
 
-    @Post()
-    create(
-        @Body() dto: CreateCashRegisterDto
-    ): Promise<CashRegister & { payments: Installment[] }> {
-        return this.closingService.create(dto)
-    }
+  @Post()
+  create(
+    @Body() dto: CreateCashRegisterDto,
+  ): Promise<CashRegister & { payments: Installment[] }> {
+    return this.closingService.create(dto);
+  }
 
-    @Get()
-    findAll(
-        @Query() filter: FilterCashRegisterDto
-    ): Promise<(CashRegister & { payments: Installment[] })[]> {
-        return this.closingService.findAll(filter)
-    }
+  @Get()
+  findAll(
+    @Query() filter: FilterCashRegisterDto,
+  ): Promise<(CashRegister & { payments: Installment[] })[]> {
+    return this.closingService.findAll(filter);
+  }
 
-    @Get('search/:id')
-    findOne(
-        @Param('id') id: string
-    ): Promise<CashRegister & {
-        payments: (Installment & {
-            loan: {
-                user: { id: string; name: string }
-                motorcycle: { id: string; plate: string }
-            }
-        })[]
-    }> {
-        return this.closingService.findOne(id)
+  @Get('search/:id')
+  findOne(@Param('id') id: string): Promise<
+    CashRegister & {
+      payments: (Installment & {
+        loan: {
+          user: { id: string; name: string };
+          motorcycle: { id: string; plate: string };
+        };
+      })[];
     }
+  > {
+    return this.closingService.findOne(id);
+  }
 
-    @Get('available-payments')
-    getUnassignedPayments(
-        @Query() filter: FilterInstallmentsDto
-    ): ReturnType<ClosingService['getUnassignedPayments']> {
-        return this.closingService.getUnassignedPayments(filter)
-    }
+  @Get('available-payments')
+  getUnassignedPayments(
+    @Query() filter: FilterInstallmentsDto,
+  ): ReturnType<ClosingService['getUnassignedPayments']> {
+    return this.closingService.getUnassignedPayments(filter);
+  }
 
-    @Get('summary')
-    getResumen(@Query() query: GetResumenDto): Promise<ResumenResponse> {
-        return this.closingService.summary(query)
-    }
+  @Get('summary')
+  getResumen(@Query() query: GetResumenDto): Promise<ResumenResponse> {
+    return this.closingService.summary(query);
+  }
 }

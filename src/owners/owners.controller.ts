@@ -3,10 +3,10 @@ import { OwnersService } from './owners.service';
 
 @Controller('owners')
 export class OwnersController {
-    constructor(private readonly ownerService: OwnersService) { }
+  constructor(private readonly ownerService: OwnersService) {}
 
-    @Get()
-    list() {
-        return this.ownerService.list()
-    }
+  @Get()
+  list() {
+    return this.ownerService.list();
+  }
 }

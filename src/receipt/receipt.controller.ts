@@ -4,16 +4,16 @@ import { CreateReceiptDto } from './dto';
 
 @Controller('receipt')
 export class ReceiptController {
-    constructor(private readonly receiptService: ReceiptService) { }
+  constructor(private readonly receiptService: ReceiptService) {}
 
-    @Post()
-    async createReceipt(@Body() dto: CreateReceiptDto) {
-        const base64 = await this.receiptService.generatePDF(dto);
+  @Post()
+  async createReceipt(@Body() dto: CreateReceiptDto) {
+    const base64 = await this.receiptService.generatePDF(dto);
 
-        return {
-            filename: 'recibo.pdf',
-            mimeType: 'application/pdf',
-            base64,
-        };
-    }
+    return {
+      filename: 'recibo.pdf',
+      mimeType: 'application/pdf',
+      base64,
+    };
+  }
 }

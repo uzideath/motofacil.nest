@@ -21,4 +21,4 @@ import { PrismaService } from 'src/prisma.service';
   providers: [PrismaService, AuthService, JwtStrategy, RolesGuard],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

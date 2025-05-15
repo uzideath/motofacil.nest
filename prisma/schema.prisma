@@ -68,7 +68,7 @@ model Loan {
   interestRate       Float // If you use this field
   interestType       String // (e.g., "FIXED", consider using an enum!)
   paymentFrequency   String // (e.g., "DAILY", consider using an enum!)
-  dailyPaymentAmount Float
+  installmentPaymentAmmount Float
 
   startDate DateTime   @default(now())
   endDate   DateTime?

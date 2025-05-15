@@ -1,61 +1,68 @@
-import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator'
-import { PaymentMethod } from 'generated/prisma'
+import {
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
+import { PaymentMethod } from 'generated/prisma';
 
 export class CreateCashRegisterDto {
-    @IsNumber()
-    cashInRegister: number
+  @IsNumber()
+  cashInRegister: number;
 
-    @IsNumber()
-    cashFromTransfers: number
+  @IsNumber()
+  cashFromTransfers: number;
 
-    @IsNumber()
-    cashFromCards: number
+  @IsNumber()
+  cashFromCards: number;
 
-    @IsOptional()
-    @IsString()
-    notes?: string
+  @IsOptional()
+  @IsString()
+  notes?: string;
 
-    @IsArray()
-    installmentIds: string[]
+  @IsArray()
+  installmentIds: string[];
 
-    @IsOptional()
-    @IsArray()
-    @IsUUID("all", { each: true })
-    expenseIds?: string[]
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  expenseIds?: string[];
 }
 
 export class GetResumenDto {
-    @IsOptional()
-    @IsDateString()
-    date?: string
+  @IsOptional()
+  @IsDateString()
+  date?: string;
 }
 export class GetTransaccionesDto {
-    @IsOptional()
-    @IsString()
-    search?: string
+  @IsOptional()
+  @IsString()
+  search?: string;
 
-    @IsOptional()
-    @IsString()
-    type?: 'income' | 'expense' | 'all'
+  @IsOptional()
+  @IsString()
+  type?: 'income' | 'expense' | 'all';
 }
 
 export class FilterCashRegisterDto {
-    @IsOptional()
-    @IsString()
-    date?: string // ISO format, ej. '2025-05-13'
+  @IsOptional()
+  @IsString()
+  date?: string; // ISO format, ej. '2025-05-13'
 }
 
 export class FilterInstallmentsDto {
-    @IsOptional()
-    @IsString()
-    startDate?: string // ISO: "2025-05-01"
+  @IsOptional()
+  @IsString()
+  startDate?: string; // ISO: "2025-05-01"
 
-    @IsOptional()
-    @IsString()
-    endDate?: string // ISO: "2025-05-10"
+  @IsOptional()
+  @IsString()
+  endDate?: string; // ISO: "2025-05-10"
 
-    @IsOptional()
-    @IsEnum(PaymentMethod)
-    paymentMethod?: PaymentMethod
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
 }
-

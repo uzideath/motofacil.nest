@@ -2,23 +2,23 @@ import { PartialType } from '@nestjs/mapped-types';
 import { IsNumber, IsString } from 'class-validator';
 
 export class CreateMotorcycleDto {
-    @IsString()
-    brand: string;
+  @IsString()
+  brand: string;
 
-    @IsString()
-    model: string;
+  @IsString()
+  model: string;
 
-    @IsString()
-    plate: string;
+  @IsString()
+  plate: string;
 
-    @IsString()
-    color: string
+  @IsString()
+  color: string;
 
-    @IsNumber()
-    cc: number
+  @IsNumber()
+  cc: number;
 
-    @IsNumber()
-    gps: number
+  @IsNumber()
+  gps: number;
 }
 
-export class UpdateMotorcycleDto extends PartialType(CreateMotorcycleDto) { }
+export class UpdateMotorcycleDto extends PartialType(CreateMotorcycleDto) {}

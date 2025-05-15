@@ -1,3 +1,3 @@
 export enum Guards {
-    JWT = 'jwt'
+  JWT = 'jwt',
 }
