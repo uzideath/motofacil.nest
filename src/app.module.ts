@@ -17,14 +17,26 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { ReceiptModule } from './receipt/receipt.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({
-    isGlobal: true,
-  }),
-    UserModule, LoanModule, InstallmentModule, MotorcycleModule, AuthModule, OwnersModule, ClosingModule, ExpenseModule, CloudinaryModule, ReceiptModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    UserModule,
+    LoanModule,
+    InstallmentModule,
+    MotorcycleModule,
+    AuthModule,
+    OwnersModule,
+    ClosingModule,
+    ExpenseModule,
+    CloudinaryModule,
+    ReceiptModule,
+  ],
   controllers: [AppController],
-  providers: [AppService,
+  providers: [
+    AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
-export class AppModule { }
+export class AppModule {}

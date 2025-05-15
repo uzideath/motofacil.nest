@@ -1,53 +1,61 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsUUID, IsNumber, IsInt, IsEnum, Min, IsPositive, IsOptional } from 'class-validator';
+import {
+  IsUUID,
+  IsNumber,
+  IsInt,
+  IsEnum,
+  Min,
+  IsPositive,
+  IsOptional,
+} from 'class-validator';
 
 export enum InterestType {
-    FIXED = 'FIXED',
-    COMPOUND = 'COMPOUND',
+  FIXED = 'FIXED',
+  COMPOUND = 'COMPOUND',
 }
 
 export enum PaymentFrequency {
-    DAILY = 'DAILY',
-    WEEKLY = 'WEEKLY',
-    BIWEEKLY = 'BIWEEKLY',
-    MONTHLY = 'MONTHLY',
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+  BIWEEKLY = 'BIWEEKLY',
+  MONTHLY = 'MONTHLY',
 }
 
 export class CreateLoanDto {
-    @IsUUID()
-    userId: string;
+  @IsUUID()
+  userId: string;
 
-    @IsUUID()
-    motorcycleId: string;
+  @IsUUID()
+  motorcycleId: string;
 
-    @IsNumber()
-    @Min(0)
-    totalAmount: number;
+  @IsNumber()
+  @Min(0)
+  totalAmount: number;
 
-    @IsNumber()
-    @Min(0)
-    downPayment: number;
+  @IsNumber()
+  @Min(0)
+  downPayment: number;
 
-    @IsInt()
-    @Min(1)
-    installments: number;
+  @IsInt()
+  @Min(1)
+  installments: number;
 
-    @IsNumber()
-    @Min(0)
-    interestRate: number;
+  @IsNumber()
+  @Min(0)
+  interestRate: number;
 
-    @IsEnum(InterestType)
-    @IsOptional()
-    interestType?: InterestType;
+  @IsEnum(InterestType)
+  @IsOptional()
+  interestType?: InterestType;
 
-    @IsEnum(PaymentFrequency)
-    @IsOptional()
-    paymentFrequency?: PaymentFrequency;
+  @IsEnum(PaymentFrequency)
+  @IsOptional()
+  paymentFrequency?: PaymentFrequency;
 
-    @IsNumber()
-    @IsOptional()
-    @IsPositive()
-    installmentPaymentAmmount?: number;
+  @IsNumber()
+  @IsOptional()
+  @IsPositive()
+  installmentPaymentAmmount?: number;
 }
 
-export class UpdateLoanDto extends PartialType(CreateLoanDto) { }
+export class UpdateLoanDto extends PartialType(CreateLoanDto) {}

@@ -4,7 +4,7 @@ import { ExpenseController } from './expense.controller';
 import { PrismaService } from 'src/prisma.service';
 
 @Module({
-    providers: [PrismaService, ExpenseService],
-    controllers: [ExpenseController]
+  providers: [PrismaService, ExpenseService],
+  controllers: [ExpenseController],
 })
-export class ExpenseModule { }
+export class ExpenseModule {}

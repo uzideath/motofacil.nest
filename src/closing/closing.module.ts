@@ -4,7 +4,7 @@ import { ClosingController } from './closing.controller';
 import { ClosingService } from './closing.service';
 
 @Module({
-    providers: [PrismaService, ClosingService],
-    controllers: [ClosingController]
+  providers: [PrismaService, ClosingService],
+  controllers: [ClosingController],
 })
-export class ClosingModule { }
+export class ClosingModule {}

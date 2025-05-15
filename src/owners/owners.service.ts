@@ -3,11 +3,9 @@ import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class OwnersService {
-    constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-
-    list() {
-        return this.prisma.owners.findMany()
-    }
-
+  list() {
+    return this.prisma.owners.findMany();
+  }
 }

@@ -6,12 +6,12 @@ import { ValidationPipe } from '@nestjs/common';
 async function main() {
   const app = await NestFactory.create(AppModule);
   const config = app.get<ConfigService>(ConfigService);
-  const port = config.get<number>('PORT') || 3000
-  const host = config.get<string>('HOST') || '0.0.0.0'
+  const port = config.get<number>('PORT') || 3000;
+  const host = config.get<string>('HOST') || '0.0.0.0';
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.setGlobalPrefix(`api/${config.get<string>('API_VERSION')}`);
   app.enableCors({
-    origin: '*'
+    origin: '*',
   });
   await app.listen(port, host);
 }

@@ -4,7 +4,7 @@ import { MotorcycleController } from './motorcycle.controller';
 import { MotorcycleService } from './motorcycle.service';
 
 @Module({
-    controllers: [MotorcycleController],
-    providers: [MotorcycleService, PrismaService],
+  controllers: [MotorcycleController],
+  providers: [MotorcycleService, PrismaService],
 })
-export class MotorcycleModule { }
+export class MotorcycleModule {}

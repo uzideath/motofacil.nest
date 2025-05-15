@@ -64,7 +64,9 @@ model Loan {
   remainingInstallments Int
   totalPaid             Float      @default(0.0)
   debtRemaining         Float
-
+  interestRate       Float // If you use this field
+  interestType       String // (e.g., "FIXED", consider using an enum!)
+  paymentFrequency   String // (e.g., "DAILY", consider using an enum!)
   interestRate              Float // If you use this field
   interestType              String // (e.g., "FIXED", consider using an enum!)
   paymentFrequency          String // (e.g., "DAILY", consider using an enum!)
