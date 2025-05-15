@@ -69,7 +69,8 @@ async function main() {
                     interestRate: 0.05,
                     interestType: 'FIJO',
                     paymentFrequency: 'DIARIO',
-                    installmentPaymentAmmount: 30000,
+                    installmentPaymentAmmount: 32000,
+                    gpsInstallmentPayment: 2000,
                     status: LoanStatus.ACTIVE,
                 },
             })
@@ -84,6 +85,7 @@ async function main() {
                     data: {
                         loanId: loan.id,
                         amount: loan.installmentPaymentAmmount,
+                        gps: 2000,
                         paymentMethod: PaymentMethod.CASH,
                         isLate: faker.datatype.boolean(),
                     },

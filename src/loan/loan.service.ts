@@ -10,7 +10,7 @@ import { addDays, addWeeks, addMonths } from 'date-fns';
 
 @Injectable()
 export class LoanService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateLoanDto) {
     const user = await this.prisma.user.findUnique({
@@ -48,10 +48,10 @@ export class LoanService {
         endDate: endDate,
         paymentFrequency: dto.paymentFrequency ?? PaymentFrequency.DAILY,
         installmentPaymentAmmount,
-
+        gpsInstallmentPayment: dto.gpsInstallmentPayment,
         paidInstallments: 0,
         remainingInstallments: dto.installments,
-        totalPaid: 0,
+        totalPaid: dto.downPayment,
         debtRemaining,
       },
     });

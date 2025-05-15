@@ -11,10 +11,12 @@ export class ReceiptService implements OnModuleDestroy {
     const formattedData = {
       ...dto,
       formattedAmount: this.formatCurrency(dto.amount),
-      formattedTotal: this.formatCurrency(dto.total),
+      formattedGps: this.formatCurrency(dto.gps || 0),
+      formattedTotal: this.formatCurrency((dto.amount || 0) + (dto.gps || 0)),
       formattedDate: this.formatDate(dto.date),
       receiptNumber: this.generateReceiptNumber(dto.identification),
     }
+
 
     const templateHtml = `
       <!DOCTYPE html>
@@ -70,14 +72,14 @@ export class ReceiptService implements OnModuleDestroy {
             margin-left: 15px;
             font-size: 24px;
             font-weight: 700;
-            color: #2563eb;
+            color:rgb(98, 98, 98);
           }
           
           .receipt-title {
             text-align: right;
             font-size: 28px;
             font-weight: 700;
-            color: #2563eb;
+            color:rgb(98, 98, 98);
             margin-bottom: 5px;
           }
           
@@ -137,7 +139,7 @@ export class ReceiptService implements OnModuleDestroy {
           
           .payment-table th {
             background-color: #f0f7ff;
-            color: #2563eb;
+            color:rgb(98, 98, 98);
             font-weight: 600;
             text-align: left;
             padding: 12px 15px;
@@ -161,7 +163,7 @@ export class ReceiptService implements OnModuleDestroy {
           .payment-amount {
             font-weight: 600;
             text-align: right;
-            color: #2563eb;
+            color:rgb(98, 98, 98);
           }
           
           .receipt-total {
@@ -190,7 +192,7 @@ export class ReceiptService implements OnModuleDestroy {
           .total-amount {
             font-size: 24px;
             font-weight: 700;
-            color: #2563eb;
+            color:rgb(98, 98, 98);
           }
           
           .receipt-footer {
@@ -205,7 +207,7 @@ export class ReceiptService implements OnModuleDestroy {
           .thank-you {
             font-size: 18px;
             font-weight: 600;
-            color: #2563eb;
+            color:rgb(98, 98, 98);
             margin-bottom: 10px;
           }
           
@@ -248,8 +250,7 @@ export class ReceiptService implements OnModuleDestroy {
           
           <div class="receipt-header">
             <div class="logo-container">
-              <img class="logo" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjEwMCIgcj0iOTUiIGZpbGw9IiMyNTYzRUIiLz4KPHBhdGggZD0iTTY1IDEzNVYxMjBMOTUgOTBMNjUgNjBWNDVIMTM1VjYwTDEwNSA5MEwxMzUgMTIwVjEzNUg2NVoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" alt="Company Logo">
-              <div class="company-name">MotoFácil</div>
+              <img class="logo" src="https://i.imgur.com/w9K9wWP.png" alt="Company Logo">
             </div>
             <div>
               <div class="receipt-title">RECIBO DE PAGO</div>
@@ -266,20 +267,25 @@ export class ReceiptService implements OnModuleDestroy {
           
           <div class="payment-details">
             <div class="receipt-info-title">Detalles del Pago</div>
-            <table class="payment-table">
-              <thead>
-                <tr>
-                  <th>Concepto</th>
-                  <th style="text-align: right;">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="payment-concept">{{concept}}</td>
-                  <td class="payment-amount">{{formattedAmount}}</td>
-                </tr>
-              </tbody>
-            </table>
+<table class="payment-table">
+  <thead>
+    <tr>
+      <th>Concepto</th>
+      <th style="text-align: right;">Monto</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="payment-concept">{{concept}}</td>
+      <td class="payment-amount">{{formattedAmount}}</td>
+    </tr>
+    <tr>
+      <td class="payment-concept">GPS</td>
+      <td class="payment-amount">{{formattedGps}}</td>
+    </tr>
+  </tbody>
+</table>
+
           </div>
           
           <div class="receipt-total">
@@ -346,11 +352,6 @@ export class ReceiptService implements OnModuleDestroy {
     const day = date.getDate().toString().padStart(2, "0")
     const idPart = id.toString().slice(-4).padStart(4, "0")
     return `${year}${month}${day}-${idPart}`
-  }
-
-  async generateReceiptBase64(dto: CreateReceiptDto): Promise<string> {
-    const buffer = await this.generateReceipt(dto)
-    return buffer.toString("base64")
   }
 
   async onModuleDestroy() {

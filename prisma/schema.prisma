@@ -68,6 +68,7 @@ model Loan {
   interestType              String // (e.g., "FIXED", consider using an enum!)
   paymentFrequency          String // (e.g., "DAILY", consider using an enum!)
   installmentPaymentAmmount Float
+  gpsInstallmentPayment     Float
 
   startDate DateTime   @default(now())
   endDate   DateTime?

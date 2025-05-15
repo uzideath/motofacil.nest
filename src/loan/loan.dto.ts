@@ -56,6 +56,10 @@ export class CreateLoanDto {
   @IsOptional()
   @IsPositive()
   installmentPaymentAmmount?: number;
+
+  @IsNumber()
+  @IsPositive()
+  gpsInstallmentPayment: number;
 }
 
-export class UpdateLoanDto extends PartialType(CreateLoanDto) {}
+export class UpdateLoanDto extends PartialType(CreateLoanDto) { }

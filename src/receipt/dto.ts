@@ -14,6 +14,9 @@ export class CreateReceiptDto {
   amount: number;
 
   @IsNumber()
+  gps: number
+
+  @IsNumber()
   total: number;
 
   @IsDateString()
