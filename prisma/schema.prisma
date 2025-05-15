@@ -82,6 +82,7 @@ model Installment {
   loanId        String
   paymentMethod PaymentMethod
   amount        Float
+  gps           Float
   paymentDate   DateTime      @default(now())
   isLate        Boolean       @default(false)
 

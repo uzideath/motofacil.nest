@@ -15,6 +15,9 @@ export class CreateInstallmentDto {
   @IsNumber()
   amount: number;
 
+  @IsNumber()
+  gps: number; // <-- Campo GPS agregado
+
   @IsString()
   paymentMethod: PaymentMethod;
 
@@ -23,4 +26,4 @@ export class CreateInstallmentDto {
   isLate?: boolean;
 }
 
-export class UpdateInstallmentDto extends PartialType(CreateInstallmentDto) {}
+export class UpdateInstallmentDto extends PartialType(CreateInstallmentDto) { }

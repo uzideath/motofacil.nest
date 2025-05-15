@@ -1,18 +1,21 @@
-import { IsNotEmpty, IsString, IsNumber } from 'class-validator';
+import { IsString, IsNumber, IsDateString } from 'class-validator';
 
 export class CreateReceiptDto {
   @IsString()
-  @IsNotEmpty()
-  customerName: string;
+  name: string;
 
   @IsString()
-  @IsNotEmpty()
-  customerId: string;
+  identification: string;
 
   @IsString()
-  @IsNotEmpty()
   concept: string;
 
   @IsNumber()
+  amount: number;
+
+  @IsNumber()
   total: number;
+
+  @IsDateString()
+  date: string;
 }

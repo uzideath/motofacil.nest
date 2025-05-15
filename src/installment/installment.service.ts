@@ -9,7 +9,7 @@ import { LoanStatus } from 'generated/prisma';
 
 @Injectable()
 export class InstallmentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateInstallmentDto) {
     const loan = await this.prisma.loan.findUnique({
@@ -36,6 +36,7 @@ export class InstallmentService {
       data: {
         loanId: dto.loanId,
         amount: dto.amount,
+        gps: dto.gps,
         paymentMethod: dto.paymentMethod,
         isLate: dto.isLate ?? false,
       },
