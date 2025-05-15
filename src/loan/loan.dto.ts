@@ -47,7 +47,7 @@ export class CreateLoanDto {
     @IsNumber()
     @IsOptional()
     @IsPositive()
-    dailyPaymentAmount?: number;
+    installmentPaymentAmmount?: number;
 }
 
 export class UpdateLoanDto extends PartialType(CreateLoanDto) { }

@@ -69,7 +69,7 @@ async function main() {
                     interestRate: 0.05,
                     interestType: 'FIJO',
                     paymentFrequency: 'DIARIO',
-                    dailyPaymentAmount: 30000,
+                    installmentPaymentAmmount: 30000,
                     status: LoanStatus.ACTIVE,
                 },
             })
@@ -83,7 +83,7 @@ async function main() {
                 prisma.installment.create({
                     data: {
                         loanId: loan.id,
-                        amount: loan.dailyPaymentAmount,
+                        amount: loan.installmentPaymentAmmount,
                         paymentMethod: PaymentMethod.CASH,
                         isLate: faker.datatype.boolean(),
                     },

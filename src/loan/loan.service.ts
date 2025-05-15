@@ -20,8 +20,8 @@ export class LoanService {
 
         const debtRemaining = dto.totalAmount - dto.downPayment;
 
-        const dailyPaymentAmount =
-            dto.dailyPaymentAmount ??
+        const installmentPaymentAmount =
+            dto.installmentPaymentAmmount ??
             parseFloat((debtRemaining / dto.installments).toFixed(2));
 
         return this.prisma.loan.create({
@@ -34,8 +34,7 @@ export class LoanService {
                 interestRate: dto.interestRate,
                 interestType: dto.interestType ?? InterestType.FIXED,
                 paymentFrequency: dto.paymentFrequency ?? PaymentFrequency.DAILY,
-                dailyPaymentAmount,
-
+                installmentPaymentAmmount: installmentPaymentAmount,
                 paidInstallments: 0,
                 remainingInstallments: dto.installments,
                 totalPaid: 0,
@@ -43,8 +42,6 @@ export class LoanService {
             },
         });
     }
-
-
 
     async findAll() {
         return this.prisma.loan.findMany({
