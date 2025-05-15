@@ -1,15 +1,15 @@
-import { faker } from "@faker-js/faker";
-import { PrismaClient, Role, LoanStatus, PaymentMethod, ExpenseCategory } from "../generated/prisma";
+import { fakerES_MX as faker } from '@faker-js/faker';
+import { PrismaClient, Role, LoanStatus, PaymentMethod, ExpenseCategory } from '../generated/prisma';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 const password = 'admin123';
 
-
 async function main() {
-    console.log('Seeding database...');
+    console.log('Seeding database en español...');
     const hashedAdminPassword = await bcrypt.hash(password, 10);
-    // Crear propietarios
+
+    // Crear propietario admin
     const owner = await prisma.owners.create({
         data: {
             username: 'admin',
@@ -24,12 +24,12 @@ async function main() {
             prisma.user.create({
                 data: {
                     name: faker.person.fullName(),
-                    identification: faker.string.alphanumeric(10),
+                    identification: faker.string.alphanumeric(10).toUpperCase(),
                     age: faker.number.int({ min: 18, max: 65 }),
                     phone: faker.phone.number(),
                     address: faker.location.streetAddress(),
                     refName: faker.person.fullName(),
-                    refID: faker.string.alphanumeric(10),
+                    refID: faker.string.alphanumeric(10).toUpperCase(),
                     refPhone: faker.phone.number(),
                 },
             })
@@ -67,8 +67,8 @@ async function main() {
                     totalPaid: 900000,
                     debtRemaining: 2100000,
                     interestRate: 0.05,
-                    interestType: 'FIXED',
-                    paymentFrequency: 'DAILY',
+                    interestType: 'FIJO',
+                    paymentFrequency: 'DIARIO',
                     dailyPaymentAmount: 30000,
                     status: LoanStatus.ACTIVE,
                 },
@@ -76,7 +76,7 @@ async function main() {
         )
     );
 
-    // Crear pagos (cuotas)
+    // Crear cuotas
     const installments = await Promise.all(
         loans.flatMap((loan) =>
             Array.from({ length: loan.paidInstallments }).map(() =>
@@ -92,13 +92,13 @@ async function main() {
         )
     );
 
-    // Crear un cierre de caja
+    // Crear cierre de caja
     const cashRegister = await prisma.cashRegister.create({
         data: {
             cashInRegister: 500000,
             cashFromTransfers: 200000,
             cashFromCards: 100000,
-            notes: 'Cierre diario de prueba',
+            notes: 'Cierre de caja del día',
             payments: {
                 connect: installments.map((i) => ({ id: i.id })),
             },
@@ -117,14 +117,14 @@ async function main() {
                     beneficiary: faker.company.name(),
                     reference: faker.string.uuid(),
                     description: faker.lorem.sentence(),
-                    attachments: [faker.internet.url()],
+                    attachments: [faker.image.url()],
                     cashRegisterId: cashRegister.id,
                 },
             })
         )
     );
 
-    console.log('Seeding completed!');
+    console.log('¡Base de datos poblada con datos en español!');
 }
 
 main()
