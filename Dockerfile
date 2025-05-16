@@ -1,9 +1,7 @@
 FROM node:20-slim
 
-# Evitar preguntas de zona horaria al instalar paquetes
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Instalar Chromium y dependencias necesarias
 RUN apt-get update && apt-get install -y \
   chromium \
   fonts-liberation \
@@ -31,13 +29,11 @@ RUN apt-get update && apt-get install -y \
   --no-install-recommends && \
   apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Configuración para Puppeteer
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV CHROME_BIN=/usr/bin/chromium
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV NODE_ENV=production
 
-# Directorio de trabajo
 WORKDIR /app
 
 COPY package*.json ./

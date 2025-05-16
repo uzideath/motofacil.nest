@@ -1,55 +1,64 @@
-// src/contract/contract.service.ts
-import { Injectable, OnModuleDestroy } from '@nestjs/common'
-import * as JsReport from 'jsreport-core'
-import { CreateContractDto } from './dto'
-import { contractTemplate } from './contract'
-
+import { Injectable } from '@nestjs/common';
+import * as puppeteer from 'puppeteer';
+import { CreateContractDto } from './dto';
+import { contractTemplate } from './contract';
 
 @Injectable()
-export class ContractService implements OnModuleDestroy {
-    private readonly jr = JsReport()
-    private readonly init = this.jr
-        .use(require('jsreport-handlebars')())
-        .use(require('jsreport-chrome-pdf')())
-        .init()
-
+export class ContractService {
     async generateContract(dto: CreateContractDto): Promise<Buffer> {
-        await this.init
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        });
 
-        const html = contractTemplate
-        const { content } = await this.jr.render({
-            template: {
-                content: html,
-                engine: 'handlebars',
-                recipe: 'chrome-pdf',
-                chrome: {
-                    format: 'A4',
-                    marginTop: '10mm',
-                    marginBottom: '10mm',
-                    marginLeft: '10mm',
-                    marginRight: '10mm',
-                    printBackground: true,
-                },
-            },
-            data: {
-                ...dto,
-                date: this.formatDate(dto.date),
-            },
-        } as any)
+        const page = await browser.newPage();
 
-        return content
+        const html = this.fillTemplate(dto);
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: {
+                top: '10mm',
+                bottom: '10mm',
+                left: '10mm',
+                right: '10mm',
+            },
+        });
+
+        await browser.close();
+        return Buffer.from(pdfBuffer);
+    }
+
+    private fillTemplate(dto: CreateContractDto): string {
+        const data = {
+            ...dto,
+            date: this.formatDate(dto.date),
+        };
+
+        return contractTemplate
+            .replace(/{{contractNumber}}/g, data.contractNumber)
+            .replace(/{{legalRepresentative}}/g, data.legalRepresentative)
+            .replace(/{{representativeId}}/g, data.representativeId)
+            .replace(/{{customerName}}/g, data.customerName)
+            .replace(/{{customerId}}/g, data.customerId)
+            .replace(/{{customerAddress}}/g, data.customerAddress)
+            .replace(/{{customerPhone}}/g, data.customerPhone)
+            .replace(/{{plate}}/g, data.plate)
+            .replace(/{{brand}}/g, data.brand)
+            .replace(/{{engine}}/g, data.engine)
+            .replace(/{{model}}/g, data.model)
+            .replace(/{{chassis}}/g, data.chassis)
+            .replace(/{{date}}/g, data.date);
     }
 
     private formatDate(dateString: string): string {
-        const date = new Date(dateString)
+        const date = new Date(dateString);
         return new Intl.DateTimeFormat('es-CO', {
             day: '2-digit',
             month: 'long',
             year: 'numeric',
-        }).format(date)
-    }
-
-    async onModuleDestroy() {
-        await this.jr.close()
+        }).format(date);
     }
 }

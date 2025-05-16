@@ -4,225 +4,176 @@ export const templateHtml = `
       <head>
         <meta charset="utf-8"/>
         <title>Payment Receipt</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-          
-          * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-          }
-          
-          body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            color: #333;
-            line-height: 1.5;
-            background-color: #fff;
-          }
-          
-          .receipt {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 40px;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            border-radius: 8px;
-          }
-          
-          .receipt-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #f0f0f0;
-          }
-          
-          .logo-container {
-            display: flex;
-            align-items: center;
-          }
-          
-          .logo {
-            width: 120px;
-            height: auto;
-          }
-          
-          .company-name {
-            margin-left: 15px;
-            font-size: 24px;
-            font-weight: 700;
-            color:rgb(98, 98, 98);
-          }
-          
-          .receipt-title {
-            text-align: right;
-            font-size: 28px;
-            font-weight: 700;
-            color:rgb(98, 98, 98);
-            margin-bottom: 5px;
-          }
-          
-          .receipt-number {
-            text-align: right;
-            font-size: 14px;
-            color: #666;
-          }
-          
-          .receipt-date {
-            text-align: right;
-            font-size: 14px;
-            color: #666;
-            margin-top: 5px;
-          }
-          
-          .receipt-info {
-            margin-bottom: 30px;
-          }
-          
-          .receipt-info-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #555;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-          }
-          
-          .customer-details {
-            background-color: #f9fafb;
-            padding: 20px;
-            border-radius: 6px;
-            margin-bottom: 30px;
-          }
-          
-          .customer-name {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 5px;
-          }
-          
-          .customer-id {
-            font-size: 14px;
-            color: #666;
-          }
-          
-          .payment-details {
-            margin-bottom: 30px;
-          }
-          
-          .payment-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-          }
-          
-          .payment-table th {
-            background-color: #f0f7ff;
-            color:rgb(98, 98, 98);
-            font-weight: 600;
-            text-align: left;
-            padding: 12px 15px;
-            border-bottom: 2px solid #e0e0e0;
-          }
-          
-          .payment-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e0e0e0;
-          }
-          
-          .payment-table tr:last-child td {
-            border-bottom: none;
-          }
-          
-          .payment-concept {
-            font-weight: 500;
-            color: #333;
-          }
-          
-          .payment-amount {
-            font-weight: 600;
-            text-align: right;
-            color:rgb(98, 98, 98);
-          }
-          
-          .receipt-total {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #f0f0f0;
-          }
-          
-          .total-container {
-            background-color: #f0f7ff;
-            padding: 15px 25px;
-            border-radius: 6px;
-            text-align: right;
-            min-width: 200px;
-          }
-          
-          .total-label {
-            font-size: 16px;
-            font-weight: 600;
-            color: #555;
-            margin-bottom: 5px;
-          }
-          
-          .total-amount {
-            font-size: 24px;
-            font-weight: 700;
-            color:rgb(98, 98, 98);
-          }
-          
-          .receipt-footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #f0f0f0;
-            text-align: center;
-            color: #666;
-            font-size: 14px;
-          }
-          
-          .thank-you {
-            font-size: 18px;
-            font-weight: 600;
-            color:rgb(98, 98, 98);
-            margin-bottom: 10px;
-          }
-          
-          .footer-note {
-            margin-top: 10px;
-            font-size: 12px;
-            color: #888;
-          }
-          
-          .watermark {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 100px;
-            color: rgba(37, 99, 235, 0.03);
-            z-index: -1;
-            font-weight: 700;
-            letter-spacing: 5px;
-            text-transform: uppercase;
-          }
-          
-          @media print {
-            body {
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            
-            .receipt {
-              box-shadow: none;
-              border: none;
-              padding: 0;
-            }
-          }
-        </style>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    color: #333;
+    line-height: 1.4;
+    background-color: #fff;
+    padding: 0;
+    margin: 0;
+  }
+
+  .receipt {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .receipt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+  }
+
+  .logo {
+    width: 80px;
+    height: auto;
+  }
+
+  .receipt-title {
+    font-size: 18px;
+    font-weight: 700;
+    text-align: right;
+    color: #444;
+  }
+
+  .receipt-number, .receipt-date {
+    font-size: 12px;
+    color: #666;
+    text-align: right;
+  }
+
+  .receipt-info-title {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    color: #555;
+  }
+
+  .customer-details {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+  }
+
+  .customer-name {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .customer-id {
+    font-size: 12px;
+    color: #666;
+  }
+
+  .payment-details {
+    margin-bottom: 15px;
+  }
+
+  .payment-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+
+  .payment-table th, .payment-table td {
+    font-size: 12px;
+    padding: 6px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .payment-table th {
+    background-color: #e0f0ff;
+    font-weight: 600;
+  }
+
+  .payment-amount {
+    text-align: right;
+    font-weight: 600;
+    color: #444;
+  }
+
+  .receipt-total {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+  }
+
+  .total-container {
+    background-color: #e0f0ff;
+    padding: 10px 15px;
+    border-radius: 4px;
+    min-width: 150px;
+    text-align: right;
+  }
+
+  .total-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+  }
+
+  .total-amount {
+    font-size: 16px;
+    font-weight: 700;
+    color: #444;
+  }
+
+  .receipt-footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 10px;
+    color: #777;
+  }
+
+  .thank-you {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #444;
+  }
+
+  .footer-note {
+    font-size: 10px;
+    color: #999;
+  }
+
+  .watermark {
+    display: none;
+  }
+
+  @media print {
+    body {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .receipt {
+      padding: 0;
+    }
+  }
+</style>
+
       </head>
       <body>
         <div class="receipt">
