@@ -1,10 +1,25 @@
-FROM ghcr.io/puppeteer/puppeteer:latest
+FROM node:20-alpine
 
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    udev \
+    bash \
+    dumb-init
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
+COPY --chown=appuser:appgroup package*.json ./
+RUN npm install --no-audit --loglevel=error
+COPY --chown=appuser:appgroup . .
 RUN npx prisma generate
 RUN npm run build
 EXPOSE 3005
+
 CMD ["npm", "run", "start"]
