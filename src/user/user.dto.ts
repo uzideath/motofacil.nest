@@ -10,6 +10,10 @@ export class CreateUserDto {
   @IsNotEmpty()
   identification: string;
 
+  @IsString()
+  @IsNotEmpty()
+  idIssuedAt: string;
+
   @IsInt()
   age: number;
 
@@ -34,4 +38,4 @@ export class CreateUserDto {
   refPhone: string;
 }
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {}
+export class UpdateUserDto extends PartialType(CreateUserDto) { }

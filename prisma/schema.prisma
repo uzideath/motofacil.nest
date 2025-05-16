@@ -28,6 +28,7 @@ model User {
   id             String   @id @default(uuid())
   name           String
   identification String   @unique
+  idIssuedAt     String
   age            Int
   phone          String
   address        String
@@ -60,15 +61,15 @@ model Loan {
   motorcycle                Motorcycle @relation(fields: [motorcycleId], references: [id])
   motorcycleId              String
   totalAmount               Float
-  downPayment               Float // ✅ Added this field
+  downPayment               Float
   installments              Int
   paidInstallments          Int        @default(0)
   remainingInstallments     Int
   totalPaid                 Float      @default(0.0)
   debtRemaining             Float
-  interestRate              Float // If you use this field
-  interestType              String // (e.g., "FIXED", consider using an enum!)
-  paymentFrequency          String // (e.g., "DAILY", consider using an enum!)
+  interestRate              Float
+  interestType              String
+  paymentFrequency          String
   installmentPaymentAmmount Float
   gpsInstallmentPayment     Float
 
@@ -116,7 +117,7 @@ model Expense {
   beneficiary    String
   reference      String?
   description    String
-  attachments    String[] // Array de archivos relacionados (recibos, facturas)
+  attachments    String[] 
   cashRegister   CashRegister?   @relation(fields: [cashRegisterId], references: [id])
   cashRegisterId String?
 

@@ -25,6 +25,7 @@ async function main() {
                 data: {
                     name: faker.person.fullName(),
                     identification: faker.string.alphanumeric(10).toUpperCase(),
+                    idIssuedAt: 'Monteria, Cordoba',
                     age: faker.number.int({ min: 18, max: 65 }),
                     phone: faker.phone.number(),
                     address: faker.location.streetAddress(),
