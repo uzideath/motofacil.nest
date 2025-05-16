@@ -26,6 +26,8 @@ RUN npm install --no-audit --loglevel=error
 
 COPY --chown=appuser:appgroup . .
 
+RUN npx puppeteer browsers install chrome
+
 RUN npx prisma generate
 
 RUN npm run build
