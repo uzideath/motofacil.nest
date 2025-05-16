@@ -38,6 +38,9 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
+# Cambiar los permisos de los archivos para que pptruser pueda acceder a ellos
+RUN chown -R pptruser:pptruser /app
+
 # Cambia al usuario no-root
 USER pptruser
 
