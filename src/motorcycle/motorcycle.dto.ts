@@ -12,6 +12,12 @@ export class CreateMotorcycleDto {
   plate: string;
 
   @IsString()
+  engine: string;
+
+  @IsString()
+  chassis: string;
+
+  @IsString()
   color: string;
 
   @IsNumber()
@@ -21,4 +27,4 @@ export class CreateMotorcycleDto {
   gps: number;
 }
 
-export class UpdateMotorcycleDto extends PartialType(CreateMotorcycleDto) {}
+export class UpdateMotorcycleDto extends PartialType(CreateMotorcycleDto) { }

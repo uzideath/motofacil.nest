@@ -357,4 +357,5 @@ export class ReceiptService implements OnModuleDestroy {
   async onModuleDestroy() {
     await this.jr.close()
   }
+  
 }

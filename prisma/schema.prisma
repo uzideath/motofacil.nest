@@ -40,14 +40,16 @@ model User {
 }
 
 model Motorcycle {
-  id    String  @id @default(uuid())
-  brand String
-  model String
-  plate String  @unique
-  color String?
-  cc    Int?
-  gps   Float?
-  loans Loan[]
+  id      String  @id @default(uuid())
+  brand   String
+  model   String
+  plate   String  @unique
+  engine  String
+  chassis String
+  color   String?
+  cc      Int?
+  gps     Float?
+  loans   Loan[]
 }
 
 model Loan {

@@ -45,6 +45,8 @@ async function main() {
                     model: faker.vehicle.model(),
                     plate: faker.vehicle.vrm(),
                     color: faker.color.human(),
+                    engine: faker.vehicle.vrm(),
+                    chassis: faker.vehicle.vin(),
                     cc: faker.number.int({ min: 100, max: 400 }),
                     gps: faker.number.float({ min: -75, max: -70 }),
                 },

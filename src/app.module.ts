@@ -15,6 +15,7 @@ import { ClosingModule } from './closing/closing.module';
 import { ExpenseModule } from './expense/expense.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { ReceiptModule } from './receipt/receipt.module';
+import { ContractsModule } from './contracts/contracts.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ReceiptModule } from './receipt/receipt.module';
     ExpenseModule,
     CloudinaryModule,
     ReceiptModule,
+    ContractsModule,
   ],
   controllers: [AppController],
   providers: [
