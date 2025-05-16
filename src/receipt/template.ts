@@ -7,10 +7,10 @@ export const templateHtml = `
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-  @page {
-    size: 80mm auto;
-    margin: 0;
-  }
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
 
   * {
     box-sizing: border-box;
