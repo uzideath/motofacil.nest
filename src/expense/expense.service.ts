@@ -1,7 +1,9 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { CreateExpenseDto } from './dto';
-import { toColombiaMidnightUtc } from 'src/lib/dates';
+import { CreateExpenseDto, FindExpenseFiltersDto } from './dto';
+import { toColombiaEndOfDayUtc, toColombiaMidnightUtc } from 'src/lib/dates';
+import { Prisma } from 'generated/prisma';
+
 
 
 @Injectable()
@@ -26,8 +28,18 @@ export class ExpenseService {
   }
 
 
-  async findAll() {
+  async findAll(filters: FindExpenseFiltersDto): Promise<Expense[]> {
+    const { startDate, endDate } = filters;
+    const where: Prisma.ExpenseWhereInput = {};
+
+    if (startDate || endDate) {
+      where.date = {};
+      if (startDate) where.date.gte = toColombiaMidnightUtc(startDate);
+      if (endDate) where.date.lte = toColombiaEndOfDayUtc(endDate);
+    }
+
     return this.prisma.expense.findMany({
+      where,
       orderBy: { date: 'desc' },
       include: {
         cashRegister: true,
@@ -35,14 +47,12 @@ export class ExpenseService {
           select: {
             id: true,
             username: true,
-            name: true
+            name: true,
           },
         },
       },
     });
   }
-
-
   async findByCashRegisterId(cashRegisterId: string) {
     return this.prisma.expense.findMany({
       where: { cashRegisterId },

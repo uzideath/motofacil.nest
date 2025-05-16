@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsBoolean,
   IsString,
+  IsDateString,
 } from 'class-validator';
 import { PaymentMethod } from 'generated/prisma';
 
@@ -28,6 +29,16 @@ export class CreateInstallmentDto {
   @IsUUID()
   @IsOptional()
   createdById?: string;
+}
+
+export class FindInstallmentFiltersDto {
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
 }
 
 export class UpdateInstallmentDto extends PartialType(CreateInstallmentDto) { }

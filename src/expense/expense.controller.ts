@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, Put, Delete } from '@nestjs/common';
-import { CreateExpenseDto } from './dto';
+import { Body, Controller, Get, Param, Post, Put, Delete, Query } from '@nestjs/common';
+import { CreateExpenseDto, FindExpenseFiltersDto } from './dto';
 import { ExpenseService } from './expense.service';
 
 
@@ -13,9 +13,10 @@ export class ExpenseController {
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query() filters: FindExpenseFiltersDto) {
+    return this.service.findAll(filters);
   }
+
 
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: CreateExpenseDto) {

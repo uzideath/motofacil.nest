@@ -4,8 +4,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { CreateInstallmentDto, UpdateInstallmentDto } from './installment.dto';
-import { LoanStatus } from 'generated/prisma';
+import { CreateInstallmentDto, FindInstallmentFiltersDto, UpdateInstallmentDto } from './installment.dto';
+import { LoanStatus, Prisma } from 'generated/prisma';
+import { toColombiaMidnightUtc, toColombiaEndOfDayUtc } from 'src/lib/dates';
 
 @Injectable()
 export class InstallmentService {
@@ -67,8 +68,18 @@ export class InstallmentService {
     return installment;
   }
 
-  async findAll() {
+  async findAll(filters: FindInstallmentFiltersDto): Promise<Installment[]> {
+    const { startDate, endDate } = filters;
+    const where: Prisma.InstallmentWhereInput = {};
+
+    if (startDate || endDate) {
+      where.paymentDate = {};
+      if (startDate) where.paymentDate.gte = toColombiaMidnightUtc(startDate);
+      if (endDate) where.paymentDate.lte = toColombiaEndOfDayUtc(endDate);
+    }
+
     return this.prisma.installment.findMany({
+      where,
       include: {
         loan: {
           include: {
@@ -81,13 +92,14 @@ export class InstallmentService {
           select: {
             id: true,
             username: true,
-            name: true
+            name: true,
           },
         },
       },
       orderBy: { paymentDate: 'desc' },
     });
   }
+
 
   async findOne(id: string) {
     const record = await this.prisma.installment.findUnique({

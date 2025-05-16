@@ -98,6 +98,8 @@ model Installment {
   paymentDate   DateTime      @default(now())
   isLate        Boolean       @default(false)
   createdById   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   createdBy     Owners?       @relation(fields: [createdById], references: [id])
 
   cashRegister   CashRegister? @relation("CashRegisterPayments", fields: [cashRegisterId], references: [id])

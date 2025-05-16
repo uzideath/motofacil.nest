@@ -6,13 +6,14 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { InstallmentService } from './installment.service';
-import { CreateInstallmentDto, UpdateInstallmentDto } from './installment.dto';
+import { CreateInstallmentDto, FindInstallmentFiltersDto, UpdateInstallmentDto } from './installment.dto';
 
 @Controller('installments')
 export class InstallmentController {
-  constructor(private readonly service: InstallmentService) {}
+  constructor(private readonly service: InstallmentService) { }
 
   @Post()
   create(@Body() dto: CreateInstallmentDto) {
@@ -20,8 +21,8 @@ export class InstallmentController {
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query() filters: FindInstallmentFiltersDto) {
+    return this.service.findAll(filters);
   }
 
   @Get(':id')

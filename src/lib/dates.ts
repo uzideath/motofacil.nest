@@ -18,3 +18,9 @@ export function getColombiaDayRange(date: Date = new Date()) {
   const endUtc = zonedTimeToUtc(endDayCol, timeZone);
   return { startUtc, endUtc };
 }
+
+export function toColombiaEndOfDayUtc(dateStr: string): Date {
+  const localDate = new Date(dateStr);
+  localDate.setHours(23, 59, 59, 999);
+  return zonedTimeToUtc(localDate, timeZone);
+}

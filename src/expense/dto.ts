@@ -48,3 +48,12 @@ export class CreateExpenseDto {
   createdById: string;
 }
 
+export class FindExpenseFiltersDto {
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+}
