@@ -13,8 +13,11 @@ export class ReceiptService implements OnModuleDestroy {
       launchOptions: {
         executablePath: process.env.CHROME_BIN || '/usr/bin/chromium-browser',
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      }
+      },
+      strategy: 'chrome-pool',
+      numberOfWorkers: 1,
     }))
+
     .init()
 
   async generateReceipt(dto: CreateReceiptDto): Promise<Buffer> {
