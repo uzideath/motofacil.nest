@@ -13,7 +13,6 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { OwnersModule } from './owners/owners.module';
 import { ClosingModule } from './closing/closing.module';
 import { ExpenseModule } from './expense/expense.module';
-import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { ReceiptModule } from './receipt/receipt.module';
 import { ContractsModule } from './contracts/contracts.module';
 
@@ -30,7 +29,6 @@ import { ContractsModule } from './contracts/contracts.module';
     OwnersModule,
     ClosingModule,
     ExpenseModule,
-    CloudinaryModule,
     ReceiptModule,
     ContractsModule,
   ],
