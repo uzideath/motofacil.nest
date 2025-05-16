@@ -18,6 +18,9 @@ export class CreateUserDto {
   age: number;
 
   @IsString()
+  city: string
+
+  @IsString()
   @IsNotEmpty()
   phone: string;
 

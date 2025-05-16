@@ -7,6 +7,7 @@ const password = 'admin123';
 
 async function main() {
     console.log('Seeding database en español...');
+
     const hashedAdminPassword = await bcrypt.hash(password, 10);
 
     // Crear propietario admin
@@ -29,6 +30,7 @@ async function main() {
                     age: faker.number.int({ min: 18, max: 65 }),
                     phone: faker.phone.number(),
                     address: faker.location.streetAddress(),
+                    city: 'Barranquilla',
                     refName: faker.person.fullName(),
                     refID: faker.string.alphanumeric(10).toUpperCase(),
                     refPhone: faker.phone.number(),
@@ -80,7 +82,7 @@ async function main() {
         )
     );
 
-    // Crear cuotas
+    // Crear cuotas con createdById
     const installments = await Promise.all(
         loans.flatMap((loan) =>
             Array.from({ length: loan.paidInstallments }).map(() =>
@@ -91,26 +93,28 @@ async function main() {
                         gps: 2000,
                         paymentMethod: PaymentMethod.CASH,
                         isLate: faker.datatype.boolean(),
+                        createdById: owner.id, // ✅ Creador
                     },
                 })
             )
         )
     );
 
-    // Crear cierre de caja
+    // Crear cierre de caja con createdById
     const cashRegister = await prisma.cashRegister.create({
         data: {
             cashInRegister: 500000,
             cashFromTransfers: 200000,
             cashFromCards: 100000,
             notes: 'Cierre de caja del día',
+            createdById: owner.id, // ✅ Creador
             payments: {
                 connect: installments.map((i) => ({ id: i.id })),
             },
         },
     });
 
-    // Crear egresos
+    // Crear egresos con createdById
     await Promise.all(
         Array.from({ length: 3 }).map(() =>
             prisma.expense.create({
@@ -124,6 +128,7 @@ async function main() {
                     description: faker.lorem.sentence(),
                     attachments: [faker.image.url()],
                     cashRegisterId: cashRegister.id,
+                    createdById: owner.id, // ✅ Creador
                 },
             })
         )

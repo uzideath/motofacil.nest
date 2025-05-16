@@ -43,6 +43,7 @@ export class ContractService {
             .replace(/{{representativeId}}/g, data.representativeId)
             .replace(/{{customerName}}/g, data.customerName)
             .replace(/{{customerId}}/g, data.customerId)
+            .replace(/{{customerCity}}/g, data.customerCity)
             .replace(/{{customerAddress}}/g, data.customerAddress)
             .replace(/{{customerPhone}}/g, data.customerPhone)
             .replace(/{{plate}}/g, data.plate)

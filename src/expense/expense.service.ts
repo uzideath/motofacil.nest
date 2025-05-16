@@ -1,16 +1,76 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateExpenseDto } from './dto';
+import { toColombiaMidnightUtc } from 'src/lib/dates';
+
 
 @Injectable()
 export class ExpenseService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateExpenseDto) {
     return this.prisma.expense.create({
       data: {
         amount: dto.amount,
-        date: new Date(dto.date),
+        date: toColombiaMidnightUtc(dto.date),
+        category: dto.category,
+        paymentMethod: dto.paymentMethod,
+        beneficiary: dto.beneficiary,
+        reference: dto.reference,
+        description: dto.description,
+        attachments: dto.attachments ?? [],
+        cashRegisterId: dto.cashRegisterId ?? null,
+        createdById: dto.createdById,
+      },
+    });
+  }
+
+
+  async findAll() {
+    return this.prisma.expense.findMany({
+      orderBy: { date: 'desc' },
+      include: {
+        cashRegister: true,
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+    });
+  }
+
+
+  async findByCashRegisterId(cashRegisterId: string) {
+    return this.prisma.expense.findMany({
+      where: { cashRegisterId },
+      orderBy: { date: 'desc' },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+    });
+  }
+
+
+  async update(id: string, dto: CreateExpenseDto) {
+    const expense = await this.prisma.expense.findUnique({ where: { id } });
+    if (!expense) throw new NotFoundException('Expense not found');
+
+    if (expense.cashRegisterId) {
+      throw new Error('Cannot update an expense that is already associated with a cash register');
+    }
+
+    return this.prisma.expense.update({
+      where: { id },
+      data: {
+        amount: dto.amount,
+        date: toColombiaMidnightUtc(dto.date),
         category: dto.category,
         paymentMethod: dto.paymentMethod,
         beneficiary: dto.beneficiary,
@@ -22,24 +82,21 @@ export class ExpenseService {
     });
   }
 
-  async findAll() {
-    return this.prisma.expense.findMany({
-      orderBy: { date: 'desc' },
-      include: { cashRegister: true },
-    });
-  }
-
-  async findByCashRegisterId(cashRegisterId: string) {
-    return this.prisma.expense.findMany({
-      where: { cashRegisterId },
-      orderBy: { date: 'desc' },
-    });
-  }
 
   async delete(id: string) {
-    const exists = await this.prisma.expense.findUnique({ where: { id } });
-    if (!exists) throw new NotFoundException('Expense not found');
+    const expense = await this.prisma.expense.findUnique({ where: { id } });
+
+    if (!expense) {
+      throw new NotFoundException('Expense not found');
+    }
+
+    if (expense.cashRegisterId) {
+      throw new ForbiddenException(
+        'No se puede eliminar un gasto que ya está asociado a un cierre de caja.'
+      );
+    }
 
     return this.prisma.expense.delete({ where: { id } });
   }
+
 }

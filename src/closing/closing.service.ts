@@ -7,21 +7,24 @@ import {
   Motorcycle,
   Prisma,
   User,
+  ExpenseCategory,
+  PaymentMethod,
 } from 'generated/prisma';
 import { PrismaService } from 'src/prisma.service';
 import {
   CreateCashRegisterDto,
   FilterCashRegisterDto,
   FilterInstallmentsDto,
+  FindOneCashRegisterResponseDto,
   GetResumenDto,
 } from './dto';
-import { startOfDay, endOfDay, subDays } from 'date-fns';
-import {} from 'date-fns-tz';
+import { subDays } from 'date-fns';
 import { getColombiaDayRange } from 'src/lib/dates';
+
 
 @Injectable()
 export class ClosingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(
     dto: CreateCashRegisterDto,
@@ -33,6 +36,7 @@ export class ClosingService {
       notes,
       installmentIds,
       expenseIds = [],
+      createdById,
     } = dto;
 
     const installments = await this.prisma.installment.findMany({
@@ -59,6 +63,7 @@ export class ClosingService {
         cashFromTransfers,
         cashFromCards,
         notes,
+        createdById,
         payments: {
           connect: installmentIds.map((id) => ({ id })),
         },
@@ -75,9 +80,14 @@ export class ClosingService {
     return cashRegister;
   }
 
+
   async findAll(
     filter: FilterCashRegisterDto,
-  ): Promise<(CashRegister & { payments: Installment[] })[]> {
+  ): Promise<(CashRegister & {
+    payments: Installment[];
+    expense: Expense[];
+    createdBy: { id: string; username: string } | null;
+  })[]> {
     let dateRange: { gte: Date; lte: Date } | undefined;
 
     if (filter.date) {
@@ -95,21 +105,19 @@ export class ClosingService {
       include: {
         payments: true,
         expense: true,
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
       },
       orderBy: { date: 'desc' },
     });
   }
 
-  async findOne(id: string): Promise<
-    CashRegister & {
-      payments: (Installment & {
-        loan: {
-          user: { id: string; name: string };
-          motorcycle: { id: string; plate: string };
-        };
-      })[];
-    }
-  > {
+
+  async findOne(id: string): Promise<FindOneCashRegisterResponseDto> {
     const cierre = await this.prisma.cashRegister.findUnique({
       where: { id },
       include: {
@@ -121,6 +129,28 @@ export class ClosingService {
                 motorcycle: { select: { id: true, plate: true } },
               },
             },
+            createdBy: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+        },
+        expense: {
+          include: {
+            createdBy: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
           },
         },
       },
@@ -130,8 +160,64 @@ export class ClosingService {
       throw new NotFoundException('Cierre no encontrado');
     }
 
-    return cierre;
+    return {
+      id: cierre.id,
+      date: cierre.date.toISOString(),
+      cashInRegister: cierre.cashInRegister,
+      cashFromTransfers: cierre.cashFromTransfers,
+      cashFromCards: cierre.cashFromCards,
+      notes: cierre.notes || undefined,
+      createdAt: cierre.createdAt.toISOString(),
+      updatedAt: cierre.updatedAt.toISOString(),
+      createdBy: cierre.createdBy
+        ? {
+          id: cierre.createdBy.id,
+          username: cierre.createdBy.username,
+        }
+        : undefined,
+      payments: cierre.payments.map((p) => ({
+        id: p.id,
+        amount: p.amount,
+        paymentDate: p.paymentDate.toISOString(),
+        loan: {
+          user: {
+            id: p.loan.user.id,
+            name: p.loan.user.name,
+          },
+          motorcycle: {
+            id: p.loan.motorcycle.id,
+            plate: p.loan.motorcycle.plate,
+          },
+        },
+        createdBy: p.createdBy
+          ? {
+            id: p.createdBy.id,
+            username: p.createdBy.username,
+          }
+          : undefined,
+      })),
+      expense: cierre.expense.map((e) => ({
+        id: e.id,
+        amount: e.amount,
+        date: e.date.toISOString(),
+        category: e.category,
+        paymentMethod: e.paymentMethod,
+        beneficiary: e.beneficiary,
+        reference: e.reference ?? undefined,
+        description: e.description,
+        attachments: e.attachments,
+        createdAt: e.createdAt.toISOString(),
+        updatedAt: e.updatedAt.toISOString(),
+        createdBy: e.createdBy
+          ? {
+            id: e.createdBy.id,
+            username: e.createdBy.username,
+          }
+          : undefined,
+      })),
+    };
   }
+
 
   async getUnassignedPayments(filter: FilterInstallmentsDto): Promise<{
     installments: (Installment & {
@@ -195,7 +281,7 @@ export class ClosingService {
     return { installments, expenses };
   }
 
-  async summary(dto: GetResumenDto): Promise<ResumenResponse> {
+  async summary(dto: GetResumenDto) {
     const baseDate = dto.date ? new Date(dto.date) : new Date();
 
     const { startUtc: todayStart, endUtc: todayEnd } =
@@ -203,22 +289,52 @@ export class ClosingService {
     const { startUtc: yesterdayStart, endUtc: yesterdayEnd } =
       getColombiaDayRange(subDays(baseDate, 1));
 
-    const [todayInstallments, yesterdayInstallments, todayExpenses] =
-      await Promise.all([
-        this.prisma.installment.findMany({
-          where: { paymentDate: { gte: todayStart, lte: todayEnd } },
-        }),
-        this.prisma.installment.findMany({
-          where: { paymentDate: { gte: yesterdayStart, lte: yesterdayEnd } },
-        }),
+    const [todayInstallments, yesterdayInstallments, todayExpenses] = await Promise.all([
+      this.prisma.installment.findMany({
+        where: {
+          paymentDate: {
+            gte: todayStart,
+            lte: todayEnd,
+          },
+        },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        },
+      }),
+      this.prisma.installment.findMany({
+        where: {
+          paymentDate: {
+            gte: yesterdayStart,
+            lte: yesterdayEnd,
+          },
+        },
+      }),
+      this.prisma.expense.findMany({
+        where: {
+          date: {
+            gte: todayStart,
+            lte: todayEnd,
+          },
+        },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        },
+      }),
+    ])
 
-        this.prisma.expense.findMany({
-          where: { date: { gte: todayStart, lte: todayEnd } },
-        }),
-      ]);
 
     const sum = (arr: { amount: number }[]) =>
-      arr.reduce((acc, i) => acc + i.amount, 0);
+      arr.reduce((acc, item) => acc + item.amount, 0);
 
     const totalIncome = sum(todayInstallments);
     const totalExpenses = sum(todayExpenses);
@@ -264,7 +380,6 @@ export class ClosingService {
         ? Math.round(((totalIncome - previousTotal) / previousTotal) * 100)
         : 100;
 
-    // Incluir los listados completos de cuotas y gastos del día
     return {
       totalIncome,
       totalExpenses,

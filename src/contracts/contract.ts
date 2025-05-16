@@ -214,7 +214,7 @@ export const contractTemplate = `
 
     <p>
       <strong>{{customerName}}</strong>, identificado con la cédula de ciudadanía N° 
-      <strong>{{customerId}}</strong>, con domicilio en Barranquilla (Atlántico), residente en el inmueble
+      <strong>{{customerId}}</strong>, con domicilio en {{customerCity}}, residente en el inmueble
       ubicado en <strong>{{customerAddress}}</strong>, portador del número telefónico 
       <strong>{{customerPhone}}</strong>, quien a partir de ahora se denomina 
       <strong class="highlight">ARRENDATARIO</strong>, de otra parte.

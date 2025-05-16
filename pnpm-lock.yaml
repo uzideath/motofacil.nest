@@ -48,11 +48,11 @@ importers:
         specifier: ^2.6.1
         version: 2.6.1
       date-fns:
-        specifier: ^4.1.0
-        version: 4.1.0
+        specifier: 2.30.0
+        version: 2.30.0
       date-fns-tz:
-        specifier: ^3.2.0
-        version: 3.2.0(date-fns@4.1.0)
+        specifier: 1.3.7
+        version: 1.3.7(date-fns@2.30.0)
       handlebars:
         specifier: ^4.7.8
         version: 4.7.8
@@ -354,6 +354,10 @@ packages:
     engines: {node: '>=6.9.0'}
     peerDependencies:
       '@babel/core': ^7.0.0-0
+
+  '@babel/runtime@7.27.1':
+    resolution: {integrity: sha512-1x3D2xEk2fRo3PAhwQwu5UubzgiVWSXTBfWpVd2Mx2AzRqJuDJCsgaDVZ7HB5iGzDW1Hl1sWN2mFyKjmR9uAog==}
+    engines: {node: '>=6.9.0'}
 
   '@babel/template@7.27.0':
     resolution: {integrity: sha512-2ncevenBqXI6qRMukPlXwHKHchC7RyMuu4xv5JBXRfOGVcTy1mXCD12qrp7Jsoxll1EV3+9sE4GugBVRjT2jFA==}
@@ -2064,13 +2068,14 @@ packages:
     resolution: {integrity: sha512-7hvf7/GW8e86rW0ptuwS3OcBGDjIi6SZva7hCyWC0yYry2cOPmLIjXAUHI6DK2HsnwJd9ifmt57i8eV2n4YNpw==}
     engines: {node: '>= 14'}
 
-  date-fns-tz@3.2.0:
-    resolution: {integrity: sha512-sg8HqoTEulcbbbVXeg84u5UnlsQa8GS5QXMqjjYIhS4abEVVKIUwe0/l/UhrZdKaL/W5eWZNlbTeEIiOXTcsBQ==}
+  date-fns-tz@1.3.7:
+    resolution: {integrity: sha512-1t1b8zyJo+UI8aR+g3iqr5fkUHWpd58VBx8J/ZSQ+w7YrGlw80Ag4sA86qkfCXRBLmMc4I2US+aPMd4uKvwj5g==}
     peerDependencies:
-      date-fns: ^3.0.0 || ^4.0.0
+      date-fns: '>=2.0.0'
 
-  date-fns@4.1.0:
-    resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
+  date-fns@2.30.0:
+    resolution: {integrity: sha512-fnULvOpxnC5/Vg3NCiWelDsLiUc9bRwAPs/+LfTLNvetFCtCTN+yQz15C/fs4AwX1R9K5GLtLfn8QW+dWisaAw==}
+    engines: {node: '>=0.11'}
 
   debug@3.1.0:
     resolution: {integrity: sha512-OX8XqP7/1a9cqkxYw2yXss15f26NKWBpDXQd0/uK/KPqdQhxbPa994hnzjcE2VqQpDslf55723cKPUOGSmMY3g==}
@@ -2756,6 +2761,10 @@ packages:
 
   inspect-with-kind@1.0.5:
     resolution: {integrity: sha512-MAQUJuIo7Xqk8EVNP+6d3CKq9c80hi4tjIbIAT6lmGW9W6WzlHiu9PS8uSuUYU+Do+j1baiFp3H25XEVxDIG2g==}
+
+  install@0.13.0:
+    resolution: {integrity: sha512-zDml/jzr2PKU9I8J/xyZBQn8rPCAY//UOYNmR01XwNwyfhEWObo2SWfSl1+0tm1u6PhxLwDnfsT/6jB7OUxqFA==}
+    engines: {node: '>= 0.10'}
 
   invert-kv@1.0.0:
     resolution: {integrity: sha512-xgs2NH9AE66ucSq4cNG1nhSFghr5l6tdL15Pk+jl46bmmBapgoaY/AacXyaDznAqmGL99TiLSQgO/XazFSKYeQ==}
@@ -4692,6 +4701,8 @@ snapshots:
       '@babel/core': 7.26.10
       '@babel/helper-plugin-utils': 7.26.5
 
+  '@babel/runtime@7.27.1': {}
+
   '@babel/template@7.27.0':
     dependencies:
       '@babel/code-frame': 7.26.2
@@ -6556,11 +6567,13 @@ snapshots:
 
   data-uri-to-buffer@6.0.2: {}
 
-  date-fns-tz@3.2.0(date-fns@4.1.0):
+  date-fns-tz@1.3.7(date-fns@2.30.0):
     dependencies:
-      date-fns: 4.1.0
+      date-fns: 2.30.0
 
-  date-fns@4.1.0: {}
+  date-fns@2.30.0:
+    dependencies:
+      '@babel/runtime': 7.27.1
 
   debug@3.1.0:
     dependencies:
@@ -7318,6 +7331,8 @@ snapshots:
     dependencies:
       kind-of: 6.0.3
 
+  install@0.13.0: {}
+
   invert-kv@1.0.0: {}
 
   ip-address@9.0.5:
@@ -8066,9 +8081,10 @@ snapshots:
       class-transformer: 0.5.1
       class-validator: 0.14.1
       cloudinary: 2.6.1
-      date-fns: 4.1.0
-      date-fns-tz: 3.2.0(date-fns@4.1.0)
+      date-fns: 2.30.0
+      date-fns-tz: 1.3.7(date-fns@2.30.0)
       handlebars: 4.7.8
+      install: 0.13.0
       jsreport-chrome-pdf: 1.10.0(puppeteer@24.8.2(typescript@5.8.3))
       jsreport-core: 2.10.1
       jsreport-handlebars: 2.1.0(handlebars@4.7.8)

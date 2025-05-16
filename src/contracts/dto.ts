@@ -21,6 +21,9 @@ export class CreateContractDto {
     @IsString()
     customerId: string
 
+    @IsString()
+    customerCity: string;
+
     /** Dirección del cliente */
     @IsString()
     customerAddress: string

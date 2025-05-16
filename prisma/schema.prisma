@@ -16,12 +16,18 @@ datasource db {
 }
 
 model Owners {
-  id           String   @id @default(cuid())
-  username     String   @unique
+  id           String         @id @default(uuid())
+  username     String         @unique
   passwordHash String
-  roles        Role[]   @default([USER])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  roles        Role[]         @default([USER])
+  status       String         @default("ACTIVE") // Por ejemplo: ACTIVE, INACTIVE, SUSPENDED
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  lastAccess   DateTime? // Se actualiza cuando el owner inicia sesión
+  refreshToken String? // nuevo campo
+  Expense      Expense[]
+  Installment  Installment[]
+  CashRegister CashRegister[]
 }
 
 model User {
@@ -32,6 +38,7 @@ model User {
   age            Int
   phone          String
   address        String
+  city           String
   refName        String
   refID          String
   refPhone       String
@@ -89,6 +96,8 @@ model Installment {
   gps           Float
   paymentDate   DateTime      @default(now())
   isLate        Boolean       @default(false)
+  createdById   String?
+  createdBy     Owners?       @relation(fields: [createdById], references: [id])
 
   cashRegister   CashRegister? @relation("CashRegisterPayments", fields: [cashRegisterId], references: [id])
   cashRegisterId String?
@@ -106,6 +115,9 @@ model CashRegister {
 
   payments Installment[] @relation("CashRegisterPayments")
   expense  Expense[]
+
+  createdById String?
+  createdBy   Owners? @relation(fields: [createdById], references: [id])
 }
 
 model Expense {
@@ -117,9 +129,11 @@ model Expense {
   beneficiary    String
   reference      String?
   description    String
-  attachments    String[] 
+  attachments    String[]
   cashRegister   CashRegister?   @relation(fields: [cashRegisterId], references: [id])
   cashRegisterId String?
+  createdById    String?
+  createdBy      Owners?         @relation(fields: [createdById], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

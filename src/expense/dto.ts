@@ -41,5 +41,10 @@ export class CreateExpenseDto {
 
   @IsUUID()
   @IsOptional()
+
   cashRegisterId: string;
+
+  @IsUUID()
+  createdById: string;
 }
+

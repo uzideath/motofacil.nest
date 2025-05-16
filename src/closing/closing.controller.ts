@@ -5,12 +5,19 @@ import {
   FilterCashRegisterDto,
   FilterInstallmentsDto,
   GetResumenDto,
+  FindOneCashRegisterResponseDto,
 } from './dto';
-import { CashRegister, Installment } from 'generated/prisma';
+import {
+  CashRegister,
+  Installment,
+  Expense,
+  PaymentMethod,
+  ExpenseCategory,
+} from 'generated/prisma';
 
 @Controller('closing')
 export class ClosingController {
-  constructor(private readonly closingService: ClosingService) {}
+  constructor(private readonly closingService: ClosingService) { }
 
   @Post()
   create(
@@ -22,21 +29,18 @@ export class ClosingController {
   @Get()
   findAll(
     @Query() filter: FilterCashRegisterDto,
-  ): Promise<(CashRegister & { payments: Installment[] })[]> {
+  ): Promise<(
+    CashRegister & {
+      payments: Installment[];
+      expense: Expense[];
+      createdBy: { id: string; username: string } | null;
+    }
+  )[]> {
     return this.closingService.findAll(filter);
   }
 
   @Get('search/:id')
-  findOne(@Param('id') id: string): Promise<
-    CashRegister & {
-      payments: (Installment & {
-        loan: {
-          user: { id: string; name: string };
-          motorcycle: { id: string; plate: string };
-        };
-      })[];
-    }
-  > {
+  findOne(@Param('id') id: string): Promise<FindOneCashRegisterResponseDto> {
     return this.closingService.findOne(id);
   }
 
@@ -48,7 +52,7 @@ export class ClosingController {
   }
 
   @Get('summary')
-  getResumen(@Query() query: GetResumenDto): Promise<ResumenResponse> {
+  getResumen(@Query() query: GetResumenDto): ReturnType<ClosingService['summary']> {
     return this.closingService.summary(query);
   }
 }

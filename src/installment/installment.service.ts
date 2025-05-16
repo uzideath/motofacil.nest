@@ -39,6 +39,7 @@ export class InstallmentService {
         gps: dto.gps,
         paymentMethod: dto.paymentMethod,
         isLate: dto.isLate ?? false,
+        createdById: dto.createdById,
       },
     });
 
@@ -73,6 +74,13 @@ export class InstallmentService {
           include: {
             user: true,
             motorcycle: true,
+            payments: true,
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
           },
         },
       },
@@ -83,12 +91,21 @@ export class InstallmentService {
   async findOne(id: string) {
     const record = await this.prisma.installment.findUnique({
       where: { id },
-      include: { loan: true },
+      include: {
+        loan: true,
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
     });
 
     if (!record) throw new NotFoundException('Installment not found');
     return record;
   }
+
 
   async update(id: string, dto: UpdateInstallmentDto) {
     await this.findOne(id);
