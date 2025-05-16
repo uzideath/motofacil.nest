@@ -12,7 +12,8 @@ export class ReceiptService implements OnModuleDestroy {
     .use(require('jsreport-chrome-pdf')({
       launchOptions: {
         executablePath: process.env.CHROME_BIN || '/usr/bin/chromium-browser',
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        headless: 'new',
       },
       strategy: 'chrome-pool',
       numberOfWorkers: 1,
