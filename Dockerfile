@@ -1,57 +1,56 @@
-FROM node:20-alpine
+FROM node:20-slim
 
-# Instalar Chromium y sus dependencias
-RUN apk add --no-cache \
+# Evitar preguntas de zona horaria al instalar paquetes
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar Chromium y dependencias necesarias
+RUN apt-get update && apt-get install -y \
   chromium \
-  nss \
-  freetype \
-  harfbuzz \
-  ca-certificates \
-  ttf-freefont \
-  fontconfig \
+  fonts-liberation \
+  libappindicator3-1 \
+  libasound2 \
+  libatk-bridge2.0-0 \
+  libatk1.0-0 \
+  libcups2 \
+  libdbus-1-3 \
+  libgdk-pixbuf2.0-0 \
+  libnspr4 \
+  libnss3 \
+  libx11-xcb1 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxrandr2 \
+  libxshmfence1 \
+  libxss1 \
+  libxtst6 \
+  xdg-utils \
   dumb-init \
-  udev \
-  bash \
   curl \
-  libxcomposite \
-  libxdamage \
-  libxrandr \
-  libxshmfence \
-  libxi \
-  libxcursor \
-  libxinerama \
-  libxss \
-  alsa-lib \
-  gtk+3.0 \
-  at-spi2-atk \
-  at-spi2-core \
-  cairo \
-  pango
+  bash \
+  ca-certificates \
+  --no-install-recommends && \
+  apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Variables de entorno requeridas por Puppeteer
+# Configuración para Puppeteer
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV CHROME_BIN=/usr/bin/chromium
 ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV CHROME_BIN=/usr/bin/chromium-browser
 ENV NODE_ENV=production
 
-# Crear directorio de trabajo
+# Directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de dependencias e instalar
 COPY package*.json ./
+
 RUN npm install -g @nestjs/cli
 RUN npm install --no-audit --loglevel=error
 
-# Copiar el resto del proyecto
 COPY . .
 
-# Generar Prisma e iniciar build
 RUN npx prisma generate
 RUN npm run build
 
-# Exponer el puerto de la app NestJS
 EXPOSE 3005
 
-# Usar dumb-init como entrypoint
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["npm", "run", "start"]
