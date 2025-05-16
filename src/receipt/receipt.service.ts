@@ -20,8 +20,8 @@ export class ReceiptService {
 
     const pdfBuffer = await page.pdf({
       width: '80mm',
-      height: 'auto',
       printBackground: true,
+      preferCSSPageSize: true,
       margin: {
         top: '0mm',
         bottom: '0mm',
@@ -29,7 +29,8 @@ export class ReceiptService {
         right: '0mm',
       },
     });
-    
+
+
     await browser.close();
     return Buffer.from(pdfBuffer);
   }
