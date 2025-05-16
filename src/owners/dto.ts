@@ -1,6 +1,10 @@
+import { PartialType } from '@nestjs/mapped-types';
 import { IsString, IsOptional } from 'class-validator';
 
 export class CreateOwnerDto {
+    @IsString()
+    name: string;
+
     @IsString()
     username: string;
 
@@ -11,3 +15,5 @@ export class CreateOwnerDto {
     @IsString()
     status?: string;
 }
+
+export class UpdateOwnerDto extends PartialType(CreateOwnerDto) { }

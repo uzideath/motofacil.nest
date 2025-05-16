@@ -81,6 +81,7 @@ export class InstallmentService {
           select: {
             id: true,
             username: true,
+            name: true
           },
         },
       },

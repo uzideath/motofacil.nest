@@ -1,7 +1,7 @@
-
-import { Controller, Get, Post, Body, Param, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
 import { OwnersService } from './owners.service';
-import { CreateOwnerDto } from './dto';
+import { CreateOwnerDto, UpdateOwnerDto } from './dto';
+
 
 @Controller('owners')
 export class OwnersController {
@@ -22,8 +22,13 @@ export class OwnersController {
     return this.ownersService.findById(id);
   }
 
-  @Patch(':id/last-access')
-  updateLastAccess(@Param('id') id: string) {
-    return this.ownersService.updateLastAccess(id);
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateOwnerDto) {
+    return this.ownersService.update(id, dto);
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.ownersService.delete(id);
   }
 }

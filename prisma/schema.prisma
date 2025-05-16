@@ -17,6 +17,7 @@ datasource db {
 
 model Owners {
   id           String         @id @default(uuid())
+  name         String
   username     String         @unique
   passwordHash String
   roles        Role[]         @default([USER])

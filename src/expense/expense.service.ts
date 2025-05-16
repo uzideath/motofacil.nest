@@ -35,6 +35,7 @@ export class ExpenseService {
           select: {
             id: true,
             username: true,
+            name: true
           },
         },
       },

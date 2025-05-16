@@ -13,6 +13,7 @@ async function main() {
     // Crear propietario admin
     const owner = await prisma.owners.create({
         data: {
+            name: 'Administrador',
             username: 'admin',
             passwordHash: hashedAdminPassword,
             roles: [Role.ADMIN],

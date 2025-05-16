@@ -71,10 +71,11 @@ export class AuthService {
     };
   }
 
-  async register(username: string, password: string, roles: Role[] = ['USER']) {
+  async register(name: string, username: string, password: string, roles: Role[] = ['USER']) {
     const passwordHash = await bcrypt.hash(password, 10);
     return this.prisma.owners.create({
       data: {
+        name,
         username,
         passwordHash,
         roles,

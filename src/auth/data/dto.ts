@@ -22,6 +22,10 @@ class LoginDto {
 class RegisterDto {
   @IsString()
   @IsNotEmpty()
+  name!: string;
+
+  @IsString()
+  @IsNotEmpty()
   username!: string;
 
   @IsString()
