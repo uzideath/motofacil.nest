@@ -41,8 +41,7 @@ export class ReceiptService implements OnModuleDestroy {
           marginLeft: '10mm',
           marginRight: '10mm',
           format: 'A4',
-          args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        },
+        }
       },
       data: formattedData,
     } as any)

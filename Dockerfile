@@ -1,6 +1,6 @@
 FROM node:20-alpine
 
-# Instala Chromium + dependencias necesarias para jsreport-chrome-pdf
+# Instala Chromium y dependencias necesarias
 RUN apk add --no-cache \
   chromium \
   nss \
@@ -12,12 +12,12 @@ RUN apk add --no-cache \
   dumb-init \
   bash
 
-# Define ruta al binario de Chromium
+# Variables de entorno para jsreport / puppeteer
 ENV CHROME_BIN=/usr/bin/chromium-browser
-ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-# Usa root para evitar problemas de namespace al lanzar Chromium
+# Ejecuta como root para evitar problemas de permisos
 USER root
 
 WORKDIR /app
@@ -27,13 +27,10 @@ RUN npm install --no-audit --loglevel=error
 
 COPY . .
 
-# Genera Prisma si lo usas
 RUN npx prisma generate
-
-# Compila el proyecto
 RUN npm run build
 
 EXPOSE 3005
 
-# Ejecuta como root, pero sin sandbox para evitar problemas de namespaces
+# Importante: tu app DEBE pasar los flags --no-sandbox, etc. ¡NO lo hace solo!
 CMD ["npm", "run", "start"]
