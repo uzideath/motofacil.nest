@@ -26,6 +26,11 @@ RUN addgroup -S pptruser && adduser -S -G pptruser pptruser \
 WORKDIR /app
 
 COPY package*.json ./
+
+# Instalar NestJS CLI globalmente
+RUN npm install -g @nestjs/cli
+
+# Instalar dependencias del proyecto
 RUN npm install --no-audit --loglevel=error
 
 COPY . .
