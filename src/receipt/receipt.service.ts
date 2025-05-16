@@ -6,7 +6,11 @@ import { templateHtml } from './template';
 @Injectable()
 export class ReceiptService {
   async generateReceipt(dto: CreateReceiptDto): Promise<Buffer> {
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
 
     const page = await browser.newPage();
 
