@@ -284,10 +284,8 @@ export class ClosingService {
   async summary(dto: GetResumenDto) {
     const baseDate = dto.date ? new Date(dto.date) : new Date();
 
-    const { startUtc: todayStart, endUtc: todayEnd } =
-      getColombiaDayRange(baseDate);
-    const { startUtc: yesterdayStart, endUtc: yesterdayEnd } =
-      getColombiaDayRange(subDays(baseDate, 1));
+    const { startUtc: todayStart, endUtc: todayEnd } = getColombiaDayRange(baseDate);
+    const { startUtc: yesterdayStart, endUtc: yesterdayEnd } = getColombiaDayRange(subDays(baseDate, 1));
 
     const [todayInstallments, yesterdayInstallments, todayExpenses] = await Promise.all([
       this.prisma.installment.findMany({
@@ -316,7 +314,7 @@ export class ClosingService {
       }),
       this.prisma.expense.findMany({
         where: {
-          date: {
+          createdAt: {
             gte: todayStart,
             lte: todayEnd,
           },
@@ -330,8 +328,7 @@ export class ClosingService {
           },
         },
       }),
-    ])
-
+    ]);
 
     const sum = (arr: { amount: number }[]) =>
       arr.reduce((acc, item) => acc + item.amount, 0);
@@ -392,4 +389,5 @@ export class ClosingService {
       allTodayExpenses: todayExpenses,
     };
   }
+
 }

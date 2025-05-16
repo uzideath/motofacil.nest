@@ -52,6 +52,7 @@ export class GetResumenDto {
   @IsDateString()
   date?: string;
 }
+
 export class GetTransaccionesDto {
   @IsOptional()
   @IsString()
