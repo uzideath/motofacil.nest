@@ -25,12 +25,16 @@ export const templateHtml = `
     background-color: #fff;
     padding: 0;
     margin: 0;
+    width: 80mm;
   }
 
-  .receipt {
-    width: 100%;
-    padding: 20px;
-  }
+.receipt {
+  width: 100%;
+  max-width: none;
+  padding: 10px 12px;
+  margin: 0 auto;
+}
+
 
   .receipt-header {
     display: flex;

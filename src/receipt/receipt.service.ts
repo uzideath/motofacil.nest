@@ -19,11 +19,17 @@ export class ReceiptService {
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
     const pdfBuffer = await page.pdf({
+      width: '80mm',
+      height: 'auto',
       printBackground: true,
-      preferCSSPageSize: true,
+      margin: {
+        top: '0mm',
+        bottom: '0mm',
+        left: '0mm',
+        right: '0mm',
+      },
     });
-
-
+    
     await browser.close();
     return Buffer.from(pdfBuffer);
   }
