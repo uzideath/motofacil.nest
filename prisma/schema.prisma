@@ -21,11 +21,11 @@ model Owners {
   username     String         @unique
   passwordHash String
   roles        Role[]         @default([USER])
-  status       String         @default("ACTIVE") // Por ejemplo: ACTIVE, INACTIVE, SUSPENDED
+  status       String         @default("ACTIVE")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
-  lastAccess   DateTime? // Se actualiza cuando el owner inicia sesión
-  refreshToken String? // nuevo campo
+  lastAccess   DateTime?
+  refreshToken String?
   Expense      Expense[]
   Installment  Installment[]
   CashRegister CashRegister[]
@@ -44,21 +44,25 @@ model User {
   refID          String
   refPhone       String
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   loans Loan[]
 }
 
 model Motorcycle {
-  id      String  @id @default(uuid())
-  brand   String
-  model   String
-  plate   String  @unique
-  engine  String
-  chassis String
-  color   String?
-  cc      Int?
-  gps     Float?
-  loans   Loan[]
+  id        String   @id @default(uuid())
+  provider  String
+  brand     String
+  model     String
+  plate     String   @unique
+  engine    String
+  chassis   String
+  color     String?
+  cc        Int?
+  gps       Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  loans     Loan[]
 }
 
 model Loan {
@@ -80,41 +84,46 @@ model Loan {
   paymentFrequency          String
   installmentPaymentAmmount Float
   gpsInstallmentPayment     Float
-
-  startDate DateTime   @default(now())
-  endDate   DateTime?
-  status    LoanStatus @default(PENDING)
+  createdAt                 DateTime   @default(now())
+  updatedAt                 DateTime   @updatedAt
+  startDate                 DateTime   @default(now())
+  endDate                   DateTime?
+  status                    LoanStatus @default(PENDING)
 
   payments Installment[]
 }
 
 model Installment {
-  id            String        @id @default(uuid())
-  loan          Loan          @relation(fields: [loanId], references: [id])
-  loanId        String
-  paymentMethod PaymentMethod
-  amount        Float
-  gps           Float
-  paymentDate   DateTime      @default(now())
-  isLate        Boolean       @default(false)
-  createdById   String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  createdBy     Owners?       @relation(fields: [createdById], references: [id])
+  id              String        @id @default(uuid())
+  loan            Loan          @relation(fields: [loanId], references: [id])
+  loanId          String
+  paymentMethod   PaymentMethod
+  amount          Float
+  gps             Float
+  paymentDate     DateTime      @default(now())
+  isLate          Boolean       @default(false)
+  latePaymentDate DateTime?
+  notes           String?       @db.Text()
+  attachmentUrl   String?
+  createdById     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  createdBy       Owners?       @relation(fields: [createdById], references: [id])
 
   cashRegister   CashRegister? @relation("CashRegisterPayments", fields: [cashRegisterId], references: [id])
   cashRegisterId String?
 }
 
 model CashRegister {
-  id                String   @id @default(uuid())
-  date              DateTime @default(now())
+  id                String    @id @default(uuid())
+  date              DateTime  @default(now())
+  provider          Providers
   cashInRegister    Float
   cashFromTransfers Float
   cashFromCards     Float
   notes             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   payments Installment[] @relation("CashRegisterPayments")
   expense  Expense[]
@@ -127,12 +136,13 @@ model Expense {
   id             String          @id @default(uuid())
   amount         Float
   date           DateTime
+  provider       Providers?
   category       ExpenseCategory
   paymentMethod  PaymentMethod
   beneficiary    String
   reference      String?
   description    String
-  attachments    String[]
+  attachmentUrl  String?
   cashRegister   CashRegister?   @relation(fields: [cashRegisterId], references: [id])
   cashRegisterId String?
   createdById    String?
@@ -171,4 +181,10 @@ enum Role {
   USER
   ADMIN
   MODERATOR
+}
+
+enum Providers {
+  MOTOFACIL
+  OBRASOCIAL
+  PORCENTAJETITO
 }

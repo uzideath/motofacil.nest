@@ -38,8 +38,11 @@ export class InstallmentService {
         loanId: dto.loanId,
         amount: dto.amount,
         gps: dto.gps,
+        latePaymentDate: dto.latePaymentDate,
+        notes: dto.notes,
         paymentMethod: dto.paymentMethod,
         isLate: dto.isLate ?? false,
+        attachmentUrl: dto.attachmentUrl,
         createdById: dto.createdById,
       },
     });
@@ -123,9 +126,14 @@ export class InstallmentService {
   async update(id: string, dto: UpdateInstallmentDto) {
     await this.findOne(id);
 
+    const { loanId, createdById, ...rest } = dto;
+
     return this.prisma.installment.update({
       where: { id },
-      data: dto,
+      data: {
+        ...rest,
+        ...(createdById ? { createdBy: { connect: { id: createdById } } } : {}),
+      },
     });
   }
 

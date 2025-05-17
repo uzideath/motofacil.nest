@@ -26,6 +26,18 @@ export class CreateInstallmentDto {
   @IsBoolean()
   isLate?: boolean;
 
+  @IsOptional()
+  @IsDateString()
+  latePaymentDate?: string;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
+
+  @IsString()
+  @IsOptional()
+  attachmentUrl?: string;
+
   @IsUUID()
   @IsOptional()
   createdById?: string;

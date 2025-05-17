@@ -20,7 +20,8 @@ export class ExpenseService {
         beneficiary: dto.beneficiary,
         reference: dto.reference,
         description: dto.description,
-        attachments: dto.attachments ?? [],
+        attachmentUrl: dto.attachmentUrl,
+        provider: dto.provider,
         cashRegisterId: dto.cashRegisterId ?? null,
         createdById: dto.createdById,
       },
@@ -40,7 +41,7 @@ export class ExpenseService {
 
     return this.prisma.expense.findMany({
       where,
-      orderBy: { date: 'desc' },
+      orderBy: { createdAt: 'desc' },
       include: {
         cashRegister: true,
         createdBy: {
@@ -53,6 +54,7 @@ export class ExpenseService {
       },
     });
   }
+
   async findByCashRegisterId(cashRegisterId: string) {
     return this.prisma.expense.findMany({
       where: { cashRegisterId },
@@ -86,8 +88,9 @@ export class ExpenseService {
         paymentMethod: dto.paymentMethod,
         beneficiary: dto.beneficiary,
         reference: dto.reference,
+        provider: dto.provider,
         description: dto.description,
-        attachments: dto.attachments ?? [],
+        attachmentUrl: dto.attachmentUrl,
         cashRegisterId: dto.cashRegisterId ?? null,
       },
     });

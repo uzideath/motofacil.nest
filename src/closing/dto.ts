@@ -9,7 +9,7 @@ import {
   IsUUID,
   ValidateNested,
 } from 'class-validator';
-import { ExpenseCategory, PaymentMethod } from 'generated/prisma';
+import { ExpenseCategory, PaymentMethod, Providers } from 'generated/prisma';
 
 export class OwnerDto {
   @IsUUID()
@@ -33,6 +33,9 @@ export class CreateCashRegisterDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsString()
+  provider: Providers;
 
   @IsArray()
   installmentIds: string[];
@@ -197,7 +200,8 @@ export class CashRegisterExpenseDto {
   description: string;
 
   @IsArray()
-  attachments: string[];
+  @IsOptional()
+  attachmentUrl?: string;
 
   @IsDateString()
   createdAt: string;

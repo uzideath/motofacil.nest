@@ -8,7 +8,7 @@ import {
   IsArray,
   IsDateString,
 } from 'class-validator';
-import { ExpenseCategory, PaymentMethod } from 'generated/prisma';
+import { ExpenseCategory, PaymentMethod, Providers } from 'generated/prisma';
 
 export class CreateExpenseDto {
   @IsNumber()
@@ -35,13 +35,16 @@ export class CreateExpenseDto {
   @IsNotEmpty()
   description: string;
 
-  @IsArray()
+  @IsString()
+  @IsNotEmpty()
+  provider: Providers;
+
+  @IsString()
   @IsOptional()
-  attachments?: string[]; // links o nombres de archivos
+  attachmentUrl?: string
 
   @IsUUID()
   @IsOptional()
-
   cashRegisterId: string;
 
   @IsUUID()

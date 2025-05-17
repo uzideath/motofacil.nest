@@ -1,12 +1,12 @@
 import { fakerES_MX as faker } from '@faker-js/faker';
-import { PrismaClient, Role, LoanStatus, PaymentMethod, ExpenseCategory } from '../generated/prisma';
+import { PrismaClient, Role, LoanStatus, PaymentMethod, ExpenseCategory, Providers } from '../generated/prisma';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 const password = 'admin123';
 
 async function main() {
-    console.log('Seeding database en español...');
+    console.log('Seeding database...');
 
     const hashedAdminPassword = await bcrypt.hash(password, 10);
 
@@ -45,6 +45,7 @@ async function main() {
         Array.from({ length: 3 }).map(() =>
             prisma.motorcycle.create({
                 data: {
+                    provider: 'MOTOFACIL',
                     brand: faker.vehicle.manufacturer(),
                     model: faker.vehicle.model(),
                     plate: faker.vehicle.vrm(),
@@ -73,8 +74,8 @@ async function main() {
                     totalPaid: 900000,
                     debtRemaining: 2100000,
                     interestRate: 0.05,
-                    interestType: 'FIJO',
-                    paymentFrequency: 'DIARIO',
+                    interestType: 'FIXED',
+                    paymentFrequency: 'DAILY',
                     installmentPaymentAmmount: 32000,
                     gpsInstallmentPayment: 2000,
                     status: LoanStatus.ACTIVE,
@@ -94,7 +95,7 @@ async function main() {
                         gps: 2000,
                         paymentMethod: PaymentMethod.CASH,
                         isLate: faker.datatype.boolean(),
-                        createdById: owner.id, // ✅ Creador
+                        createdById: owner.id,
                     },
                 })
             )
@@ -104,11 +105,12 @@ async function main() {
     // Crear cierre de caja con createdById
     const cashRegister = await prisma.cashRegister.create({
         data: {
+            provider: Providers.MOTOFACIL,
             cashInRegister: 500000,
             cashFromTransfers: 200000,
             cashFromCards: 100000,
             notes: 'Cierre de caja del día',
-            createdById: owner.id, // ✅ Creador
+            createdById: owner.id,
             payments: {
                 connect: installments.map((i) => ({ id: i.id })),
             },
@@ -124,18 +126,19 @@ async function main() {
                     date: faker.date.recent(),
                     category: ExpenseCategory.SERVICES,
                     paymentMethod: PaymentMethod.CASH,
+                    provider: Providers.OBRASOCIAL,
                     beneficiary: faker.company.name(),
                     reference: faker.string.uuid(),
                     description: faker.lorem.sentence(),
-                    attachments: [faker.image.url()],
+                    attachmentUrl: faker.image.url(),
                     cashRegisterId: cashRegister.id,
-                    createdById: owner.id, // ✅ Creador
+                    createdById: owner.id,
                 },
             })
         )
     );
 
-    console.log('¡Base de datos poblada con datos en español!');
+    console.log('Seeded.');
 }
 
 main()

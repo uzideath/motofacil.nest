@@ -3,6 +3,9 @@ import { IsNumber, IsString } from 'class-validator';
 
 export class CreateMotorcycleDto {
   @IsString()
+  provider: string;
+
+  @IsString()
   brand: string;
 
   @IsString()

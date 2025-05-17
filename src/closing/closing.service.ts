@@ -34,6 +34,7 @@ export class ClosingService {
       cashFromTransfers,
       cashFromCards,
       notes,
+      provider,
       installmentIds,
       expenseIds = [],
       createdById,
@@ -63,6 +64,7 @@ export class ClosingService {
         cashFromTransfers,
         cashFromCards,
         notes,
+        provider,
         createdById,
         payments: {
           connect: installmentIds.map((id) => ({ id })),
@@ -205,7 +207,7 @@ export class ClosingService {
         beneficiary: e.beneficiary,
         reference: e.reference ?? undefined,
         description: e.description,
-        attachments: e.attachments,
+        attachmentUrl: e.attachmentUrl ?? undefined,
         createdAt: e.createdAt.toISOString(),
         updatedAt: e.updatedAt.toISOString(),
         createdBy: e.createdBy
@@ -252,7 +254,7 @@ export class ClosingService {
         loan: {
           include: {
             user: { select: { id: true, name: true } },
-            motorcycle: { select: { id: true, plate: true } },
+            motorcycle: { select: { id: true, plate: true, provider: true } },
           },
         },
       },
