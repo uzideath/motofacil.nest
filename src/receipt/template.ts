@@ -34,7 +34,7 @@ export const templateHtml = `
     }
 
     .logo {
-      width: 80px;
+      width: 120px;
       height: auto;
       margin: 0 auto 10px;
     }
@@ -111,7 +111,7 @@ export const templateHtml = `
     <div class="section">
       <div class="label">Cliente:</div>
       <div>{{name}}</div>
-      <div>Contrato #: {{identification}}</div>
+      <div>Placa #: <strong>{{identification}}</strong></div>
     </div>
 
     <div class="section">
