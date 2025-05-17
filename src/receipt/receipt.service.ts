@@ -11,17 +11,14 @@ export class ReceiptService {
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
-
     const page = await browser.newPage();
-
     const html = this.fillTemplate(dto);
 
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
     const pdfBuffer = await page.pdf({
-      width: '80mm',
+      format: 'A4',
       printBackground: true,
-      preferCSSPageSize: true,
       margin: {
         top: '0mm',
         bottom: '0mm',
@@ -30,20 +27,23 @@ export class ReceiptService {
       },
     });
 
-
     await browser.close();
     return Buffer.from(pdfBuffer);
   }
 
   private fillTemplate(dto: CreateReceiptDto): string {
+    const paymentDate = dto.latePaymentDate ? new Date(dto.latePaymentDate) : new Date();
+
     const data = {
       ...dto,
       formattedAmount: this.formatCurrency(dto.amount),
       formattedGps: this.formatCurrency(dto.gps || 0),
       formattedTotal: this.formatCurrency((dto.amount || 0) + (dto.gps || 0)),
       formattedDate: this.formatDate(dto.date),
-      receiptNumber: this.generateReceiptNumber(dto.identification),
+      receiptNumber: this.generateReceiptNumber(dto.receiptNumber),
       concept: dto.concept || 'Servicio de transporte',
+      formattedPaymentDate: this.formatDate(paymentDate),
+      formattedGeneratedDate: this.formatDate(new Date()),
     };
 
     return templateHtml
@@ -54,7 +54,9 @@ export class ReceiptService {
       .replace(/{{formattedGps}}/g, data.formattedGps)
       .replace(/{{formattedTotal}}/g, data.formattedTotal)
       .replace(/{{formattedDate}}/g, data.formattedDate)
-      .replace(/{{receiptNumber}}/g, data.receiptNumber);
+      .replace(/{{receiptNumber}}/g, data.receiptNumber)
+      .replace(/{{paymentDate}}/g, data.formattedPaymentDate)
+      .replace(/{{generatedDate}}/g, data.formattedGeneratedDate);
   }
 
   private formatCurrency(value: number): string {
@@ -65,8 +67,9 @@ export class ReceiptService {
     }).format(value);
   }
 
-  private formatDate(dateString: string): string {
-    const date = new Date(dateString);
+  private formatDate(dateInput: string | Date | null | undefined): string {
+    if (!dateInput) return "—";
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
     return new Intl.DateTimeFormat('es-DO', {
       year: 'numeric',
       month: 'long',
@@ -76,12 +79,9 @@ export class ReceiptService {
     }).format(date);
   }
 
-  private generateReceiptNumber(id: string): string {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const idPart = id.toString().slice(-4).padStart(4, '0');
-    return `${year}${month}${day}-${idPart}`;
+  private generateReceiptNumber(uuid: string): string {
+    const cleanId = uuid.replace(/-/g, '');
+    const lastFive = cleanId.slice(-5);
+    return lastFive.toUpperCase();
   }
 }
