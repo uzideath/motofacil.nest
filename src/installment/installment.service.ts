@@ -7,6 +7,7 @@ import { PrismaService } from 'src/prisma.service';
 import { CreateInstallmentDto, FindInstallmentFiltersDto, UpdateInstallmentDto } from './installment.dto';
 import { LoanStatus, Prisma } from 'generated/prisma';
 import { toColombiaMidnightUtc, toColombiaEndOfDayUtc } from 'src/lib/dates';
+import { addDays } from 'date-fns';
 
 @Injectable()
 export class InstallmentService {
@@ -77,8 +78,13 @@ export class InstallmentService {
 
     if (startDate || endDate) {
       where.paymentDate = {};
-      if (startDate) where.paymentDate.gte = toColombiaMidnightUtc(startDate);
-      if (endDate) where.paymentDate.lte = toColombiaEndOfDayUtc(endDate);
+      if (startDate) {
+        where.paymentDate.gte = toColombiaMidnightUtc(startDate);
+      }
+      if (endDate) {
+        const extendedEndDate = addDays(new Date(endDate), 1);
+        where.paymentDate.lte = toColombiaEndOfDayUtc(extendedEndDate);
+      }
     }
 
     return this.prisma.installment.findMany({

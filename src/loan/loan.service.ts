@@ -28,6 +28,7 @@ export class LoanService {
     const installmentPaymentAmmount =
       dto.installmentPaymentAmmount ??
       parseFloat((debtRemaining / dto.installments).toFixed(2));
+
     const endDate: Date =
       dto.paymentFrequency === PaymentFrequency.DAILY
         ? addDays(new Date(), dto.installments)
@@ -36,8 +37,14 @@ export class LoanService {
           : dto.paymentFrequency === PaymentFrequency.BIWEEKLY
             ? addWeeks(new Date(), dto.installments * 2)
             : addMonths(new Date(), dto.installments);
+
+    const totalLoans = await this.prisma.loan.count();
+    const nextNumber = totalLoans + 1;
+    const contractNumber = `C${String(nextNumber).padStart(6, '0')}`;
+
     return this.prisma.loan.create({
       data: {
+        contractNumber,
         userId: dto.userId,
         motorcycleId: dto.motorcycleId,
         totalAmount: dto.totalAmount,

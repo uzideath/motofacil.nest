@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma.service';
 import { CreateExpenseDto, FindExpenseFiltersDto } from './dto';
 import { toColombiaEndOfDayUtc, toColombiaMidnightUtc } from 'src/lib/dates';
 import { Prisma } from 'generated/prisma';
+import { addDays } from 'date-fns';
 
 
 
@@ -35,8 +36,13 @@ export class ExpenseService {
 
     if (startDate || endDate) {
       where.date = {};
-      if (startDate) where.date.gte = toColombiaMidnightUtc(startDate);
-      if (endDate) where.date.lte = toColombiaEndOfDayUtc(endDate);
+      if (startDate) {
+        where.date.gte = toColombiaMidnightUtc(startDate);
+      }
+      if (endDate) {
+        const extendedEnd = addDays(new Date(endDate), 1);
+        where.date.lte = toColombiaEndOfDayUtc(extendedEnd);
+      }
     }
 
     return this.prisma.expense.findMany({

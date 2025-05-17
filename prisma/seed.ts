@@ -59,11 +59,12 @@ async function main() {
         )
     );
 
-    // Crear préstamos
     const loans = await Promise.all(
-        users.map((user, i) =>
-            prisma.loan.create({
+        users.map((user, i) => {
+            const contractNumber = `C${String(i + 1).padStart(6, '0')}`; // C000001, C000002...
+            return prisma.loan.create({
                 data: {
+                    contractNumber,
                     userId: user.id,
                     motorcycleId: motorcycles[i % motorcycles.length].id,
                     totalAmount: 3000000,
@@ -80,8 +81,8 @@ async function main() {
                     gpsInstallmentPayment: 2000,
                     status: LoanStatus.ACTIVE,
                 },
-            })
-        )
+            });
+        })
     );
 
     // Crear cuotas con createdById
