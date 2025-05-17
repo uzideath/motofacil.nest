@@ -18,7 +18,7 @@ export const templateHtml = `
 
     body {
       font-family: sans-serif;
-      font-size: 13px;
+      font-size: 18px;
       color: #000;
       background-color: #fff;
       width: 80mm;
@@ -28,41 +28,48 @@ export const templateHtml = `
       width: 100%;
     }
 
-    .header, .footer {
+    .header {
       text-align: center;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+    }
+
+    .logo {
+      width: 80px;
+      height: auto;
+      margin: 0 auto 10px;
     }
 
     .title {
-      font-size: 16px;
+      font-size: 20px;
       font-weight: bold;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .info {
-      font-size: 12px;
+      font-size: 18px;
       margin-bottom: 4px;
     }
 
     .section {
-      margin-top: 10px;
-      margin-bottom: 10px;
+      margin-top: 14px;
+      margin-bottom: 14px;
     }
 
     .label {
       font-weight: bold;
+      margin-bottom: 2px;
     }
 
     .table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 5px;
+      margin-top: 6px;
     }
 
     .table th, .table td {
       text-align: left;
-      padding: 4px 0;
-      font-size: 13px;
+      padding: 6px 0;
+      font-size: 18px;
       border-bottom: 1px dashed #000;
     }
 
@@ -71,24 +78,31 @@ export const templateHtml = `
     }
 
     .total {
-      font-size: 14px;
+      font-size: 20px;
       font-weight: bold;
       text-align: right;
-      margin-top: 8px;
+      margin-top: 12px;
       border-top: 1px solid #000;
-      padding-top: 5px;
+      padding-top: 6px;
     }
 
     .thank-you {
       font-weight: bold;
-      font-size: 14px;
-      margin-top: 10px;
+      font-size: 18px;
+      margin-top: 14px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 17px;
     }
   </style>
 </head>
 <body>
   <div class="receipt">
     <div class="header">
+      <img class="logo" src="https://i.imgur.com/w9K9wWP.png" alt="Logo">
       <div class="title">RECIBO DE PAGO</div>
       <div class="info">Recibo #: MC-{{receiptNumber}}</div>
       <div class="info">Fecha: {{formattedDate}}</div>
@@ -104,7 +118,7 @@ export const templateHtml = `
       <div class="label">Detalle del Pago</div>
       <table class="table">
         <tr>
-          <td>Concepto</td>
+          <td>{{concept}}</td>
           <td class="right">{{formattedAmount}}</td>
         </tr>
         <tr>
