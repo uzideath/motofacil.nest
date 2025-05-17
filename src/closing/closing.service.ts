@@ -105,7 +105,22 @@ export class ClosingService {
         ...(dateRange && { date: dateRange }),
       },
       include: {
-        payments: true,
+        payments: {
+          include: {
+            loan: {
+              include: {
+                user: { select: { id: true, name: true } },
+                motorcycle: { select: { id: true, plate: true } },
+              },
+            },
+            createdBy: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+        },
         expense: true,
         createdBy: {
           select: {
