@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ReceiptService } from './receipt.service';
 import { ReceiptController } from './receipt.controller';
-import { WhatsappService } from 'src/whatsapp/whatsapp.service';
+import { WhatsappModule } from '../whatsapp/whatsapp.module';
 
 @Module({
-  providers: [WhatsappService, ReceiptService],
+  imports: [WhatsappModule],
+  providers: [ReceiptService],
   controllers: [ReceiptController],
 })
 export class ReceiptModule { }

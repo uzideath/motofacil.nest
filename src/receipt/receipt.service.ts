@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import * as puppeteer from "puppeteer"
 import type { CreateReceiptDto } from "./dto"
 import { templateHtml } from "./template"
-import type { WhatsappService } from "../whatsapp/whatsapp.service"
+import { WhatsappService } from "../whatsapp/whatsapp.service"
 import * as fs from "fs"
 import * as path from "path"
 

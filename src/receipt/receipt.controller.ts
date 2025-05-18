@@ -1,5 +1,5 @@
 import { Controller, Post, HttpException, HttpStatus, Body } from "@nestjs/common"
-import type { ReceiptService } from "./receipt.service"
+import { ReceiptService } from "./receipt.service"
 import type { CreateReceiptDto, SendReceiptDto } from "./dto"
 
 @Controller("receipt")
