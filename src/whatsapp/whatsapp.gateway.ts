@@ -2,33 +2,33 @@ import {
     SubscribeMessage,
     WebSocketGateway,
     WebSocketServer,
-    OnGatewayConnection,
-    OnGatewayDisconnect,
-    OnGatewayInit,
+    type OnGatewayConnection,
+    type OnGatewayDisconnect,
+    type OnGatewayInit,
 } from "@nestjs/websockets"
 import { Logger } from "@nestjs/common"
-import { Server, Socket } from "socket.io"
+import type { Server, Socket } from "socket.io"
 
 interface QrCodePayload {
     qr: string
 }
 
-// Updated to accept any type for wid since it's a ContactId in whatsapp-web.js
 interface WhatsAppStatusPayload {
     isReady: boolean
     info?: {
-        wid: any // Changed from string | null to any to accommodate ContactId type
+        wid: any
         platform: string | null
     } | null
 }
 
 @WebSocketGateway({
     cors: {
-        origin: "*", // In production, you should restrict this to your frontend domain
+        origin: "*", // En producción, restringe esto a tu dominio frontend
         methods: ["GET", "POST"],
         credentials: true,
     },
     namespace: "/",
+    transports: ["websocket", "polling"], // Añadir soporte para polling como fallback
 })
 export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
@@ -42,6 +42,10 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     handleConnection(client: Socket): void {
         this.logger.log(`Client connected: ${client.id}`)
+
+        // Enviar el estado actual al cliente que se acaba de conectar
+        // Esto asegura que los clientes reciban el estado actual inmediatamente
+        client.emit("connection_established", { connected: true })
     }
 
     handleDisconnect(client: Socket): void {
@@ -54,7 +58,18 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
      */
     sendQrCode(qr: string): void {
         const payload: QrCodePayload = { qr }
+        this.logger.log(`Enviando código QR a ${this.server ? this.server.sockets.sockets.size : 0} clientes conectados`)
+
+        // Emitir el evento a todos los clientes
         this.server.emit("qr", payload)
+
+        // También emitir un evento de log para depuración
+        this.server.emit("whatsapp_log", {
+            type: "info",
+            message: "Código QR generado y enviado",
+            timestamp: new Date().toISOString(),
+        })
+
         this.logger.log("QR code sent to clients")
     }
 
@@ -85,24 +100,14 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     }
 
     /**
-     * Send a message to a specific client
-     * @param clientId The socket ID of the client
-     * @param event The event name
-     * @param data The data to send
+     * Handle requests for the current QR code
+     * @param client The client socket
      */
-    sendToClient(clientId: string, event: string, data: any): void {
-        this.server.to(clientId).emit(event, data)
-        this.logger.debug(`Sent ${event} to client ${clientId}`)
-    }
-
-    /**
-     * Broadcast a message to all connected clients except the sender
-     * @param sender The socket that should not receive the broadcast
-     * @param event The event name
-     * @param data The data to broadcast
-     */
-    broadcastExcept(sender: Socket, event: string, data: any): void {
-        sender.broadcast.emit(event, data)
-        this.logger.debug(`Broadcast ${event} to all except ${sender.id}`)
+    @SubscribeMessage("request_qr")
+    handleRequestQr(client: Socket): void {
+        this.logger.log(`Client ${client.id} requested QR code`)
+        // Este método será llamado desde el frontend cuando necesite solicitar un QR
+        // El servicio de WhatsApp deberá responder generando un nuevo QR
+        client.emit("qr_requested", { timestamp: new Date().toISOString() })
     }
 }

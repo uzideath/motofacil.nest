@@ -1,8 +1,8 @@
 import { Controller, Post, Get, Body, UseInterceptors, UploadedFile } from "@nestjs/common"
 import { FileInterceptor } from "@nestjs/platform-express"
 import type { Express } from "express"
-import { SendMessageDto, SendRemoteAttachmentDto } from "./dto"
 import { WhatsappService } from "./whatsapp.service"
+import type { SendMessageDto, SendAttachmentDto, SendRemoteAttachmentDto } from "./dto"
 
 @Controller("whatsapp")
 export class WhatsappController {
@@ -19,6 +19,12 @@ export class WhatsappController {
         return { success: true, message: "Reconexión iniciada" }
     }
 
+    @Post("request-qr")
+    async requestQr() {
+        await this.whatsappService.reconnect()
+        return { success: true, message: "Solicitud de QR iniciada" }
+    }
+
     @Post("send-message")
     async sendMessage(@Body() sendMessageDto: SendMessageDto) {
         return this.whatsappService.sendMessage(sendMessageDto)
@@ -26,7 +32,7 @@ export class WhatsappController {
 
     @Post("send-attachment")
     @UseInterceptors(FileInterceptor("file"))
-    async sendAttachment(@UploadedFile() file: Express.Multer.File, @Body() sendAttachmentDto: any) {
+    async sendAttachment(@UploadedFile() file: Express.Multer.File, sendAttachmentDto: SendAttachmentDto) {
         return this.whatsappService.sendAttachment(sendAttachmentDto.phoneNumber, file.path, sendAttachmentDto.caption)
     }
 
