@@ -25,7 +25,9 @@ export class ReceiptService {
       width: "80mm",
       printBackground: true,
       margin: { top: "5mm", bottom: "5mm", left: "5mm", right: "5mm" },
+      preferCSSPageSize: true,
     })
+
 
     await browser.close()
     return Buffer.from(pdfBuffer)
