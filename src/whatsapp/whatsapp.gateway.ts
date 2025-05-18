@@ -104,10 +104,21 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
      * @param client The client socket
      */
     @SubscribeMessage("request_qr")
-    handleRequestQr(client: Socket): void {
+    async handleRequestQr(client: Socket): Promise<void> {
         this.logger.log(`Client ${client.id} requested QR code`)
-        // Este método será llamado desde el frontend cuando necesite solicitar un QR
-        // El servicio de WhatsApp deberá responder generando un nuevo QR
+
+        // Emitir evento para informar que se ha solicitado un QR
         client.emit("qr_requested", { timestamp: new Date().toISOString() })
+
+        // Notificar a todos los clientes que se está generando un QR
+        this.server.emit("whatsapp_log", {
+            type: "info",
+            message: "Generando nuevo código QR por solicitud del cliente",
+            timestamp: new Date().toISOString(),
+        })
+
+        // Aquí podríamos llamar directamente al servicio de WhatsApp para solicitar un nuevo QR
+        // Pero eso requeriría inyectar el servicio en el gateway
+        // Por ahora, el cliente deberá hacer una solicitud HTTP separada
     }
 }

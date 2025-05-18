@@ -17,7 +17,8 @@ export class WhatsappService implements OnModuleInit {
     private readonly logger = new Logger(WhatsappService.name)
     private initializationAttempts = 0
     private readonly maxInitializationAttempts = 5
-    private sessionId = `nest-whatsapp-service-${Date.now()}`
+    // Cambiado de readonly a private para permitir reasignación
+    private sessionId = `nest-whatsapp-service-${Date.now()}` // ID único para cada instancia
 
     constructor(private readonly gateway: WhatsappGateway) {
         this.setupClient()
@@ -401,5 +402,58 @@ export class WhatsappService implements OnModuleInit {
 
         // Inicializar nuevo cliente
         return this.initializeClient()
+    }
+
+    // Añadir un nuevo método para solicitar explícitamente un código QR
+    async requestQrCode() {
+        this.logger.log("Solicitud explícita de código QR recibida")
+
+        // Si el cliente ya está listo, no necesitamos un nuevo QR
+        if (this.isReady && this.client) {
+            this.logger.log("El cliente ya está conectado, no se necesita un nuevo QR")
+            return {
+                success: false,
+                message: "El cliente ya está conectado, no se necesita un nuevo QR",
+            }
+        }
+
+        // Si hay un cliente existente, intentar destruirlo primero
+        if (this.client) {
+            try {
+                this.logger.log("Destruyendo cliente existente para generar nuevo QR")
+                await this.client.destroy()
+            } catch (e) {
+                this.logger.error(`Error al destruir cliente: ${e.message}`)
+            }
+        }
+
+        this.client = null
+        this.isReady = false
+
+        // Limpiar archivos de bloqueo
+        await this.cleanupLockFiles()
+
+        // Crear nuevo cliente con ID de sesión único
+        this.sessionId = `nest-whatsapp-service-${Date.now()}`
+        this.setupClient()
+
+        // Resetear contador de intentos
+        this.initializationAttempts = 0
+
+        // Inicializar nuevo cliente
+        try {
+            this.logger.log("Inicializando nuevo cliente para generar QR")
+            await this.initializeClient()
+            return {
+                success: true,
+                message: "Solicitud de QR iniciada correctamente",
+            }
+        } catch (error) {
+            this.logger.error(`Error al inicializar cliente para QR: ${error.message}`)
+            return {
+                success: false,
+                error: error.message,
+            }
+        }
     }
 }
