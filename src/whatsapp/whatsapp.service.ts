@@ -2,6 +2,7 @@ import { Injectable, Logger, type OnModuleInit } from "@nestjs/common"
 import { Client, LocalAuth, MessageMedia } from "whatsapp-web.js"
 import * as fs from "fs"
 import * as qrcode from "qrcode-terminal"
+import { WhatsappGateway } from "./whatsapp.gateway"
 import { SendMessageDto } from "./dto"
 
 @Injectable()
@@ -10,7 +11,7 @@ export class WhatsappService implements OnModuleInit {
     private isReady = false
     private readonly logger = new Logger(WhatsappService.name)
 
-    constructor() {
+    constructor(private readonly gateway: WhatsappGateway) {
         this.client = new Client({
             authStrategy: new LocalAuth({ clientId: "nest-whatsapp-service" }),
             puppeteer: {
@@ -29,11 +30,23 @@ export class WhatsappService implements OnModuleInit {
         this.client.on("qr", (qr) => {
             this.logger.log("QR Code received, scan to authenticate:")
             qrcode.generate(qr, { small: true })
+
+            // Send QR code to frontend via WebSocket
+            this.gateway.sendQrCode(qr)
         })
 
         this.client.on("ready", () => {
             this.isReady = true
             this.logger.log("WhatsApp client is ready!")
+
+            // Send status update to frontend
+            this.gateway.sendWhatsAppStatus({
+                isReady: true,
+                info: {
+                    wid: this.client.info.wid, // Now accepts ContactId type
+                    platform: this.client.info.platform,
+                },
+            })
         })
 
         this.client.on("authenticated", () => {
@@ -42,11 +55,24 @@ export class WhatsappService implements OnModuleInit {
 
         this.client.on("auth_failure", (msg) => {
             this.logger.error(`WhatsApp authentication failed: ${msg}`)
+
+            // Send status update to frontend
+            this.gateway.sendWhatsAppStatus({
+                isReady: false,
+                info: null,
+            })
         })
 
         this.client.on("disconnected", (reason) => {
             this.isReady = false
             this.logger.warn(`WhatsApp client disconnected: ${reason}`)
+
+            // Send status update to frontend
+            this.gateway.sendWhatsAppStatus({
+                isReady: false,
+                info: null,
+            })
+
             this.initializeClient()
         })
     }
@@ -57,6 +83,13 @@ export class WhatsappService implements OnModuleInit {
             await this.client.initialize()
         } catch (error) {
             this.logger.error(`Failed to initialize WhatsApp client: ${error.message}`)
+
+            // Send status update to frontend
+            this.gateway.sendWhatsAppStatus({
+                isReady: false,
+                info: null,
+            })
+
             throw error
         }
     }
@@ -66,7 +99,7 @@ export class WhatsappService implements OnModuleInit {
             isReady: this.isReady,
             info: this.isReady
                 ? {
-                    wid: this.client.info ? this.client.info.wid : null,
+                    wid: this.client.info ? this.client.info.wid : null, // Now accepts ContactId type
                     platform: this.client.info ? this.client.info.platform : null,
                 }
                 : null,

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { WhatsappService } from "./whatsapp.service"
 import { WhatsappController } from "./whatsapp.controller"
+import { WhatsappGateway } from "./whatsapp.gateway"
 import { MulterModule } from "@nestjs/platform-express"
 import { diskStorage } from "multer"
 import { extname } from "path"
@@ -20,7 +21,7 @@ import { extname } from "path"
     }),
   ],
   controllers: [WhatsappController],
-  providers: [WhatsappService],
-  exports: [WhatsappService],
+  providers: [WhatsappService, WhatsappGateway],
+  exports: [WhatsappService, WhatsappGateway],
 })
 export class WhatsappModule { }

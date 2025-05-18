@@ -1,9 +1,8 @@
-import { Controller, Post, Body, Get, UseInterceptors, UploadedFile } from "@nestjs/common"
+import { Controller, Post, Get, UseInterceptors } from "@nestjs/common"
 import { FileInterceptor } from "@nestjs/platform-express"
 import type { Express } from "express"
-import { WhatsappService } from "./whatsapp.service"
-import { SendMessageDto, SendAttachmentDto, SendRemoteAttachmentDto } from "./dto"
-
+import type { WhatsappService } from "./whatsapp.service"
+import type { SendMessageDto, SendAttachmentDto, SendRemoteAttachmentDto } from "./dto"
 
 @Controller("whatsapp")
 export class WhatsappController {
@@ -14,26 +13,27 @@ export class WhatsappController {
         return this.whatsappService.getStatus()
     }
 
-    @Post('send-message')
-    async sendMessage(@Body() sendMessageDto: SendMessageDto) {
-        return this.whatsappService.sendMessage(sendMessageDto);
+    @Post("reconnect")
+    async reconnect() {
+        // This will trigger a re-initialization of the WhatsApp client
+        await this.whatsappService.onModuleInit()
+        return { success: true }
+    }
+
+    @Post("send-message")
+    async sendMessage(sendMessageDto: SendMessageDto) {
+        return this.whatsappService.sendMessage(sendMessageDto)
     }
 
     @Post("send-attachment")
     @UseInterceptors(FileInterceptor("file"))
-    async sendAttachment(@UploadedFile() file: Express.Multer.File, @Body() sendAttachmentDto: SendAttachmentDto) {
+    async sendAttachment(file: Express.Multer.File, sendAttachmentDto: SendAttachmentDto) {
         return this.whatsappService.sendAttachment(sendAttachmentDto.phoneNumber, file.path, sendAttachmentDto.caption)
     }
 
-    @Post('send-remote-attachment')
-    async sendRemoteAttachment(@Body() dto: SendRemoteAttachmentDto) {
-        return this.whatsappService.sendRemoteAttachment(
-            dto.phoneNumber,
-            dto.url,
-            dto.filename,
-            dto.mimeType,
-            dto.caption,
-        );
+    @Post("send-remote-attachment")
+    async sendRemoteAttachment(dto: SendRemoteAttachmentDto) {
+        return this.whatsappService.sendRemoteAttachment(dto.phoneNumber, dto.url, dto.filename, dto.mimeType, dto.caption)
     }
 
     @Post("logout")
