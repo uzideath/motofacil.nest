@@ -47,17 +47,17 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     }
 
     handleConnection(client: Socket): void {
-        this.logger.log(`Client connected: ${client.id}`)
-        client.emit("connection_established", { connected: true })
-
-        // NUEVO: enviar estado actual si está conectado
         const status = this.whatsappService.getStatusSync()
         if (status.isReady) {
             client.emit("whatsapp_connected", status)
-            this.logger.log(`Estado enviado al nuevo cliente: ${JSON.stringify(status)}`)
         } else {
             client.emit("whatsapp_disconnected", status)
-            this.logger.log(`Estado de desconexión enviado al nuevo cliente`)
+        }
+
+        // Opcional: reenviar QR si existe
+        const lastQr = this.whatsappService.getLastQrCode?.()
+        if (lastQr) {
+            client.emit("qr", { qr: lastQr })
         }
     }
 
@@ -71,20 +71,8 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
      * @param qr The QR code string to be displayed and scanned
      */
     sendQrCode(qr: string): void {
-        const payload: QrCodePayload = { qr }
-        this.logger.log(`Enviando código QR a ${this.server ? this.server.sockets.sockets.size : 0} clientes conectados`)
-
-        // Emitir el evento a todos los clientes
-        this.server.emit("qr", payload)
-
-        // También emitir un evento de log para depuración
-        this.server.emit("whatsapp_log", {
-            type: "info",
-            message: "Código QR generado y enviado",
-            timestamp: new Date().toISOString(),
-        })
-
-        this.logger.log("QR code sent to clients")
+        this.logger.log("🚀 Emitiendo evento QR a clientes WebSocket")
+        this.server.emit("qr", { qr }) // 🔥 Este es el que el frontend espera
     }
 
     /**
@@ -120,19 +108,36 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     @SubscribeMessage("request_qr")
     async handleRequestQr(client: Socket): Promise<void> {
         this.logger.log(`Client ${client.id} requested QR code`)
-
-        // Emitir evento para informar que se ha solicitado un QR
         client.emit("qr_requested", { timestamp: new Date().toISOString() })
 
-        // Notificar a todos los clientes que se está generando un QR
         this.server.emit("whatsapp_log", {
             type: "info",
             message: "Generando nuevo código QR por solicitud del cliente",
             timestamp: new Date().toISOString(),
         })
 
-        // Aquí podríamos llamar directamente al servicio de WhatsApp para solicitar un nuevo QR
-        // Pero eso requeriría inyectar el servicio en el gateway
-        // Por ahora, el cliente deberá hacer una solicitud HTTP separada
+        // ✅ LLAMAR al servicio para generar el nuevo QR
+        try {
+            const result = await this.whatsappService.requestQrCode()
+
+            if ('success' in result && result.success) {
+                this.logger.log("✅ QR generado correctamente desde request_qr")
+            } else {
+                this.logger.error(`❌ Error al generar QR desde gateway: ${result}`)
+                client.emit("whatsapp_log", {
+                    type: "error",
+                    message: `Error al generar nuevo QR: ${result}`,
+                    timestamp: new Date().toISOString(),
+                })
+            }
+        } catch (error) {
+            this.logger.error(`❌ Excepción al manejar request_qr: ${error.message}`)
+            client.emit("whatsapp_log", {
+                type: "error",
+                message: `Excepción al reiniciar cliente: ${error.message}`,
+                timestamp: new Date().toISOString(),
+            })
+        }
     }
+
 }

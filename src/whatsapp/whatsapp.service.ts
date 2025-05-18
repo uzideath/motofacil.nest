@@ -114,8 +114,6 @@ export class WhatsappService implements OnModuleInit {
         this.client.on("qr", (qr) => {
             this.logger.log("QR Code received")
             this.lastQrCode = qr
-
-            qrcode.generate(qr, { small: true })
             this.gateway.sendQrCode(qr)
         })
 
@@ -178,63 +176,49 @@ export class WhatsappService implements OnModuleInit {
 
     private async initializeClient() {
         if (!this.client) {
+            this.logger.warn("⚠️ No hay cliente. Ejecutando setupClient.")
             this.setupClient()
         }
 
         try {
             this.initializationAttempts++
-            this.logger.log(
-                `Initializing WhatsApp client (intento ${this.initializationAttempts}/${this.maxInitializationAttempts})...`,
-            )
+            this.logger.log(`🚀 Inicializando WhatsApp client (intento ${this.initializationAttempts})`)
 
-            // Limpiar archivos de bloqueo antes de inicializar
             await this.cleanupLockFiles()
 
+            this.logger.log("🕐 Ejecutando client.initialize()...")
             await this.client?.initialize()
+            this.logger.log("✅ client.initialize() completado")
         } catch (error) {
-            this.logger.error(`Failed to initialize WhatsApp client: ${error.message}`)
+            this.logger.error(`❌ Error al inicializar cliente: ${error.message}`)
 
-            // Send status update to frontend
             this.gateway.sendWhatsAppStatus({
                 isReady: false,
                 info: null,
             })
 
-            // Si el error es específicamente sobre SingletonLock, intentar limpiar y reiniciar
             if (error.message.includes("SingletonLock")) {
-                this.logger.log("Detectado error de SingletonLock, limpiando y reintentando...")
-
-                // Destruir cliente actual
+                this.logger.log("🔁 Error SingletonLock detectado. Reintentando con nuevo cliente.")
                 try {
                     await this.client?.destroy()
                 } catch (e) {
                     this.logger.error(`Error al destruir cliente: ${e.message}`)
                 }
-
                 this.client = null
-
-                // Limpiar archivos de bloqueo
                 await this.cleanupLockFiles()
-
-                // Crear nuevo cliente
                 this.setupClient()
             }
 
-            // Implementar backoff exponencial para reintentos
             if (this.initializationAttempts < this.maxInitializationAttempts) {
                 const delay = Math.min(1000 * Math.pow(2, this.initializationAttempts), 30000)
-                this.logger.log(`Reintentando inicialización en ${delay / 1000} segundos...`)
-
-                setTimeout(() => {
-                    this.initializeClient()
-                }, delay)
+                this.logger.log(`🕒 Reintentando en ${delay / 1000}s...`)
+                setTimeout(() => this.initializeClient(), delay)
             } else {
-                this.logger.error(
-                    `Se alcanzó el número máximo de intentos (${this.maxInitializationAttempts}). Deteniendo reintentos.`,
-                )
+                this.logger.error("❌ Máximo de intentos alcanzado. Abortando.")
             }
         }
     }
+
 
     async getStatus() {
         return {
@@ -423,56 +407,50 @@ export class WhatsappService implements OnModuleInit {
         return this.initializeClient()
     }
 
-    // Añadir un nuevo método para solicitar explícitamente un código QR
-    async requestQrCode() {
-        this.logger.log("Solicitud explícita de código QR recibida")
+    async requestQrCode(): Promise<{ success: boolean; message: string } | { success: false; error: string }> {
+        this.logger.log("📨 Solicitud explícita de código QR recibida")
 
-        // Si el cliente ya está listo, no necesitamos un nuevo QR
-        if (this.isReady && this.client) {
-            this.logger.log("El cliente ya está conectado, no se necesita un nuevo QR")
-            return {
-                success: false,
-                message: "El cliente ya está conectado, no se necesita un nuevo QR",
-            }
-        }
-
-        // Si hay un cliente existente, intentar destruirlo primero
-        if (this.client) {
-            try {
-                this.logger.log("Destruyendo cliente existente para generar nuevo QR")
-                await this.client.destroy()
-            } catch (e) {
-                this.logger.error(`Error al destruir cliente: ${e.message}`)
-            }
-        }
-
-        this.client = null
-        this.isReady = false
-
-        // Limpiar archivos de bloqueo
-        await this.cleanupLockFiles()
-
-        // Crear nuevo cliente con ID de sesión único
-        this.sessionId = `nest-whatsapp-service-${Date.now()}`
-        this.setupClient()
-
-        // Resetear contador de intentos
-        this.initializationAttempts = 0
-
-        // Inicializar nuevo cliente
         try {
-            this.logger.log("Inicializando nuevo cliente para generar QR")
+            // Destruir cliente actual si existe
+            if (this.client) {
+                this.logger.log("🔄 Destruyendo cliente anterior")
+                try {
+                    await this.client.destroy()
+                } catch (e) {
+                    this.logger.warn(`Error al destruir cliente: ${e.message}`)
+                }
+            }
+
+            // Reiniciar estado
+            this.client = null
+            this.isReady = false
+
+            // ⚠️ Generar nuevo ID de sesión
+            this.sessionId = `nest-whatsapp-service-${Date.now()}`
+            this.logger.log(`🆕 Nuevo sessionId generado: ${this.sessionId}`)
+
+            // Limpiar archivos
+            await this.cleanupLockFiles()
+
+            // Crear cliente y registrar listeners
+            this.setupClient()
+            this.initializationAttempts = 0
+
+            // Inicializar (esto emitirá el QR si funciona)
             await this.initializeClient()
+
             return {
                 success: true,
                 message: "Solicitud de QR iniciada correctamente",
             }
         } catch (error) {
-            this.logger.error(`Error al inicializar cliente para QR: ${error.message}`)
+            this.logger.error(`❌ Error al reiniciar cliente para QR: ${error.message}`)
             return {
                 success: false,
                 error: error.message,
             }
         }
     }
+
+
 }
