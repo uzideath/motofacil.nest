@@ -50,10 +50,14 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         this.logger.log(`Client connected: ${client.id}`)
         client.emit("connection_established", { connected: true })
 
-        const lastQr = this.whatsappService.getLastQrCode()
-        if (lastQr) {
-            this.logger.log(`Sending last QR code to client ${client.id}`)
-            client.emit("qr", { qr: lastQr })
+        // NUEVO: enviar estado actual si está conectado
+        const status = this.whatsappService.getStatusSync()
+        if (status.isReady) {
+            client.emit("whatsapp_connected", status)
+            this.logger.log(`Estado enviado al nuevo cliente: ${JSON.stringify(status)}`)
+        } else {
+            client.emit("whatsapp_disconnected", status)
+            this.logger.log(`Estado de desconexión enviado al nuevo cliente`)
         }
     }
 

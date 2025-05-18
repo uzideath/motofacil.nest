@@ -95,6 +95,19 @@ export class WhatsappService implements OnModuleInit {
         }
     }
 
+    getStatusSync(): { isReady: boolean; info: any | null } {
+        return {
+            isReady: this.isReady,
+            info: this.isReady && this.client
+                ? {
+                    wid: this.client.info?.wid ?? null,
+                    platform: this.client.info?.platform ?? null,
+                }
+                : null,
+        }
+    }
+
+
     private setupEventListeners() {
         if (!this.client) return
 
