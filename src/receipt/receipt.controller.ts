@@ -1,38 +1,52 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Res,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
-import { Response } from 'express';
-import { ReceiptService } from './receipt.service';
-import { Public } from 'src/auth/decorators/public.decorator';
-import { CreateReceiptDto } from './dto';
+import { Controller, Post, HttpException, HttpStatus, Body } from "@nestjs/common"
+import type { ReceiptService } from "./receipt.service"
+import type { CreateReceiptDto, SendReceiptDto } from "./dto"
 
-
-@Controller('receipt')
+@Controller("receipt")
 export class ReceiptController {
   constructor(private readonly receiptService: ReceiptService) { }
 
   @Post()
-  async generate(@Body() dto: CreateReceiptDto, @Res() res: Response) {
+  async generate(@Body() dto: CreateReceiptDto) {
     try {
-      const pdfBuffer = await this.receiptService.generateReceipt(dto);
+      const pdfBuffer = await this.receiptService.generateReceipt(dto)
 
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="receipt-${Date.now()}.pdf"`,
-        'Content-Length': pdfBuffer.length,
-      });
-
-      res.send(pdfBuffer);
+      return pdfBuffer
     } catch (err) {
       console.log(err)
+      throw new HttpException("No se pudo generar el recibo.", HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+  }
+
+  @Post("whatsapp")
+  async sendViaWhatsapp(@Body() dto: SendReceiptDto) {
+    try {
+      const { phoneNumber, caption, ...receiptData } = dto;
+
+      // Generate and send the PDF receipt as an attachment via WhatsApp
+      const result = await this.receiptService.sendReceiptViaWhatsapp(
+        phoneNumber,
+        receiptData,
+        caption
+      );
+
+      if (!result.success) {
+        throw new HttpException(
+          result.error || "No se pudo enviar el recibo por WhatsApp.",
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      return {
+        success: true,
+        messageId: result.messageId,
+        message: "Recibo PDF enviado exitosamente como adjunto por WhatsApp.",
+      };
+    } catch (err) {
+      console.log(err);
       throw new HttpException(
-        'No se pudo generar el recibo.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        "No se pudo enviar el recibo por WhatsApp.",
+        HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }

@@ -14,7 +14,8 @@ lerna-debug.log*
 
 # OS
 .DS_Store
-
+.wwebjs_auth
+.wwebjs_cache
 # Tests
 /coverage
 /.nyc_output

@@ -15,6 +15,9 @@ import { ClosingModule } from './closing/closing.module';
 import { ExpenseModule } from './expense/expense.module';
 import { ReceiptModule } from './receipt/receipt.module';
 import { ContractsModule } from './contracts/contracts.module';
+import { WhatsappModule } from './whatsapp/whatsapp.module';
+import { join } from 'path';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
@@ -31,6 +34,11 @@ import { ContractsModule } from './contracts/contracts.module';
     ExpenseModule,
     ReceiptModule,
     ContractsModule,
+    WhatsappModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, "..", "uploads"),
+      serveRoot: "/uploads",
+    }),
   ],
   controllers: [AppController],
   providers: [
@@ -39,4 +47,4 @@ import { ContractsModule } from './contracts/contracts.module';
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
-export class AppModule {}
+export class AppModule { }
