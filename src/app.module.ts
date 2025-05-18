@@ -18,12 +18,14 @@ import { ContractsModule } from './contracts/contracts.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     UserModule,
     LoanModule,
     InstallmentModule,

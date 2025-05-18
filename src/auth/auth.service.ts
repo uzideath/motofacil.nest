@@ -99,19 +99,48 @@ export class AuthService {
       where: { id: payload.sub },
     });
 
-    if (!user || !user.refreshToken)
+    if (!user || !user.refreshToken) {
       throw new ForbiddenException('Token no registrado');
+    }
 
     const tokenMatches = await bcrypt.compare(refreshToken, user.refreshToken);
-    if (!tokenMatches) throw new ForbiddenException('Token inválido');
+    if (!tokenMatches) {
+      throw new ForbiddenException('Token inválido');
+    }
 
-    const newAccessToken = await this.jwt.signAsync(payload, {
+    // Crear nuevo payload sin 'exp'
+    const newPayload: JwtPayload = {
+      sub: payload.sub,
+      username: payload.username,
+      roles: payload.roles,
+    };
+
+    // Nuevo access token
+    const newAccessToken = await this.jwt.signAsync(newPayload, {
       secret: this.config.get('JWT_ACCESS_SECRET'),
       expiresIn: this.config.get('JWT_ACCESS_EXPIRES_IN') || '15m',
     });
 
-    return { access_token: newAccessToken };
+    // Nuevo refresh token
+    const newRefreshToken = await this.jwt.signAsync(newPayload, {
+      secret: this.config.get('JWT_REFRESH_SECRET'),
+      expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN') || '7d',
+    });
+
+    const hashedNewRefreshToken = await bcrypt.hash(newRefreshToken, 10);
+
+    // Guardar nuevo refresh token hasheado
+    await this.prisma.owners.update({
+      where: { id: payload.sub },
+      data: { refreshToken: hashedNewRefreshToken },
+    });
+
+    return {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+    };
   }
+
 
   async logout(userId: string) {
     return this.prisma.owners.update({
