@@ -5,11 +5,7 @@ import { WhatsappGateway } from "./whatsapp.gateway"
 import { MulterModule } from "@nestjs/platform-express"
 import { diskStorage } from "multer"
 import { extname } from "path"
-import { WhatsappClientService } from "./services/client.service"
-import { WhatsappFileService } from "./services/file.service"
-import { WhatsappHealthService } from "./services/health.service"
-import { WhatsappMessageService } from "./services/messages.service"
-import { WhatsappSessionService } from "./services/session.service"
+
 
 @Module({
   imports: [
@@ -26,7 +22,7 @@ import { WhatsappSessionService } from "./services/session.service"
     }),
   ],
   controllers: [WhatsappController],
-  providers: [WhatsappClientService, WhatsappFileService, WhatsappHealthService, WhatsappMessageService, WhatsappSessionService, WhatsappService, WhatsappGateway],
+  providers: [WhatsappService, WhatsappGateway],
   exports: [WhatsappService, WhatsappGateway],
 })
 export class WhatsappModule { }
