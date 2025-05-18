@@ -6,8 +6,9 @@ import {
     type OnGatewayDisconnect,
     type OnGatewayInit,
 } from "@nestjs/websockets"
-import { Logger } from "@nestjs/common"
+import { forwardRef, Inject, Logger } from "@nestjs/common"
 import type { Server, Socket } from "socket.io"
+import { WhatsappService } from "./whatsapp.service"
 
 interface QrCodePayload {
     qr: string
@@ -31,6 +32,11 @@ interface WhatsAppStatusPayload {
     transports: ["websocket", "polling"], // Añadir soporte para polling como fallback
 })
 export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+    constructor(
+        @Inject(forwardRef(() => WhatsappService))
+        private readonly whatsappService: WhatsappService,
+    ) { }
+
     @WebSocketServer()
     server: Server
 
@@ -42,11 +48,15 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     handleConnection(client: Socket): void {
         this.logger.log(`Client connected: ${client.id}`)
-
-        // Enviar el estado actual al cliente que se acaba de conectar
-        // Esto asegura que los clientes reciban el estado actual inmediatamente
         client.emit("connection_established", { connected: true })
+
+        const lastQr = this.whatsappService.getLastQrCode()
+        if (lastQr) {
+            this.logger.log(`Sending last QR code to client ${client.id}`)
+            client.emit("qr", { qr: lastQr })
+        }
     }
+
 
     handleDisconnect(client: Socket): void {
         this.logger.log(`Client disconnected: ${client.id}`)

@@ -25,6 +25,11 @@ export class WhatsappController {
         return result
     }
 
+    @Get("qr")
+    getLastQr(): { qr: string | null } {
+        return { qr: this.whatsappService.getLastQrCode() }
+    }
+
     @Post("send-message")
     async sendMessage(@Body() sendMessageDto: SendMessageDto) {
         return this.whatsappService.sendMessage(sendMessageDto)

@@ -17,11 +17,16 @@ export class WhatsappService implements OnModuleInit {
     private readonly logger = new Logger(WhatsappService.name)
     private initializationAttempts = 0
     private readonly maxInitializationAttempts = 5
+    private lastQrCode: string | null = null
     // Cambiado de readonly a private para permitir reasignación
     private sessionId = `nest-whatsapp-service-${Date.now()}` // ID único para cada instancia
 
     constructor(private readonly gateway: WhatsappGateway) {
         this.setupClient()
+    }
+
+    getLastQrCode(): string | null {
+        return this.lastQrCode
     }
 
     private setupClient() {
@@ -94,12 +99,13 @@ export class WhatsappService implements OnModuleInit {
         if (!this.client) return
 
         this.client.on("qr", (qr) => {
-            this.logger.log("QR Code received, scan to authenticate:")
-            qrcode.generate(qr, { small: true })
+            this.logger.log("QR Code received")
+            this.lastQrCode = qr
 
-            // Send QR code to frontend via WebSocket
+            qrcode.generate(qr, { small: true })
             this.gateway.sendQrCode(qr)
         })
+
 
         this.client.on("ready", () => {
             this.isReady = true
