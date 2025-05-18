@@ -23,7 +23,9 @@ export class WhatsappService implements OnModuleInit {
     private readonly initializeMutex = new Mutex()
     private readonly QR_TTL = 1 * 60 * 1000;
     private qrTimeout: NodeJS.Timeout | null = null
-    private sessionId = `nest-whatsapp-service-${Date.now()}` // ID único para cada instancia
+    private sessionId = `nest-whatsapp-service-${Date.now()}`
+    private lastQrTimestamp: number | null = null
+    private readonly QR_INACTIVITY_LIMIT = 3 * 60 * 1000
 
     constructor(private readonly gateway: WhatsappGateway) {
         this.setupClient()
@@ -222,22 +224,28 @@ export class WhatsappService implements OnModuleInit {
 
         this.logger.log("QR Code recibido y será emitido a los clientes")
         this.lastQrCode = qr
+        this.lastQrTimestamp = Date.now()
         this.gateway.sendQrCode(qr)
 
-        // Cancelar cualquier timeout previo
         if (this.qrTimeout) {
             clearTimeout(this.qrTimeout)
         }
 
-        // Programar la expiración automática del QR
         this.qrTimeout = setTimeout(() => {
             if (this.lastQrCode === qr) {
                 this.logger.warn("⌛ QR expirado automáticamente. Limpiando...")
                 this.lastQrCode = null
                 this.qrTimeout = null
+
+                // Si tras la expiración no hay reconexión automática, la forzamos aquí
+                this.logger.warn("📛 QR no fue escaneado. Forzando reconexión...")
+                this.reconnect().catch((err) => {
+                    this.logger.error(`Error al reiniciar tras expiración de QR: ${err.message}`)
+                })
             }
         }, this.QR_TTL)
     }
+
 
     async getStatus() {
         return {
@@ -487,12 +495,29 @@ export class WhatsappService implements OnModuleInit {
 
     @Cron(CronExpression.EVERY_MINUTE)
     handleKeepAliveCron() {
-        if (this.client && this.isReady) {
+        const now = Date.now()
+        if (!this.isReady) {
+            if (
+                !this.lastQrTimestamp ||
+                now - this.lastQrTimestamp > this.QR_INACTIVITY_LIMIT
+            ) {
+                this.logger.warn("📛 QR no generado en los últimos 3 minutos. Forzando reconexión...")
+                this.reconnect().catch(err =>
+                    this.logger.error(`Error en reconexión forzada por inactividad de QR: ${err.message}`)
+                )
+            } else {
+                this.logger.verbose("🕒 Cron KeepAlive: cliente no listo, esperando escaneo de QR")
+            }
+            return
+        }
+
+        if (this.client) {
             this.client.getState()
-                .then(() => this.logger.verbose('🕒 Cron KeepAlive: cliente activo'))
-                .catch((err) => this.logger.warn(`⚠️ Cron KeepAlive falló: ${err.message}`))
-        } else {
-            this.logger.verbose('🕒 Cron KeepAlive: cliente no listo')
+                .then(() => this.logger.verbose("🕒 Cron KeepAlive: cliente activo"))
+                .catch((err) => {
+                    this.logger.warn(`⚠️ Cron KeepAlive falló: ${err.message}`)
+                })
         }
     }
+
 }
