@@ -1,8 +1,8 @@
-import { Controller, Post, Get, UseInterceptors } from "@nestjs/common"
+import { Controller, Post, Get, Body, UseInterceptors, UploadedFile } from "@nestjs/common"
 import { FileInterceptor } from "@nestjs/platform-express"
 import type { Express } from "express"
+import { SendMessageDto, SendRemoteAttachmentDto } from "./dto"
 import { WhatsappService } from "./whatsapp.service"
-import type { SendMessageDto, SendAttachmentDto, SendRemoteAttachmentDto } from "./dto"
 
 @Controller("whatsapp")
 export class WhatsappController {
@@ -15,24 +15,23 @@ export class WhatsappController {
 
     @Post("reconnect")
     async reconnect() {
-        // This will trigger a re-initialization of the WhatsApp client
-        await this.whatsappService.onModuleInit()
-        return { success: true }
+        await this.whatsappService.reconnect()
+        return { success: true, message: "Reconexión iniciada" }
     }
 
     @Post("send-message")
-    async sendMessage(sendMessageDto: SendMessageDto) {
+    async sendMessage(@Body() sendMessageDto: SendMessageDto) {
         return this.whatsappService.sendMessage(sendMessageDto)
     }
 
     @Post("send-attachment")
     @UseInterceptors(FileInterceptor("file"))
-    async sendAttachment(file: Express.Multer.File, sendAttachmentDto: SendAttachmentDto) {
+    async sendAttachment(@UploadedFile() file: Express.Multer.File, @Body() sendAttachmentDto: any) {
         return this.whatsappService.sendAttachment(sendAttachmentDto.phoneNumber, file.path, sendAttachmentDto.caption)
     }
 
     @Post("send-remote-attachment")
-    async sendRemoteAttachment(dto: SendRemoteAttachmentDto) {
+    async sendRemoteAttachment(@Body() dto: SendRemoteAttachmentDto) {
         return this.whatsappService.sendRemoteAttachment(dto.phoneNumber, dto.url, dto.filename, dto.mimeType, dto.caption)
     }
 

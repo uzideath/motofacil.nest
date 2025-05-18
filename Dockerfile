@@ -59,6 +59,10 @@ RUN npm install --no-audit --loglevel=error
 # Copiar el resto de los archivos
 COPY . .
 
+# Crear script de limpieza y hacerlo ejecutable
+COPY cleanup-locks.sh /app/cleanup-locks.sh
+RUN chmod +x /app/cleanup-locks.sh
+
 # Crear y configurar el directorio de autenticación de WhatsApp
 RUN mkdir -p /app/.wwebjs_auth && \
     chmod -R 777 /app/.wwebjs_auth
@@ -73,5 +77,5 @@ EXPOSE 3005
 # Usar dumb-init como punto de entrada para manejar señales correctamente
 ENTRYPOINT ["dumb-init", "--"]
 
-# Comando para iniciar la aplicación
-CMD ["node", "dist/main"]
+# Ejecutar script de limpieza antes de iniciar la aplicación
+CMD ["/bin/bash", "-c", "/app/cleanup-locks.sh && node dist/main"]
