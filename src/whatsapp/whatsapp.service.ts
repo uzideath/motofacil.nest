@@ -427,16 +427,15 @@ export class WhatsappService implements OnModuleInit {
     }
 
 
-    async requestQrCode(): Promise<{ success: boolean; message?: string; error?: string }> {
-        return this.initializeMutex.runExclusive(async () => {
-            this.logger.log("📨 Solicitud explícita de código QR recibida")
+    async requestQrCode(): Promise<{ success: boolean; message: string }> {
+        this.logger.log("📨 Solicitud explícita de código QR recibida")
 
+        this.initializeMutex.runExclusive(async () => {
             try {
                 if (this.client) {
                     this.logger.log("🔄 Destruyendo cliente anterior...")
                     try {
                         await this.client.destroy()
-                        this.logger.log("✅ Cliente destruido correctamente")
                     } catch (e) {
                         this.logger.warn(`⚠️ Error al destruir cliente: ${e.message}`)
                     }
@@ -444,29 +443,28 @@ export class WhatsappService implements OnModuleInit {
 
                 this.client = null
                 this.isReady = false
-
                 this.sessionId = `nest-whatsapp-service-${Date.now()}`
-                this.logger.log(`🆕 Nuevo sessionId generado: ${this.sessionId}`)
 
                 await this.cleanupLockFiles()
                 this.setupClient()
                 this.initializationAttempts = 0
 
-                await this.initializeClient()
-
-                return {
-                    success: true,
-                    message: "Solicitud de QR iniciada correctamente",
-                }
+                // Inicializar cliente en background
+                this.initializeClient().catch((e) => {
+                    this.logger.error(`⚠️ Error de inicialización diferida: ${e.message}`)
+                })
             } catch (error) {
-                this.logger.error(`❌ Error al reiniciar cliente para QR: ${error.message}`)
-                return {
-                    success: false,
-                    error: error.message,
-                }
+                this.logger.error(`❌ Error en preparación del cliente: ${error.message}`)
             }
         })
+
+        // Responder rápido al frontend
+        return {
+            success: true,
+            message: "Cliente WhatsApp en proceso de reinicio. QR será emitido vía WebSocket.",
+        }
     }
+
 
     @Cron(CronExpression.EVERY_MINUTE)
     handleKeepAliveCron() {
