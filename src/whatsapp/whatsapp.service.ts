@@ -224,28 +224,22 @@ export class WhatsappService implements OnModuleInit {
 
         this.logger.log("QR Code recibido y será emitido a los clientes")
         this.lastQrCode = qr
-        this.lastQrTimestamp = Date.now()
         this.gateway.sendQrCode(qr)
 
+        // Cancelar cualquier timeout previo
         if (this.qrTimeout) {
             clearTimeout(this.qrTimeout)
         }
 
+        // Programar la expiración automática del QR
         this.qrTimeout = setTimeout(() => {
             if (this.lastQrCode === qr) {
                 this.logger.warn("⌛ QR expirado automáticamente. Limpiando...")
                 this.lastQrCode = null
                 this.qrTimeout = null
-
-                // Si tras la expiración no hay reconexión automática, la forzamos aquí
-                this.logger.warn("📛 QR no fue escaneado. Forzando reconexión...")
-                this.reconnect().catch((err) => {
-                    this.logger.error(`Error al reiniciar tras expiración de QR: ${err.message}`)
-                })
             }
         }, this.QR_TTL)
     }
-
 
     async getStatus() {
         return {
@@ -495,29 +489,12 @@ export class WhatsappService implements OnModuleInit {
 
     @Cron(CronExpression.EVERY_MINUTE)
     handleKeepAliveCron() {
-        const now = Date.now()
-        if (!this.isReady) {
-            if (
-                !this.lastQrTimestamp ||
-                now - this.lastQrTimestamp > this.QR_INACTIVITY_LIMIT
-            ) {
-                this.logger.warn("📛 QR no generado en los últimos 3 minutos. Forzando reconexión...")
-                this.reconnect().catch(err =>
-                    this.logger.error(`Error en reconexión forzada por inactividad de QR: ${err.message}`)
-                )
-            } else {
-                this.logger.verbose("🕒 Cron KeepAlive: cliente no listo, esperando escaneo de QR")
-            }
-            return
-        }
-
-        if (this.client) {
+        if (this.client && this.isReady) {
             this.client.getState()
-                .then(() => this.logger.verbose("🕒 Cron KeepAlive: cliente activo"))
-                .catch((err) => {
-                    this.logger.warn(`⚠️ Cron KeepAlive falló: ${err.message}`)
-                })
+                .then(() => this.logger.verbose('🕒 Cron KeepAlive: cliente activo'))
+                .catch((err) => this.logger.warn(`⚠️ Cron KeepAlive falló: ${err.message}`))
+        } else {
+            this.logger.verbose('🕒 Cron KeepAlive: cliente no listo')
         }
     }
-
 }
