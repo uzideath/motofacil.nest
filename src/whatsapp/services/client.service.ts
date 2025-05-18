@@ -72,18 +72,19 @@ export class WhatsappClientService implements IWhatsappClientService {
     }
 
     async destroy(): Promise<void> {
-        if (this.client) {
-            try {
-                await this.client.destroy()
-                this.client = null
-                this.isClientReady = false
-                this.logger.log("WhatsApp client destroyed")
-            } catch (error) {
-                this.logger.error(`Error destroying WhatsApp client: ${error.message}`)
-                throw error
-            }
+        if (!this.client) return;
+
+        try {
+            await this.client.destroy();
+        } catch (error) {
+            this.logger.warn(`⚠️ Failed to destroy WhatsApp client: ${error.message}`);
+        } finally {
+            this.client = null;
+            this.isClientReady = false;
+            this.logger.log("✅ WhatsApp client cleaned up");
         }
     }
+
 
     async getState(): Promise<string> {
         if (!this.client) {

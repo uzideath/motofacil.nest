@@ -72,39 +72,41 @@ export class WhatsappSessionService implements IWhatsappSessionService {
     }
 
     async requestQrCode(): Promise<IQrCodeResult> {
-        this.logger.log("Explicit QR code request received")
+        this.logger.log("📨 Explicit QR code request received");
 
         try {
-            // Destroy current client if it exists
-            await this.clientService.destroy()
-            this.clientService.setReady(false)
+            const client = this.clientService.getClient();
+            if (client) {
+                this.logger.log("🔄 Destroying current client before generating new QR");
+                await this.clientService.destroy();
+                this.clientService.setReady(false);
+            } else {
+                this.logger.log("⚠️ No client to destroy");
+            }
 
-            // Generate new session ID
-            const sessionId = this.clientService.regenerateSessionId()
-            this.logger.log(`New sessionId generated: ${sessionId}`)
+            const sessionId = this.clientService.regenerateSessionId();
+            this.logger.log(`🆕 New sessionId generated: ${sessionId}`);
 
-            // Clean up files
-            await this.fileService.cleanupLockFiles(sessionId)
+            await this.fileService.cleanupLockFiles(sessionId);
 
-            // Create client and register listeners
-            await this.setupClientWithListeners()
-            this.initializationAttempts = 0
+            await this.setupClientWithListeners();
+            this.initializationAttempts = 0;
 
-            // Initialize (this will emit the QR if it works)
-            await this.initializeClient()
+            await this.initializeClient();
 
             return {
                 success: true,
                 message: "QR request initiated successfully",
-            }
+            };
         } catch (error) {
-            this.logger.error(`Error restarting client for QR: ${error.message}`)
+            this.logger.error(`❌ Error restarting client for QR: ${error.message}`);
             return {
                 success: false,
                 error: error.message,
-            }
+            };
         }
     }
+
 
     async setupClientWithListeners(): Promise<void> {
         const client = this.clientService.createClient()
