@@ -1,4 +1,5 @@
 import {
+    ConnectedSocket,
     SubscribeMessage,
     WebSocketGateway,
     WebSocketServer,
@@ -24,12 +25,10 @@ interface WhatsAppStatusPayload {
 
 @WebSocketGateway({
     cors: {
-        origin: "*", // En producción, restringe esto a tu dominio frontend
-        methods: ["GET", "POST"],
+        origin: '*',
         credentials: true,
     },
-    namespace: "/",
-    transports: ["websocket", "polling"], // Añadir soporte para polling como fallback
+    transports: ['websocket'],
 })
 export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     constructor(
@@ -114,7 +113,8 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
      * @param client The client socket
      */
     @SubscribeMessage("request_qr")
-    async handleRequestQr(client: Socket): Promise<void> {
+    async handleRequestQr(@ConnectedSocket() client: Socket) {
+        this.logger.log(`📩 Cliente ${client.id} solicitó QR`)
         this.logger.log(`Client ${client.id} requested QR code`)
         client.emit("qr_requested", { timestamp: new Date().toISOString() })
 
