@@ -112,36 +112,35 @@ export class WhatsappService implements OnModuleInit {
         if (!this.client) return
 
         this.client.on("qr", (qr) => {
-            this.logger.log("QR Code received")
-            this.lastQrCode = qr
-            this.gateway.sendQrCode(qr)
+            this.handleQrCodeSafely(qr)
         })
 
+        this.client.on("authenticated", () => {
+            this.logger.log("WhatsApp client authenticated")
+
+            // Limpiar QR antiguo después de autenticación
+            this.lastQrCode = null
+        })
 
         this.client.on("ready", () => {
             this.isReady = true
-            this.initializationAttempts = 0 // Resetear contador de intentos
+            this.initializationAttempts = 0
+            this.lastQrCode = null
+
             this.logger.log("WhatsApp client is ready!")
 
-            // Send status update to frontend
+            // Enviar estado a clientes
             this.gateway.sendWhatsAppStatus({
                 isReady: true,
                 info: {
                     wid: this.client?.info.wid,
-                    // Corregido: Convertir undefined a null explícitamente
                     platform: this.client?.info.platform || null,
                 },
             })
         })
 
-        this.client.on("authenticated", () => {
-            this.logger.log("WhatsApp client authenticated")
-        })
-
         this.client.on("auth_failure", (msg) => {
             this.logger.error(`WhatsApp authentication failed: ${msg}`)
-
-            // Send status update to frontend
             this.gateway.sendWhatsAppStatus({
                 isReady: false,
                 info: null,
@@ -151,28 +150,22 @@ export class WhatsappService implements OnModuleInit {
         this.client.on("disconnected", async (reason) => {
             this.isReady = false
             this.logger.warn(`WhatsApp client disconnected: ${reason}`)
-
-            // Send status update to frontend
             this.gateway.sendWhatsAppStatus({
                 isReady: false,
                 info: null,
             })
 
-            // Limpiar cliente actual
+            // Limpieza y reinicio
             this.client = null
-
-            // Limpiar archivos de bloqueo antes de reiniciar
             await this.cleanupLockFiles()
-
-            // Crear nuevo cliente y reiniciar
             this.setupClient()
 
-            // Esperar un poco antes de reiniciar para evitar ciclos de reinicio rápidos
             setTimeout(() => {
                 this.initializeClient()
             }, 5000)
         })
     }
+
 
     private async initializeClient() {
         if (!this.client) {
@@ -219,6 +212,17 @@ export class WhatsappService implements OnModuleInit {
         }
     }
 
+
+    private handleQrCodeSafely(qr: string): void {
+        if (this.isReady) {
+            this.logger.warn("📛 QR recibido después de estar listo. No se emitirá.")
+            return
+        }
+
+        this.logger.log("QR Code recibido y será emitido a los clientes")
+        this.lastQrCode = qr
+        this.gateway.sendQrCode(qr)
+    }
 
     async getStatus() {
         return {
