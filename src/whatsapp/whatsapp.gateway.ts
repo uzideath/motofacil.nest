@@ -2,12 +2,12 @@ import {
     SubscribeMessage,
     WebSocketGateway,
     WebSocketServer,
-    type OnGatewayConnection,
-    type OnGatewayDisconnect,
-    type OnGatewayInit,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnGatewayInit,
 } from "@nestjs/websockets"
 import { Logger } from "@nestjs/common"
-import type { Server, Socket } from "socket.io"
+import { Server, Socket } from "socket.io"
 
 interface QrCodePayload {
     qr: string

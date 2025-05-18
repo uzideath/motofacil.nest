@@ -1,7 +1,7 @@
 import { Controller, Post, Get, UseInterceptors } from "@nestjs/common"
 import { FileInterceptor } from "@nestjs/platform-express"
 import type { Express } from "express"
-import type { WhatsappService } from "./whatsapp.service"
+import { WhatsappService } from "./whatsapp.service"
 import type { SendMessageDto, SendAttachmentDto, SendRemoteAttachmentDto } from "./dto"
 
 @Controller("whatsapp")
