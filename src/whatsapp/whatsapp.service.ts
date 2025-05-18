@@ -2,13 +2,12 @@ import { Injectable, Logger, type OnModuleInit } from "@nestjs/common"
 import { Client, LocalAuth, MessageMedia } from "whatsapp-web.js"
 import * as fs from "fs"
 import * as path from "path"
-import * as qrcode from "qrcode-terminal"
 import { exec } from "child_process"
 import { promisify } from "util"
-import { SendMessageDto } from "./dto"
-import { WhatsappGateway } from "./whatsapp.gateway"
+import type { SendMessageDto } from "./dto"
+import type { WhatsappGateway } from "./whatsapp.gateway"
 import { Cron, CronExpression } from "@nestjs/schedule"
-import { Mutex } from 'async-mutex'
+import { Mutex } from "async-mutex"
 
 const execAsync = promisify(exec)
 
@@ -21,11 +20,14 @@ export class WhatsappService implements OnModuleInit {
     private readonly maxInitializationAttempts = 5
     private lastQrCode: string | null = null
     private readonly initializeMutex = new Mutex()
-    private readonly QR_TTL = 1 * 60 * 1000;
+    private readonly QR_TTL = 1 * 60 * 1000
     private qrTimeout: NodeJS.Timeout | null = null
     private sessionId = `nest-whatsapp-service-${Date.now()}`
     private lastQrTimestamp: number | null = null
     private readonly QR_INACTIVITY_LIMIT = 3 * 60 * 1000
+    private browserHealthCheckInterval: NodeJS.Timeout | null = null
+    private lastKeepAliveSuccess: number = Date.now()
+    private readonly MAX_INACTIVE_TIME = 3 * 60 * 1000 // 3 minutes
 
     constructor(private readonly gateway: WhatsappGateway) {
         this.setupClient()
@@ -45,6 +47,7 @@ export class WhatsappService implements OnModuleInit {
             puppeteer: {
                 headless: true,
                 executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+                timeout: 120000, // Increased timeout for initialization
                 args: [
                     "--no-sandbox",
                     "--disable-setuid-sandbox",
@@ -55,14 +58,37 @@ export class WhatsappService implements OnModuleInit {
                     "--single-process",
                     "--disable-gpu",
                     "--disable-extensions",
-                    "--disable-software-rasterizer",
+
+                    // Additional stability improvements
                     "--disable-features=site-per-process",
-                    "--user-data-dir=/app/.wwebjs_auth/session-" + this.sessionId,
+                    "--js-flags=--max-old-space-size=500", // Limit memory usage
+                    "--disable-web-security",
+                    "--disable-features=IsolateOrigins,site-per-process",
+
+                    // Memory management
+                    "--disable-background-timer-throttling",
+                    "--disable-backgrounding-occluded-windows",
+                    "--disable-breakpad",
+                    "--disable-component-extensions-with-background-pages",
+                    "--disable-features=TranslateUI,BlinkGenPropertyTrees",
+                    "--disable-ipc-flooding-protection",
+                    "--disable-renderer-backgrounding",
+
+                    // User data directory
+                    `--user-data-dir=/app/.wwebjs_auth/session-${this.sessionId}`,
                 ],
             },
+            // Increase timeouts for better stability
+            webVersionCache: {
+                type: "remote",
+                remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/4.0.0.html",
+            },
+            webVersion: "2.2346.52",
+            restartOnAuthFail: true,
         })
 
         this.setupEventListeners()
+        this.startBrowserHealthCheck()
     }
 
     async onModuleInit() {
@@ -104,15 +130,15 @@ export class WhatsappService implements OnModuleInit {
     getStatusSync(): { isReady: boolean; info: any | null } {
         return {
             isReady: this.isReady,
-            info: this.isReady && this.client
-                ? {
-                    wid: this.client.info?.wid ?? null,
-                    platform: this.client.info?.platform ?? null,
-                }
-                : null,
+            info:
+                this.isReady && this.client
+                    ? {
+                        wid: this.client.info?.wid ?? null,
+                        platform: this.client.info?.platform ?? null,
+                    }
+                    : null,
         }
     }
-
 
     private setupEventListeners() {
         if (!this.client) return
@@ -123,6 +149,7 @@ export class WhatsappService implements OnModuleInit {
 
         this.client.on("authenticated", () => {
             this.logger.log("WhatsApp client authenticated")
+            this.lastKeepAliveSuccess = Date.now()
 
             // Limpiar QR antiguo después de autenticación
             this.lastQrCode = null
@@ -132,6 +159,7 @@ export class WhatsappService implements OnModuleInit {
             this.isReady = true
             this.initializationAttempts = 0
             this.lastQrCode = null
+            this.lastKeepAliveSuccess = Date.now()
 
             this.logger.log("WhatsApp client is ready!")
 
@@ -162,16 +190,50 @@ export class WhatsappService implements OnModuleInit {
             })
 
             // Limpieza y reinicio
+            try {
+                await this.client?.destroy()
+            } catch (e) {
+                this.logger.error(`Error destroying client after disconnect: ${e.message}`)
+            }
+
             this.client = null
             await this.cleanupLockFiles()
-            this.setupClient()
 
+            // Wait a bit before reconnecting
+            this.logger.log("🔄 Scheduling reconnection after disconnect...")
             setTimeout(() => {
+                this.setupClient()
                 this.initializeClient()
             }, 5000)
         })
     }
 
+    private startBrowserHealthCheck() {
+        // Clear any existing interval
+        if (this.browserHealthCheckInterval) {
+            clearInterval(this.browserHealthCheckInterval)
+        }
+
+        // Set up a new health check interval
+        this.browserHealthCheckInterval = setInterval(async () => {
+            if (this.client && this.isReady) {
+                try {
+                    // Check if browser is still responsive
+                    await this.client.pupPage?.evaluate(() => true)
+
+                    // Check if we've been inactive for too long
+                    const timeSinceLastSuccess = Date.now() - this.lastKeepAliveSuccess
+                    if (timeSinceLastSuccess > this.MAX_INACTIVE_TIME) {
+                        this.logger.warn(`Browser inactive for ${timeSinceLastSuccess}ms, forcing reconnect`)
+                        await this.reconnect()
+                    }
+                } catch (err) {
+                    this.logger.error(`Browser health check failed: ${err.message}`)
+                    this.reconnect().catch((e) => this.logger.error(`Failed to reconnect after health check: ${e.message}`))
+                }
+            }
+        }, 60000) // Check every minute
+    }
 
     private async initializeClient(): Promise<void> {
         await this.initializeMutex.runExclusive(async () => {
@@ -190,6 +252,7 @@ export class WhatsappService implements OnModuleInit {
                 this.logger.log("🕐 Ejecutando client.initialize()...")
                 await this.client?.initialize()
                 this.logger.log("✅ client.initialize() completado")
+                this.lastKeepAliveSuccess = Date.now()
             } catch (error) {
                 this.logger.error(`❌ Error al inicializar cliente: ${error.message}`)
 
@@ -224,6 +287,7 @@ export class WhatsappService implements OnModuleInit {
 
         this.logger.log("QR Code recibido y será emitido a los clientes")
         this.lastQrCode = qr
+        this.lastQrTimestamp = Date.now()
         this.gateway.sendQrCode(qr)
 
         // Cancelar cualquier timeout previo
@@ -277,12 +341,26 @@ export class WhatsappService implements OnModuleInit {
             // Send the message
             const message = await this.client.sendMessage(chatId, dto.message)
 
+            // Update keep-alive timestamp on successful operation
+            this.lastKeepAliveSuccess = Date.now()
+
             return {
                 success: true,
                 messageId: message.id._serialized,
             }
         } catch (error) {
             this.logger.error(`Failed to send message: ${error.message}`)
+
+            // Check if this is a session error and try to recover
+            if (
+                error.message.includes("Session closed") ||
+                error.message.includes("Protocol error") ||
+                error.message.includes("Target closed")
+            ) {
+                this.logger.warn("🔄 Session error detected during send, scheduling reconnect...")
+                setTimeout(() => this.reconnect(), 1000)
+            }
+
             return {
                 success: false,
                 error: error.message,
@@ -320,12 +398,26 @@ export class WhatsappService implements OnModuleInit {
             // Send the attachment
             const message = await this.client.sendMessage(chatId, media, { caption })
 
+            // Update keep-alive timestamp on successful operation
+            this.lastKeepAliveSuccess = Date.now()
+
             return {
                 success: true,
                 messageId: message.id._serialized,
             }
         } catch (error) {
             this.logger.error(`Failed to send attachment: ${error.message}`)
+
+            // Check if this is a session error and try to recover
+            if (
+                error.message.includes("Session closed") ||
+                error.message.includes("Protocol error") ||
+                error.message.includes("Target closed")
+            ) {
+                this.logger.warn("🔄 Session error detected during attachment send, scheduling reconnect...")
+                setTimeout(() => this.reconnect(), 1000)
+            }
+
             return {
                 success: false,
                 error: error.message,
@@ -366,12 +458,26 @@ export class WhatsappService implements OnModuleInit {
             // Send the attachment
             const message = await this.client.sendMessage(chatId, media, { caption })
 
+            // Update keep-alive timestamp on successful operation
+            this.lastKeepAliveSuccess = Date.now()
+
             return {
                 success: true,
                 messageId: message.id._serialized,
             }
         } catch (error) {
             this.logger.error(`Failed to send remote attachment: ${error.message}`)
+
+            // Check if this is a session error and try to recover
+            if (
+                error.message.includes("Session closed") ||
+                error.message.includes("Protocol error") ||
+                error.message.includes("Target closed")
+            ) {
+                this.logger.warn("🔄 Session error detected during remote attachment send, scheduling reconnect...")
+                setTimeout(() => this.reconnect(), 1000)
+            }
+
             return {
                 success: false,
                 error: error.message,
@@ -397,6 +503,12 @@ export class WhatsappService implements OnModuleInit {
     async logout() {
         this.logger.log("🔌 Logout iniciado...")
 
+        // Clear health check interval
+        if (this.browserHealthCheckInterval) {
+            clearInterval(this.browserHealthCheckInterval)
+            this.browserHealthCheckInterval = null
+        }
+
         if (this.client) {
             try {
                 await this.client.destroy()
@@ -414,10 +526,15 @@ export class WhatsappService implements OnModuleInit {
         this.logger.log("📴 WhatsApp client logged out")
     }
 
-
     async reconnect(): Promise<{ success: boolean; message: string }> {
         return this.initializeMutex.runExclusive(async () => {
             this.logger.log("🔄 Iniciando reconexión manual de WhatsApp...")
+
+            // Clear health check interval
+            if (this.browserHealthCheckInterval) {
+                clearInterval(this.browserHealthCheckInterval)
+                this.browserHealthCheckInterval = null
+            }
 
             if (this.client) {
                 try {
@@ -446,7 +563,6 @@ export class WhatsappService implements OnModuleInit {
             }
         })
     }
-
 
     async requestQrCode(): Promise<{ success: boolean; message: string }> {
         this.logger.log("📨 Solicitud explícita de código QR recibida")
@@ -486,15 +602,81 @@ export class WhatsappService implements OnModuleInit {
         }
     }
 
-
-    @Cron(CronExpression.EVERY_MINUTE)
-    handleKeepAliveCron() {
+    @Cron(CronExpression.EVERY_30_SECONDS) // More frequent checks
+    async handleKeepAliveCron() {
         if (this.client && this.isReady) {
-            this.client.getState()
-                .then(() => this.logger.verbose('🕒 Cron KeepAlive: cliente activo'))
-                .catch((err) => this.logger.warn(`⚠️ Cron KeepAlive falló: ${err.message}`))
+            try {
+                // More robust check - actually perform a lightweight operation
+                const state = await this.client.getState()
+                this.logger.verbose(`🕒 Cron KeepAlive: cliente activo (state: ${state})`)
+
+                // Perform a lightweight operation to keep the browser active
+                if (this.client.pupPage) {
+                    await this.client.pupPage.evaluate(() => console.log("keepalive"))
+                }
+
+                // Update last successful keep-alive timestamp
+                this.lastKeepAliveSuccess = Date.now()
+            } catch (err) {
+                this.logger.warn(`⚠️ Cron KeepAlive falló: ${err.message}`)
+
+                // Auto-recovery on failure
+                if (
+                    err.message.includes("Session closed") ||
+                    err.message.includes("Protocol error") ||
+                    err.message.includes("Target closed")
+                ) {
+                    this.logger.warn("🔄 Detectada sesión cerrada, iniciando reconexión automática...")
+                    this.reconnect().catch((e) => this.logger.error(`❌ Error en reconexión automática: ${e.message}`))
+                }
+            }
         } else {
-            this.logger.verbose('🕒 Cron KeepAlive: cliente no listo')
+            this.logger.verbose("🕒 Cron KeepAlive: cliente no listo")
+        }
+    }
+
+    @Cron(CronExpression.EVERY_10_MINUTES)
+    async handleMemoryCleanup() {
+        await this.performMemoryCleanup()
+    }
+
+    private async performMemoryCleanup() {
+        if (!this.client || !this.client.pupBrowser) return
+
+        try {
+            // Get all pages
+            const pages = await this.client.pupBrowser.pages()
+
+            // Close any extra pages (keep only the main one)
+            if (pages.length > 1) {
+                for (let i = 1; i < pages.length; i++) {
+                    await pages[i].close()
+                    this.logger.log(`Closed extra browser page ${i}`)
+                }
+            }
+
+            // Run garbage collection if possible
+            if (this.client.pupPage) {
+                await this.client.pupPage.evaluate(() => {
+                    if (window.gc) window.gc()
+                })
+            }
+
+            // Check memory usage (Node.js process)
+            const memUsage = process.memoryUsage()
+            if (memUsage.heapUsed > 500 * 1024 * 1024) {
+                // 500MB threshold
+                this.logger.warn(`High memory usage detected: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`)
+
+                // Consider restarting if memory is too high
+                if (memUsage.heapUsed > 800 * 1024 * 1024) {
+                    // 800MB threshold
+                    this.logger.warn("Memory usage critical, scheduling restart")
+                    setTimeout(() => this.reconnect(), 5000)
+                }
+            }
+        } catch (err) {
+            this.logger.error(`Error in memory cleanup: ${err.message}`)
         }
     }
 }
