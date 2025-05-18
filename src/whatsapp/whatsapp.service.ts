@@ -5,7 +5,7 @@ import * as path from "path"
 import { exec } from "child_process"
 import { promisify } from "util"
 import type { SendMessageDto } from "./dto"
-import type { WhatsappGateway } from "./whatsapp.gateway"
+import { WhatsappGateway } from "./whatsapp.gateway"
 import { Cron, CronExpression } from "@nestjs/schedule"
 import { Mutex } from "async-mutex"
 
