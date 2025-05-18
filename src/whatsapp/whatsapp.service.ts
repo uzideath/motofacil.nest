@@ -8,6 +8,7 @@ import { promisify } from "util"
 import { SendMessageDto } from "./dto"
 import { WhatsappGateway } from "./whatsapp.gateway"
 import { Cron, CronExpression } from "@nestjs/schedule"
+import { Mutex } from 'async-mutex'
 
 const execAsync = promisify(exec)
 
@@ -19,6 +20,7 @@ export class WhatsappService implements OnModuleInit {
     private initializationAttempts = 0
     private readonly maxInitializationAttempts = 5
     private lastQrCode: string | null = null
+    private readonly initializeMutex = new Mutex()
     // Cambiado de readonly a private para permitir reasignación
     private sessionId = `nest-whatsapp-service-${Date.now()}` // ID único para cada instancia
 
@@ -168,51 +170,48 @@ export class WhatsappService implements OnModuleInit {
     }
 
 
-    private async initializeClient() {
-        if (!this.client) {
-            this.logger.warn("⚠️ No hay cliente. Ejecutando setupClient.")
-            this.setupClient()
-        }
-
-        try {
+    private async initializeClient(): Promise<void> {
+        await this.initializeMutex.runExclusive(async () => {
             this.initializationAttempts++
             this.logger.log(`🚀 Inicializando WhatsApp client (intento ${this.initializationAttempts})`)
 
-            await this.cleanupLockFiles()
+            try {
+                if (!this.client) {
+                    this.logger.warn("⚠️ No hay cliente. Ejecutando setupClient()...")
+                    this.setupClient()
+                }
 
-            this.logger.log("🕐 Ejecutando client.initialize()...")
-            await this.client?.initialize()
-            this.logger.log("✅ client.initialize() completado")
-        } catch (error) {
-            this.logger.error(`❌ Error al inicializar cliente: ${error.message}`)
+                await this.cleanupLockFiles()
+                await new Promise((r) => setTimeout(r, 500))
 
-            this.gateway.sendWhatsAppStatus({
-                isReady: false,
-                info: null,
-            })
+                this.logger.log("🕐 Ejecutando client.initialize()...")
+                await this.client?.initialize()
+                this.logger.log("✅ client.initialize() completado")
+            } catch (error) {
+                this.logger.error(`❌ Error al inicializar cliente: ${error.message}`)
 
-            if (error.message.includes("SingletonLock")) {
-                this.logger.log("🔁 Error SingletonLock detectado. Reintentando con nuevo cliente.")
+                this.gateway.sendWhatsAppStatus({ isReady: false, info: null })
+
                 try {
                     await this.client?.destroy()
                 } catch (e) {
-                    this.logger.error(`Error al destruir cliente: ${e.message}`)
+                    this.logger.error(`Error al destruir cliente después de fallo: ${e.message}`)
                 }
+
                 this.client = null
                 await this.cleanupLockFiles()
                 this.setupClient()
-            }
 
-            if (this.initializationAttempts < this.maxInitializationAttempts) {
-                const delay = Math.min(1000 * Math.pow(2, this.initializationAttempts), 30000)
-                this.logger.log(`🕒 Reintentando en ${delay / 1000}s...`)
-                setTimeout(() => this.initializeClient(), delay)
-            } else {
-                this.logger.error("❌ Máximo de intentos alcanzado. Abortando.")
+                if (this.initializationAttempts < this.maxInitializationAttempts) {
+                    const delay = Math.min(1000 * Math.pow(2, this.initializationAttempts), 15000)
+                    this.logger.log(`🕒 Reintentando en ${delay / 1000}s...`)
+                    setTimeout(() => this.initializeClient(), delay)
+                } else {
+                    this.logger.error("❌ Máximo de intentos alcanzado. Abortando inicialización.")
+                }
             }
-        }
+        })
     }
-
 
     private handleQrCodeSafely(qr: string): void {
         if (this.isReady) {
@@ -375,20 +374,12 @@ export class WhatsappService implements OnModuleInit {
     }
 
     async logout() {
-        if (this.isReady && this.client) {
-            await this.client.logout()
-            this.isReady = false
-            this.logger.log("WhatsApp client logged out")
-        }
-    }
+        this.logger.log("🔌 Logout iniciado...")
 
-    async reconnect() {
-        this.logger.log("Iniciando reconexión manual de WhatsApp...")
-
-        // Destruir cliente actual si existe
         if (this.client) {
             try {
                 await this.client.destroy()
+                this.logger.log("✅ Cliente destruido correctamente")
             } catch (e) {
                 this.logger.error(`Error al destruir cliente: ${e.message}`)
             }
@@ -397,65 +388,86 @@ export class WhatsappService implements OnModuleInit {
         this.client = null
         this.isReady = false
 
-        // Limpiar archivos de bloqueo
         await this.cleanupLockFiles()
 
-        // Crear nuevo cliente con ID de sesión único
-        // Corregido: Asignar nuevo valor al sessionId
-        this.sessionId = `nest-whatsapp-service-${Date.now()}`
-        this.setupClient()
-
-        // Resetear contador de intentos
-        this.initializationAttempts = 0
-
-        // Inicializar nuevo cliente
-        return this.initializeClient()
+        this.logger.log("📴 WhatsApp client logged out")
     }
 
-    async requestQrCode(): Promise<{ success: boolean; message: string } | { success: false; error: string }> {
-        this.logger.log("📨 Solicitud explícita de código QR recibida")
 
-        try {
-            // Destruir cliente actual si existe
+    async reconnect(): Promise<{ success: boolean; message: string }> {
+        return this.initializeMutex.runExclusive(async () => {
+            this.logger.log("🔄 Iniciando reconexión manual de WhatsApp...")
+
             if (this.client) {
-                this.logger.log("🔄 Destruyendo cliente anterior")
                 try {
                     await this.client.destroy()
+                    this.logger.log("✅ Cliente destruido correctamente")
                 } catch (e) {
-                    this.logger.warn(`Error al destruir cliente: ${e.message}`)
+                    this.logger.error(`Error al destruir cliente: ${e.message}`)
                 }
             }
 
-            // Reiniciar estado
             this.client = null
             this.isReady = false
 
-            // ⚠️ Generar nuevo ID de sesión
             this.sessionId = `nest-whatsapp-service-${Date.now()}`
             this.logger.log(`🆕 Nuevo sessionId generado: ${this.sessionId}`)
 
-            // Limpiar archivos
             await this.cleanupLockFiles()
-
-            // Crear cliente y registrar listeners
             this.setupClient()
             this.initializationAttempts = 0
 
-            // Inicializar (esto emitirá el QR si funciona)
             await this.initializeClient()
 
             return {
                 success: true,
-                message: "Solicitud de QR iniciada correctamente",
+                message: "Reconexión iniciada",
             }
-        } catch (error) {
-            this.logger.error(`❌ Error al reiniciar cliente para QR: ${error.message}`)
-            return {
-                success: false,
-                error: error.message,
-            }
-        }
+        })
     }
+
+
+    async requestQrCode(): Promise<{ success: boolean; message?: string; error?: string }> {
+        return this.initializeMutex.runExclusive(async () => {
+            this.logger.log("📨 Solicitud explícita de código QR recibida")
+
+            try {
+                if (this.client) {
+                    this.logger.log("🔄 Destruyendo cliente anterior...")
+                    try {
+                        await this.client.destroy()
+                        this.logger.log("✅ Cliente destruido correctamente")
+                    } catch (e) {
+                        this.logger.warn(`⚠️ Error al destruir cliente: ${e.message}`)
+                    }
+                }
+
+                this.client = null
+                this.isReady = false
+
+                this.sessionId = `nest-whatsapp-service-${Date.now()}`
+                this.logger.log(`🆕 Nuevo sessionId generado: ${this.sessionId}`)
+
+                await this.cleanupLockFiles()
+                this.setupClient()
+                this.initializationAttempts = 0
+
+                await this.initializeClient()
+
+                return {
+                    success: true,
+                    message: "Solicitud de QR iniciada correctamente",
+                }
+            } catch (error) {
+                this.logger.error(`❌ Error al reiniciar cliente para QR: ${error.message}`)
+                return {
+                    success: false,
+                    error: error.message,
+                }
+            }
+        })
+    }
+
     @Cron(CronExpression.EVERY_MINUTE)
     handleKeepAliveCron() {
         if (this.client && this.isReady) {
