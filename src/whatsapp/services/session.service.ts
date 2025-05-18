@@ -170,6 +170,7 @@ export class WhatsappSessionService implements IWhatsappSessionService {
         this.setQrCode(qr)
     }
 
+
     async initializeClient(): Promise<void> {
         try {
             this.initializationAttempts++

@@ -48,18 +48,22 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     handleConnection(client: Socket): void {
         const status = this.whatsappService.getStatusSync()
+
         if (status.isReady) {
             client.emit("whatsapp_connected", status)
         } else {
             client.emit("whatsapp_disconnected", status)
-        }
 
-        // Opcional: reenviar QR si existe
-        const lastQr = this.whatsappService.getLastQrCode?.()
-        if (lastQr) {
-            client.emit("qr", { qr: lastQr })
+            const lastQr = this.whatsappService.getLastQrCode?.()
+            if (lastQr) {
+                client.emit("qr", { qr: lastQr }) // 🚀 Emitimos el QR de nuevo
+                this.logger.log(`🧾 Reemitiendo QR al cliente ${client.id}`)
+            } else {
+                this.logger.log(`ℹ️ Cliente ${client.id} conectado pero sin QR disponible`)
+            }
         }
     }
+
 
 
     handleDisconnect(client: Socket): void {
@@ -71,10 +75,9 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
      * @param qr The QR code string to be displayed and scanned
      */
     sendQrCode(qr: string): void {
-        this.logger.log("🚀 Emitiendo evento QR a clientes WebSocket")
-        this.server.emit("qr", { qr }) // 🔥 Este es el que el frontend espera
+        this.logger.log("📡 Enviando código QR a clientes vía WebSocket" + qr)
+        this.server.emit("qr", { qr })
     }
-
     /**
      * Send WhatsApp connection status to all connected clients
      * @param status The current WhatsApp connection status
