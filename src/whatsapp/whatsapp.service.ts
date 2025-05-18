@@ -21,7 +21,8 @@ export class WhatsappService implements OnModuleInit {
     private readonly maxInitializationAttempts = 5
     private lastQrCode: string | null = null
     private readonly initializeMutex = new Mutex()
-    // Cambiado de readonly a private para permitir reasignación
+    private readonly QR_TTL = 1 * 60 * 1000;
+    private qrTimeout: NodeJS.Timeout | null = null
     private sessionId = `nest-whatsapp-service-${Date.now()}` // ID único para cada instancia
 
     constructor(private readonly gateway: WhatsappGateway) {
@@ -222,6 +223,20 @@ export class WhatsappService implements OnModuleInit {
         this.logger.log("QR Code recibido y será emitido a los clientes")
         this.lastQrCode = qr
         this.gateway.sendQrCode(qr)
+
+        // Cancelar cualquier timeout previo
+        if (this.qrTimeout) {
+            clearTimeout(this.qrTimeout)
+        }
+
+        // Programar la expiración automática del QR
+        this.qrTimeout = setTimeout(() => {
+            if (this.lastQrCode === qr) {
+                this.logger.warn("⌛ QR expirado automáticamente. Limpiando...")
+                this.lastQrCode = null
+                this.qrTimeout = null
+            }
+        }, this.QR_TTL)
     }
 
     async getStatus() {
@@ -236,6 +251,10 @@ export class WhatsappService implements OnModuleInit {
                     }
                     : null,
         }
+    }
+
+    hasActiveQr(): boolean {
+        return this.lastQrCode !== null
     }
 
     async sendMessage(dto: SendMessageDto): Promise<{ success: boolean; messageId?: string; error?: string }> {
