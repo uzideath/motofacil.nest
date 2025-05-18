@@ -101,6 +101,11 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         return { event: "pong", data: "pong" }
     }
 
+    emitWhatsappReady(): void {
+        this.logger.log("📲 Emitiendo evento whatsapp_ready a clientes")
+        this.server.emit("whatsapp_ready", { timestamp: new Date().toISOString() })
+    }
+
     /**
      * Handle requests for the current QR code
      * @param client The client socket
@@ -116,12 +121,17 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
             timestamp: new Date().toISOString(),
         })
 
-        // ✅ LLAMAR al servicio para generar el nuevo QR
         try {
             const result = await this.whatsappService.requestQrCode()
 
             if ('success' in result && result.success) {
                 this.logger.log("✅ QR generado correctamente desde request_qr")
+
+                // ✅ reenviar el último QR directamente al cliente
+                const qr = this.whatsappService.getLastQrCode?.()
+                if (qr) {
+                    client.emit("qr", { qr })
+                }
             } else {
                 this.logger.error(`❌ Error al generar QR desde gateway: ${result}`)
                 client.emit("whatsapp_log", {
@@ -139,5 +149,4 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
             })
         }
     }
-
 }

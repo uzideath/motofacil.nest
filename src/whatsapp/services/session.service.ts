@@ -123,7 +123,11 @@ export class WhatsappSessionService implements IWhatsappSessionService {
             this.initializationAttempts = 0
             this.setQrCode(null)
             this.logger.log("WhatsApp client is ready!")
+
             this.gateway.sendWhatsAppStatus(this.getStatusSync())
+
+            // ✅ Emitir evento especial al frontend
+            this.gateway.emitWhatsappReady()
         })
 
         client.on("auth_failure", (msg) => {
