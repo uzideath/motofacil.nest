@@ -74,9 +74,10 @@ export class ReceiptService {
     if (!dateInput) return "—"
     const timeZone = "America/Bogota"
     const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput
-    const zonedDate = utcToZonedTime(date, timeZone)
-    return format(zonedDate, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
+
+    return format(date, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
   }
+
 
 
   private generateReceiptNumber(uuid: string): string {
