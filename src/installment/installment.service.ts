@@ -237,6 +237,43 @@ export class InstallmentService {
       changes,
     }
   }
+  async unifyMay21PaymentDates(): Promise<{ updated: number, changes: { id: string, before: string, after: string }[] }> {
+    const timeZone = "America/Bogota"
 
+    const installments = await this.prisma.installment.findMany({
+      select: { id: true, paymentDate: true }
+    })
+
+    const unifiedTime = zonedTimeToUtc(new Date("2025-05-21T18:15:00"), timeZone) // 6:15 PM hora Colombia
+
+    const changes: { id: string, before: string, after: string }[] = []
+
+    for (const installment of installments) {
+      const paymentDate = new Date(installment.paymentDate)
+
+      // Convertimos paymentDate de UTC → hora Colombia para comparar la "fecha" (no la hora)
+      const localDate = paymentDate.toLocaleDateString("en-CA", {
+        timeZone: timeZone,
+      })
+
+      if (localDate === "2025-05-21") {
+        await this.prisma.installment.update({
+          where: { id: installment.id },
+          data: { paymentDate: unifiedTime },
+        })
+
+        changes.push({
+          id: installment.id,
+          before: paymentDate.toISOString(),
+          after: unifiedTime.toISOString(),
+        })
+      }
+    }
+
+    return {
+      updated: changes.length,
+      changes,
+    }
+  }
 
 }

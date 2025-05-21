@@ -49,4 +49,9 @@ export class InstallmentController {
   async revertWrongDates() {
     return this.service.revertWrongUtcAdjustment()
   }
+
+  @Post("admin/unify-may21-payment-dates")
+  async unifyPaymentDates() {
+    return this.service.unifyMay21PaymentDates()
+  }
 }
