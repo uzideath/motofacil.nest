@@ -105,7 +105,7 @@ export const templateHtml = `
       <img class="logo" src="https://i.imgur.com/vxqGDAf.png" alt="Logo">
       <div class="title">RECIBO DE PAGO</div>
       <div class="info">Recibo #: MC-{{receiptNumber}}</div>
-      <div class="info">Fecha: {{formattedDate}}</div>
+      <div><span class="label">Generado:</span> {{generatedDate}}</div>
     </div>
 
     <div class="section">
@@ -130,7 +130,6 @@ export const templateHtml = `
 
     <div class="section">
       <div><span class="label">Fecha de Pago:</span> {{paymentDate}}</div>
-      <div><span class="label">Generado:</span> {{generatedDate}}</div>
     </div>
 
     <div class="total">TOTAL: {{formattedTotal}}</div>
