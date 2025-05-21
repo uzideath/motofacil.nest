@@ -3,12 +3,13 @@ import { zonedTimeToUtc } from 'date-fns-tz';
 
 const timeZone = 'America/Bogota';
 
-export function toColombiaMidnightUtc(dateStr: string): Date {
-  const localDate = new Date(dateStr);
-  localDate.setHours(0, 0, 0, 0);
-  return zonedTimeToUtc(localDate, timeZone);
+export function toColombiaMidnightUtc(date: string | Date): Date {
+  const zoned = new Date(
+    new Date(date).toLocaleString('en-US', { timeZone: 'America/Bogota' })
+  )
+  zoned.setHours(0, 0, 0, 0)
+  return zonedTimeToUtc(zoned, 'America/Bogota')
 }
-
 
 
 export function getColombiaDayRange(date: Date = new Date()) {
@@ -19,12 +20,13 @@ export function getColombiaDayRange(date: Date = new Date()) {
   return { startUtc, endUtc };
 }
 
-export function toColombiaEndOfDayUtc(dateInput: string | Date): Date {
-  const localDate = new Date(dateInput);
-  localDate.setHours(23, 59, 59, 999);
-  return zonedTimeToUtc(localDate, timeZone);
+export function toColombiaEndOfDayUtc(date: string | Date): Date {
+  const zoned = new Date(
+    new Date(date).toLocaleString('en-US', { timeZone: 'America/Bogota' })
+  )
+  zoned.setHours(23, 59, 59, 999)
+  return zonedTimeToUtc(zoned, 'America/Bogota')
 }
-
 export function toColombiaUtc(date: string | Date): Date {
   return zonedTimeToUtc(date, 'America/Bogota')
 }

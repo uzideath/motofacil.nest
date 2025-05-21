@@ -45,6 +45,8 @@ export class InstallmentService {
         paymentMethod: dto.paymentMethod,
         isLate: dto.isLate ?? false,
         attachmentUrl: dto.attachmentUrl,
+        createdAt: toColombiaUtc(new Date()),
+        updatedAt: toColombiaUtc(new Date()),
         createdById: dto.createdById,
       },
     });

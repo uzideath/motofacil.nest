@@ -10,7 +10,7 @@ import * as path from "path"
 export class ReceiptService {
   constructor(private readonly whatsappService: WhatsappService) { }
 
-  async generateReceipt(dto: CreateReceiptDto): Promise<Buffer> {
+  async generateReceipt(dto: any): Promise<Buffer> {
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -34,8 +34,6 @@ export class ReceiptService {
   }
 
   private fillTemplate(dto: CreateReceiptDto): string {
-    console.log("DTO recibido en fillTemplate:", dto)
-
     const paymentDate = dto.latePaymentDate ? new Date(dto.latePaymentDate) : new Date()
 
     const data = {
@@ -51,7 +49,7 @@ export class ReceiptService {
     }
 
     return templateHtml
-      .replace(/{{name}}/g, data.name?.trim() || "—")
+      .replace(/{{name}}/g, data.name)
       .replace(/{{identification}}/g, data.identification)
       .replace(/{{concept}}/g, data.concept)
       .replace(/{{formattedAmount}}/g, data.formattedAmount)
@@ -74,14 +72,20 @@ export class ReceiptService {
   private formatDate(dateInput: string | Date | null | undefined): string {
     if (!dateInput) return "—"
     const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput
-    return new Intl.DateTimeFormat("es-DO", {
+
+    const colombiaDate = new Date(
+      date.toLocaleString("en-US", { timeZone: "America/Bogota" })
+    )
+
+    return new Intl.DateTimeFormat("es-CO", {
       year: "numeric",
       month: "long",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    }).format(date)
+    }).format(colombiaDate)
   }
+
 
   private generateReceiptNumber(uuid: string): string {
     const cleanId = uuid.replace(/-/g, "")
