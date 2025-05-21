@@ -22,6 +22,8 @@ export class CreateReceiptDto {
   @IsDateString()
   date: string;
 
+  paymentDate: string;
+
   @IsDateString()
   @IsOptional()
   latePaymentDate?: string;

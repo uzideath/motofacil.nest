@@ -35,7 +35,7 @@ export class ReceiptService {
   }
 
   private fillTemplate(dto: CreateReceiptDto): string {
-    const paymentDate = dto.latePaymentDate ? new Date(dto.latePaymentDate) : new Date()
+    const paymentDate = dto.paymentDate ? new Date(dto.paymentDate) : new Date()
 
     const data = {
       ...dto,
