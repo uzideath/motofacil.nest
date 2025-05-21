@@ -35,6 +35,7 @@ export class ReceiptService {
   }
 
   private fillTemplate(dto: CreateReceiptDto): string {
+    console.log("paymentDate en DTO:", dto.paymentDate);
     const paymentDate = dto.paymentDate ? new Date(dto.paymentDate) : new Date()
 
     const data = {
@@ -70,15 +71,17 @@ export class ReceiptService {
     }).format(value)
   }
 
-  private formatDate(dateInput: string | Date | null | undefined): string {
-    if (!dateInput) return "—"
+private formatDate(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) return "—"
+  const timeZone = "America/Bogota"
 
-    const timeZone = "America/Bogota"
-    const utcDate = new Date(dateInput as any)
-    const zoned = utcToZonedTime(utcDate, timeZone)
+  const raw = typeof dateInput === "string" ? dateInput : dateInput.toISOString()
+  const utcDate = new Date(raw.endsWith("Z") ? raw : `${raw}Z`)
+  const zoned = utcToZonedTime(utcDate, timeZone)
 
-    return format(zoned, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
-  }
+  return format(zoned, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
+}
+
 
 
   private generateReceiptNumber(uuid: string): string {
