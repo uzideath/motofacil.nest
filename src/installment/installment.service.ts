@@ -108,7 +108,10 @@ export class InstallmentService {
           },
         },
       },
-      orderBy: { paymentDate: 'desc' },
+      orderBy: [
+        { paymentDate: 'desc' },
+        { createdAt: 'desc' }
+      ],
     });
   }
 
