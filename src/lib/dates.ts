@@ -1,5 +1,5 @@
 import { startOfDay, endOfDay } from 'date-fns';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 
 const timeZone = 'America/Bogota';
 
@@ -27,6 +27,9 @@ export function toColombiaEndOfDayUtc(date: string | Date): Date {
   zoned.setHours(23, 59, 59, 999)
   return zonedTimeToUtc(zoned, 'America/Bogota')
 }
+
 export function toColombiaUtc(date: Date | string) {
-  return zonedTimeToUtc(new Date(date), 'America/Bogota');
+  const localDate = typeof date === 'string' ? new Date(date) : date
+  const zoned = utcToZonedTime(localDate, timeZone)
+  return zonedTimeToUtc(zoned, timeZone)
 }
