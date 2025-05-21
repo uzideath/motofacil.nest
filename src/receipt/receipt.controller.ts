@@ -9,7 +9,7 @@ export class ReceiptController {
 
   @Post()
   async generate(
-    @Body() dto: CreateReceiptDto,
+    @Body() dto: any,
     @Res({ passthrough: true }) res: Response
   ): Promise<Buffer> {
     console.log("✅ DTO recibido:", dto);
