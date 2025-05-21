@@ -39,4 +39,9 @@ export class InstallmentController {
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
+
+  @Post("migrate-payment-dates")
+  async migrateDates() {
+    return this.service.migrateInstallmentDates()
+  }
 }

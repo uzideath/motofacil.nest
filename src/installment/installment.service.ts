@@ -8,6 +8,7 @@ import { CreateInstallmentDto, FindInstallmentFiltersDto, UpdateInstallmentDto }
 import { LoanStatus, Prisma } from 'generated/prisma';
 import { toColombiaMidnightUtc, toColombiaEndOfDayUtc, toColombiaUtc } from 'src/lib/dates';
 import { addDays } from 'date-fns';
+import { zonedTimeToUtc } from 'date-fns-tz';
 
 @Injectable()
 export class InstallmentService {
@@ -97,7 +98,7 @@ export class InstallmentService {
           include: {
             user: true,
             motorcycle: true,
-            payments: true,
+            // payments: true,
           },
         },
         createdBy: {
@@ -113,6 +114,20 @@ export class InstallmentService {
         { createdAt: 'desc' }
       ],
     });
+  }
+
+  async findAllRaw(): Promise<Installment[]> {
+    return this.prisma.installment.findMany({
+      include: {
+        loan: {
+          include: {
+            user: true,
+            motorcycle: true,
+          },
+        },
+        createdBy: true,
+      },
+    })
   }
 
 
@@ -159,4 +174,34 @@ export class InstallmentService {
       where: { id },
     });
   }
+
+
+async migrateInstallmentDates(): Promise<{ updated: number }> {
+  const installments = await this.prisma.installment.findMany({
+    select: { id: true, paymentDate: true }
+  })
+
+  let updatedCount = 0
+
+  for (const installment of installments) {
+    const currentPaymentDate = new Date(installment.paymentDate)
+
+    // Suponemos que la fecha guardada era en hora Colombia, pero mal interpretada como UTC
+    const correctedUtc = zonedTimeToUtc(currentPaymentDate, 'America/Bogota')
+
+    // Solo actualizamos si hay diferencia real
+    if (correctedUtc.toISOString() !== currentPaymentDate.toISOString()) {
+      await this.prisma.installment.update({
+        where: { id: installment.id },
+        data: {
+          paymentDate: correctedUtc,
+        },
+      })
+      updatedCount++
+    }
+  }
+
+  return { updated: updatedCount }
+}
+
 }
