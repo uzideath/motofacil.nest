@@ -72,12 +72,14 @@ export class ReceiptService {
 
   private formatDate(dateInput: string | Date | null | undefined): string {
     if (!dateInput) return "—"
-    const timeZone = "America/Bogota"
-    const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput
-    const zonedDate = utcToZonedTime(date, timeZone)
 
-    return format(zonedDate, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
+    const timeZone = "America/Bogota"
+    const utcDate = new Date(dateInput as any)
+    const zoned = utcToZonedTime(utcDate, timeZone)
+
+    return format(zoned, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
   }
+
 
   private generateReceiptNumber(uuid: string): string {
     const cleanId = uuid.replace(/-/g, "")
