@@ -114,13 +114,13 @@ export class InstallmentService {
     const record = await this.prisma.installment.findUnique({
       where: { id },
       include: {
-        loan: true,
-        createdBy: {
-          select: {
-            id: true,
-            username: true,
-          },
+        loan: {
+          include: {
+            user:true,
+            motorcycle:true,
+          }
         },
+        createdBy: true,
       },
     });
 
