@@ -9,6 +9,7 @@ export class ReceiptController {
 
   @Post()
   async generate(@Body() dto: CreateReceiptDto, @Res() res: Response) {
+    console.log('Received DTO:', JSON.stringify(dto));
     try {
       const pdfBuffer = await this.receiptService.generateReceipt(dto)
 
