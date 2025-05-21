@@ -38,6 +38,7 @@ export class ReceiptService {
 
     const data = {
       ...dto,
+      name: dto.name?.trim() || "",
       formattedAmount: this.formatCurrency(dto.amount),
       formattedGps: this.formatCurrency(dto.gps || 0),
       formattedTotal: this.formatCurrency((dto.amount || 0) + (dto.gps || 0)),
@@ -47,6 +48,7 @@ export class ReceiptService {
       formattedPaymentDate: this.formatDate(paymentDate),
       formattedGeneratedDate: this.formatDate(new Date()),
     }
+
 
     return templateHtml
       .replace(/{{name}}/g, data.name)
