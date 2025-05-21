@@ -24,3 +24,7 @@ export function toColombiaEndOfDayUtc(dateInput: string | Date): Date {
   localDate.setHours(23, 59, 59, 999);
   return zonedTimeToUtc(localDate, timeZone);
 }
+
+export function toColombiaUtc(date: string | Date): Date {
+  return zonedTimeToUtc(date, 'America/Bogota')
+}

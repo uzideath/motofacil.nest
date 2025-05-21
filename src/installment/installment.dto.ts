@@ -30,6 +30,10 @@ export class CreateInstallmentDto {
   @IsDateString()
   latePaymentDate?: string;
 
+  @IsOptional()
+  @IsDateString()
+  PaymentDate?: string;
+
   @IsString()
   @IsOptional()
   notes?: string;

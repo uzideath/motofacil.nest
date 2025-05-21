@@ -6,7 +6,7 @@ import {
 import { PrismaService } from 'src/prisma.service';
 import { CreateInstallmentDto, FindInstallmentFiltersDto, UpdateInstallmentDto } from './installment.dto';
 import { LoanStatus, Prisma } from 'generated/prisma';
-import { toColombiaMidnightUtc, toColombiaEndOfDayUtc } from 'src/lib/dates';
+import { toColombiaMidnightUtc, toColombiaEndOfDayUtc, toColombiaUtc } from 'src/lib/dates';
 import { addDays } from 'date-fns';
 
 @Injectable()
@@ -39,7 +39,8 @@ export class InstallmentService {
         loanId: dto.loanId,
         amount: dto.amount,
         gps: dto.gps,
-        latePaymentDate: dto.latePaymentDate,
+        latePaymentDate: dto.latePaymentDate ? toColombiaUtc(dto.latePaymentDate) : null,
+        paymentDate: toColombiaUtc(new Date()),
         notes: dto.notes,
         paymentMethod: dto.paymentMethod,
         isLate: dto.isLate ?? false,
@@ -116,8 +117,8 @@ export class InstallmentService {
       include: {
         loan: {
           include: {
-            user:true,
-            motorcycle:true,
+            user: true,
+            motorcycle: true,
           }
         },
         createdBy: true,
@@ -138,9 +139,12 @@ export class InstallmentService {
       where: { id },
       data: {
         ...rest,
+        paymentDate: rest.PaymentDate ? toColombiaUtc(rest.PaymentDate) : undefined,
+        latePaymentDate: rest.latePaymentDate ? toColombiaUtc(rest.latePaymentDate) : undefined,
         ...(createdById ? { createdBy: { connect: { id: createdById } } } : {}),
       },
     });
+
   }
 
   async remove(id: string) {
