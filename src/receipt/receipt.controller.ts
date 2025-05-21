@@ -8,27 +8,20 @@ export class ReceiptController {
   constructor(private readonly receiptService: ReceiptService) { }
 
   @Post()
-  async generate(
-    @Body() dto: any,
-    @Res({ passthrough: true }) res: Response
-  ): Promise<Buffer> {
-    console.log("✅ DTO recibido:", dto);
+  async generate(@Body() dto: any, @Res() res: Response) {
+    console.log('Received DTO:', JSON.stringify(dto));
     try {
-      const pdfBuffer = await this.receiptService.generateReceipt(dto);
+      const pdfBuffer = await this.receiptService.generateReceipt(dto)
 
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        `inline; filename=receipt-${Date.now()}.pdf`
-      );
+      // Set the correct headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename=receipt-${Date.now()}.pdf`);
 
-      return pdfBuffer;
+      // Send the buffer as the response
+      return res.send(pdfBuffer);
     } catch (err) {
-      console.error("❌ Error en generación:", err);
-      throw new HttpException(
-        "No se pudo generar el recibo.",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      console.log(err)
+      throw new HttpException("No se pudo generar el recibo.", HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
 
