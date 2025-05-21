@@ -5,6 +5,7 @@ import { templateHtml } from "./template"
 import { WhatsappService } from "../whatsapp/whatsapp.service"
 import * as fs from "fs"
 import * as path from "path"
+import { format, utcToZonedTime } from "date-fns-tz"
 
 @Injectable()
 export class ReceiptService {
@@ -71,15 +72,12 @@ export class ReceiptService {
 
   private formatDate(dateInput: string | Date | null | undefined): string {
     if (!dateInput) return "—"
+    const timeZone = "America/Bogota"
     const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput
-    return new Intl.DateTimeFormat("es-DO", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date)
+    const zonedDate = utcToZonedTime(date, timeZone)
+    return format(zonedDate, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
   }
+
 
   private generateReceiptNumber(uuid: string): string {
     const cleanId = uuid.replace(/-/g, "")

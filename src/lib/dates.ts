@@ -27,6 +27,6 @@ export function toColombiaEndOfDayUtc(date: string | Date): Date {
   zoned.setHours(23, 59, 59, 999)
   return zonedTimeToUtc(zoned, 'America/Bogota')
 }
-export function toColombiaUtc(date: string | Date): Date {
-  return zonedTimeToUtc(date, 'America/Bogota')
+export function toColombiaUtc(date: Date | string) {
+  return zonedTimeToUtc(new Date(date), 'America/Bogota');
 }
