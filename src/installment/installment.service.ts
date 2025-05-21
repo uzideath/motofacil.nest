@@ -7,7 +7,7 @@ import { PrismaService } from 'src/prisma.service';
 import { CreateInstallmentDto, FindInstallmentFiltersDto, UpdateInstallmentDto } from './installment.dto';
 import { LoanStatus, Prisma } from 'generated/prisma';
 import { toColombiaMidnightUtc, toColombiaEndOfDayUtc, toColombiaUtc } from 'src/lib/dates';
-import { addDays } from 'date-fns';
+import { addDays, subHours } from 'date-fns';
 import { zonedTimeToUtc } from 'date-fns-tz';
 
 @Injectable()
@@ -176,32 +176,67 @@ export class InstallmentService {
   }
 
 
-async migrateInstallmentDates(): Promise<{ updated: number }> {
-  const installments = await this.prisma.installment.findMany({
-    select: { id: true, paymentDate: true }
-  })
+  async migrateInstallmentDates(): Promise<{ updated: number }> {
+    const installments = await this.prisma.installment.findMany({
+      select: { id: true, paymentDate: true }
+    })
 
-  let updatedCount = 0
+    let updatedCount = 0
 
-  for (const installment of installments) {
-    const currentPaymentDate = new Date(installment.paymentDate)
+    for (const installment of installments) {
+      const currentPaymentDate = new Date(installment.paymentDate)
 
-    // Suponemos que la fecha guardada era en hora Colombia, pero mal interpretada como UTC
-    const correctedUtc = zonedTimeToUtc(currentPaymentDate, 'America/Bogota')
+      // Suponemos que la fecha guardada era en hora Colombia, pero mal interpretada como UTC
+      const correctedUtc = zonedTimeToUtc(currentPaymentDate, 'America/Bogota')
 
-    // Solo actualizamos si hay diferencia real
-    if (correctedUtc.toISOString() !== currentPaymentDate.toISOString()) {
-      await this.prisma.installment.update({
-        where: { id: installment.id },
-        data: {
-          paymentDate: correctedUtc,
-        },
-      })
-      updatedCount++
+      // Solo actualizamos si hay diferencia real
+      if (correctedUtc.toISOString() !== currentPaymentDate.toISOString()) {
+        await this.prisma.installment.update({
+          where: { id: installment.id },
+          data: {
+            paymentDate: correctedUtc,
+          },
+        })
+        updatedCount++
+      }
+    }
+
+    return { updated: updatedCount }
+  }
+
+
+  async revertWrongUtcAdjustment(): Promise<{ updated: number, changes: { id: string, before: string, after: string }[] }> {
+    const installments = await this.prisma.installment.findMany({
+      select: { id: true, paymentDate: true }
+    })
+
+    const changes: { id: string, before: string, after: string }[] = []
+
+    for (const installment of installments) {
+      const current = new Date(installment.paymentDate)
+
+      // Restamos 5 horas para revertir la conversión incorrecta
+      const corrected = subHours(current, 5)
+
+      if (corrected.toISOString() !== current.toISOString()) {
+        await this.prisma.installment.update({
+          where: { id: installment.id },
+          data: { paymentDate: corrected },
+        })
+
+        changes.push({
+          id: installment.id,
+          before: current.toISOString(),
+          after: corrected.toISOString(),
+        })
+      }
+    }
+
+    return {
+      updated: changes.length,
+      changes,
     }
   }
 
-  return { updated: updatedCount }
-}
 
 }

@@ -44,4 +44,9 @@ export class InstallmentController {
   async migrateDates() {
     return this.service.migrateInstallmentDates()
   }
+
+  @Post("admin/revert-payment-dates")
+  async revertWrongDates() {
+    return this.service.revertWrongUtcAdjustment()
+  }
 }
