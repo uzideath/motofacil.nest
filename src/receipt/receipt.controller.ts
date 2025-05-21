@@ -1,4 +1,4 @@
-import { Controller, Post, HttpException, HttpStatus, Body, Res, Header } from "@nestjs/common"
+import { Controller, Post, HttpException, HttpStatus, Body, Res } from "@nestjs/common"
 import { ReceiptService } from "./receipt.service"
 import type { CreateReceiptDto, SendReceiptDto } from "./dto"
 import { Response } from "express";
@@ -8,28 +8,22 @@ export class ReceiptController {
   constructor(private readonly receiptService: ReceiptService) { }
 
   @Post()
-  async generate(
-    @Body() dto: CreateReceiptDto,
-    @Res({ passthrough: true }) res: Response
-  ): Promise<Buffer> {
+  async generate(@Body() dto: CreateReceiptDto, @Res() res: Response) {
     try {
-      const pdfBuffer = await this.receiptService.generateReceipt(dto);
+      const pdfBuffer = await this.receiptService.generateReceipt(dto)
 
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=receipt-${Date.now()}.pdf`,
-      });
+      // Set the correct headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename=receipt-${Date.now()}.pdf`);
 
-      return pdfBuffer;
+      // Send the buffer as the response
+      return res.send(pdfBuffer);
     } catch (err) {
-      console.error("❌ Error al generar el recibo:", err);
-      throw new HttpException(
-        "No se pudo generar el recibo.",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      console.log(err)
+      throw new HttpException("No se pudo generar el recibo.", HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
-  
+
   @Post("whatsapp")
   async sendViaWhatsapp(@Body() dto: SendReceiptDto) {
     try {
