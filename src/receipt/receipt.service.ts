@@ -38,7 +38,7 @@ export class ReceiptService {
 
     const data = {
       ...dto,
-      name: dto.name?.trim() || "",
+      name: dto.name?.trim() || "Usario no encontrado",
       formattedAmount: this.formatCurrency(dto.amount),
       formattedGps: this.formatCurrency(dto.gps || 0),
       formattedTotal: this.formatCurrency((dto.amount || 0) + (dto.gps || 0)),
@@ -51,7 +51,7 @@ export class ReceiptService {
 
 
     return templateHtml
-      .replace(/{{name}}/g, data.name)
+      .replace(/{{name}}/g, data.name?.trim() || "—")
       .replace(/{{identification}}/g, data.identification)
       .replace(/{{concept}}/g, data.concept)
       .replace(/{{formattedAmount}}/g, data.formattedAmount)
