@@ -72,20 +72,14 @@ export class ReceiptService {
   private formatDate(dateInput: string | Date | null | undefined): string {
     if (!dateInput) return "—"
     const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput
-
-    const colombiaDate = new Date(
-      date.toLocaleString("en-US", { timeZone: "America/Bogota" })
-    )
-
-    return new Intl.DateTimeFormat("es-CO", {
+    return new Intl.DateTimeFormat("es-DO", {
       year: "numeric",
       month: "long",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    }).format(colombiaDate)
+    }).format(date)
   }
-
 
   private generateReceiptNumber(uuid: string): string {
     const cleanId = uuid.replace(/-/g, "")
