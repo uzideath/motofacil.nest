@@ -39,19 +39,4 @@ export class InstallmentController {
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
-
-  @Post("migrate-payment-dates")
-  async migrateDates() {
-    return this.service.migrateInstallmentDates()
-  }
-
-  @Post("admin/revert-payment-dates")
-  async revertWrongDates() {
-    return this.service.revertWrongUtcAdjustment()
-  }
-
-  @Post("admin/unify-may21-payment-dates")
-  async unifyPaymentDates() {
-    return this.service.unifyMay21PaymentDates()
-  }
 }
