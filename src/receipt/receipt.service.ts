@@ -38,7 +38,6 @@ export class ReceiptService {
 
     const data = {
       ...dto,
-      name: dto.name?.trim() || "Usario no encontrado",
       formattedAmount: this.formatCurrency(dto.amount),
       formattedGps: this.formatCurrency(dto.gps || 0),
       formattedTotal: this.formatCurrency((dto.amount || 0) + (dto.gps || 0)),
@@ -48,7 +47,6 @@ export class ReceiptService {
       formattedPaymentDate: this.formatDate(paymentDate),
       formattedGeneratedDate: this.formatDate(new Date()),
     }
-
 
     return templateHtml
       .replace(/{{name}}/g, data.name?.trim() || "—")
