@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common"
 import type { CashRegister, Expense, Installment, Loan, Motorcycle, Prisma, User } from "generated/prisma"
-import type { PrismaService } from "src/prisma.service"
+import { PrismaService } from "src/prisma.service"
 import type {
   CreateCashRegisterDto,
   FilterCashRegisterDto,
