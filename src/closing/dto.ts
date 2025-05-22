@@ -1,216 +1,211 @@
-import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsDateString,
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  ValidateNested,
-} from 'class-validator';
-import { ExpenseCategory, PaymentMethod, Providers } from 'generated/prisma';
+import { Type } from "class-transformer"
+import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator"
+import { ExpenseCategory, PaymentMethod, type Providers } from "generated/prisma"
 
 export class OwnerDto {
   @IsUUID()
-  id: string;
+  id: string
 
   @IsString()
-  username: string;
+  username: string
 }
-
 
 export class CreateCashRegisterDto {
   @IsNumber()
-  cashInRegister: number;
+  cashInRegister: number
 
   @IsNumber()
-  cashFromTransfers: number;
+  cashFromTransfers: number
 
   @IsNumber()
-  cashFromCards: number;
+  cashFromCards: number
 
   @IsOptional()
   @IsString()
-  notes?: string;
+  notes?: string
 
   @IsString()
-  provider: Providers;
+  provider: Providers
 
   @IsArray()
-  installmentIds: string[];
+  installmentIds: string[]
 
   @IsOptional()
   @IsArray()
-  @IsUUID('all', { each: true })
-  expenseIds?: string[];
+  @IsUUID("all", { each: true })
+  expenseIds?: string[]
 
   @IsUUID()
-  createdById: string;
+  createdById: string
 }
-
 
 export class GetResumenDto {
   @IsOptional()
   @IsDateString()
-  date?: string;
+  date?: string
 }
 
 export class GetTransaccionesDto {
   @IsOptional()
   @IsString()
-  search?: string;
+  search?: string
 
   @IsOptional()
   @IsString()
-  type?: 'income' | 'expense' | 'all';
+  type?: "income" | "expense" | "all"
 }
 
 export class FilterCashRegisterDto {
   @IsOptional()
   @IsString()
-  date?: string; // ISO format, ej. '2025-05-13'
+  date?: string // ISO format, ej. '2025-05-13'
 }
 
 export class FilterInstallmentsDto {
   @IsOptional()
   @IsString()
-  startDate?: string; // ISO: "2025-05-01"
+  startDate?: string // ISO: "2025-05-01"
 
   @IsOptional()
   @IsString()
-  endDate?: string; // ISO: "2025-05-10"
+  endDate?: string // ISO: "2025-05-10"
 
   @IsOptional()
   @IsEnum(PaymentMethod)
-  paymentMethod?: PaymentMethod;
+  paymentMethod?: PaymentMethod
 }
 
 export class FindOneCashRegisterResponseDto {
   @IsUUID()
-  id: string;
+  id: string
 
   @IsDateString()
-  date: string;
+  date: string
 
   @IsNumber()
-  cashInRegister: number;
+  cashInRegister: number
 
   @IsNumber()
-  cashFromTransfers: number;
+  cashFromTransfers: number
 
   @IsNumber()
-  cashFromCards: number;
+  cashFromCards: number
 
   @IsOptional()
   @IsString()
-  notes?: string;
+  notes?: string
 
   @IsDateString()
-  createdAt: string;
+  createdAt: string
 
   @IsDateString()
-  updatedAt: string;
+  updatedAt: string
 
   @ValidateNested()
   @Type(() => OwnerDto)
   @IsOptional()
-  createdBy?: OwnerDto;
+  createdBy?: OwnerDto
 
   @ValidateNested({ each: true })
   @Type(() => CashRegisterInstallmentDto)
-  payments: CashRegisterInstallmentDto[];
+  payments: CashRegisterInstallmentDto[]
 
   @ValidateNested({ each: true })
   @Type(() => CashRegisterExpenseDto)
-  expense: CashRegisterExpenseDto[];
+  expense: CashRegisterExpenseDto[]
 }
 
 export class UserDto {
   @IsUUID()
-  id: string;
+  id: string
 
   @IsString()
-  name: string;
+  name: string
 }
 
 export class MotorcycleDto {
   @IsUUID()
-  id: string;
+  id: string
 
   @IsString()
-  plate: string;
+  plate: string
 }
 
 export class LoanDto {
   @ValidateNested()
   @Type(() => UserDto)
-  user: UserDto;
+  user: UserDto
 
   @ValidateNested()
   @Type(() => MotorcycleDto)
-  motorcycle: MotorcycleDto;
+  motorcycle: MotorcycleDto
 }
 
+// Update the CashRegisterInstallmentDto to include totalAmount and gpsAmount
 export class CashRegisterInstallmentDto {
   @IsUUID()
-  id: string;
+  id: string
 
   @IsNumber()
-  amount: number;
+  amount: number
+
+  @IsNumber()
+  totalAmount: number
+
+  @IsNumber()
+  gpsAmount: number
 
   @IsDateString()
-  paymentDate: string;
+  paymentDate: string
 
   @ValidateNested()
   @Type(() => LoanDto)
-  loan: LoanDto;
+  loan: LoanDto
 
   @ValidateNested()
   @Type(() => OwnerDto)
   @IsOptional()
-  createdBy?: OwnerDto;
+  createdBy?: OwnerDto
 }
-
 
 export class CashRegisterExpenseDto {
   @IsUUID()
-  id: string;
+  id: string
 
   @IsNumber()
-  amount: number;
+  amount: number
 
   @IsDateString()
-  date: string;
+  date: string
 
   @IsEnum(ExpenseCategory)
-  category: ExpenseCategory;
+  category: ExpenseCategory
 
   @IsEnum(PaymentMethod)
-  paymentMethod: PaymentMethod;
+  paymentMethod: PaymentMethod
 
   @IsString()
-  beneficiary: string;
+  beneficiary: string
 
   @IsString()
   @IsOptional()
-  reference?: string;
+  reference?: string
 
   @IsString()
-  description: string;
+  description: string
 
   @IsArray()
   @IsOptional()
-  attachmentUrl?: string;
+  attachmentUrl?: string
 
   @IsDateString()
-  createdAt: string;
+  createdAt: string
 
   @IsDateString()
-  updatedAt: string;
+  updatedAt: string
 
   @ValidateNested()
   @Type(() => OwnerDto)
   @IsOptional()
-  createdBy?: OwnerDto;
+  createdBy?: OwnerDto
 }

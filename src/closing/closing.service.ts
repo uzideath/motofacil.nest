@@ -1,34 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import {
-  CashRegister,
-  Expense,
-  Installment,
-  Loan,
-  Motorcycle,
-  Prisma,
-  User,
-  ExpenseCategory,
-  PaymentMethod,
-} from 'generated/prisma';
-import { PrismaService } from 'src/prisma.service';
-import {
+import { Injectable, NotFoundException } from "@nestjs/common"
+import type { CashRegister, Expense, Installment, Loan, Motorcycle, Prisma, User } from "generated/prisma"
+import type { PrismaService } from "src/prisma.service"
+import type {
   CreateCashRegisterDto,
   FilterCashRegisterDto,
   FilterInstallmentsDto,
   FindOneCashRegisterResponseDto,
   GetResumenDto,
-} from './dto';
-import { subDays } from 'date-fns';
-import { getColombiaDayRange } from 'src/lib/dates';
-
+} from "./dto"
+import { subDays } from "date-fns"
+import { getColombiaDayRange } from "src/lib/dates"
 
 @Injectable()
 export class ClosingService {
   constructor(private readonly prisma: PrismaService) { }
 
-  async create(
-    dto: CreateCashRegisterDto,
-  ): Promise<CashRegister & { payments: Installment[] }> {
+  async create(dto: CreateCashRegisterDto): Promise<CashRegister & { payments: Installment[] }> {
     const {
       cashInRegister,
       cashFromTransfers,
@@ -38,23 +25,23 @@ export class ClosingService {
       installmentIds,
       expenseIds = [],
       createdById,
-    } = dto;
+    } = dto
 
     const installments = await this.prisma.installment.findMany({
       where: { id: { in: installmentIds } },
-    });
+    })
 
     if (installments.length !== installmentIds.length) {
-      throw new NotFoundException('Algunos pagos no fueron encontrados');
+      throw new NotFoundException("Algunos pagos no fueron encontrados")
     }
 
     if (expenseIds.length > 0) {
       const expenses = await this.prisma.expense.findMany({
         where: { id: { in: expenseIds } },
-      });
+      })
 
       if (expenses.length !== expenseIds.length) {
-        throw new NotFoundException('Algunos egresos no fueron encontrados');
+        throw new NotFoundException("Algunos egresos no fueron encontrados")
       }
     }
 
@@ -77,27 +64,26 @@ export class ClosingService {
         payments: true,
         expense: true,
       },
-    });
+    })
 
-    return cashRegister;
+    return cashRegister
   }
 
-
-  async findAll(
-    filter: FilterCashRegisterDto,
-  ): Promise<(CashRegister & {
-    payments: Installment[];
-    expense: Expense[];
-    createdBy: { id: string; username: string } | null;
-  })[]> {
-    let dateRange: { gte: Date; lte: Date } | undefined;
+  async findAll(filter: FilterCashRegisterDto): Promise<
+    (CashRegister & {
+      payments: Installment[]
+      expense: Expense[]
+      createdBy: { id: string; username: string } | null
+    })[]
+  > {
+    let dateRange: { gte: Date; lte: Date } | undefined
 
     if (filter.date) {
-      const start = new Date(filter.date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(filter.date);
-      end.setHours(23, 59, 59, 999);
-      dateRange = { gte: start, lte: end };
+      const start = new Date(filter.date)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(filter.date)
+      end.setHours(23, 59, 59, 999)
+      dateRange = { gte: start, lte: end }
     }
 
     return this.prisma.cashRegister.findMany({
@@ -129,10 +115,9 @@ export class ClosingService {
           },
         },
       },
-      orderBy: { date: 'desc' },
-    });
+      orderBy: { date: "desc" },
+    })
   }
-
 
   async findOne(id: string): Promise<FindOneCashRegisterResponseDto> {
     const cierre = await this.prisma.cashRegister.findUnique({
@@ -171,10 +156,10 @@ export class ClosingService {
           },
         },
       },
-    });
+    })
 
     if (!cierre) {
-      throw new NotFoundException('Cierre no encontrado');
+      throw new NotFoundException("Cierre no encontrado")
     }
 
     return {
@@ -195,6 +180,8 @@ export class ClosingService {
       payments: cierre.payments.map((p) => ({
         id: p.id,
         amount: p.amount,
+        totalAmount: p.amount + p.gps,
+        gpsAmount: p.gps,
         paymentDate: p.paymentDate.toISOString(),
         loan: {
           user: {
@@ -232,34 +219,33 @@ export class ClosingService {
           }
           : undefined,
       })),
-    };
+    }
   }
-
 
   async getUnassignedPayments(filter: FilterInstallmentsDto): Promise<{
     installments: (Installment & {
       loan: Loan & {
-        user: Pick<User, 'id' | 'name'>;
-        motorcycle: Pick<Motorcycle, 'id' | 'plate'>;
-      };
-    })[];
-    expenses: Expense[];
+        user: Pick<User, "id" | "name">
+        motorcycle: Pick<Motorcycle, "id" | "plate">
+      }
+    })[]
+    expenses: Expense[]
   }> {
     const whereInstallments: Prisma.InstallmentWhereInput = {
       cashRegisterId: null,
-    };
+    }
 
     if (filter.paymentMethod) {
-      whereInstallments.paymentMethod = filter.paymentMethod;
+      whereInstallments.paymentMethod = filter.paymentMethod
     }
 
     if (filter.startDate || filter.endDate) {
-      whereInstallments.paymentDate = {};
+      whereInstallments.paymentDate = {}
       if (filter.startDate) {
-        whereInstallments.paymentDate.gte = new Date(filter.startDate);
+        whereInstallments.paymentDate.gte = new Date(filter.startDate)
       }
       if (filter.endDate) {
-        whereInstallments.paymentDate.lte = new Date(filter.endDate);
+        whereInstallments.paymentDate.lte = new Date(filter.endDate)
       }
     }
 
@@ -273,36 +259,36 @@ export class ClosingService {
           },
         },
       },
-      orderBy: { paymentDate: 'asc' },
-    });
+      orderBy: { paymentDate: "asc" },
+    })
 
     const whereExpenses: Prisma.ExpenseWhereInput = {
       cashRegisterId: null,
-    };
+    }
 
     if (filter.startDate || filter.endDate) {
-      whereExpenses.date = {};
+      whereExpenses.date = {}
       if (filter.startDate) {
-        whereExpenses.date.gte = new Date(filter.startDate);
+        whereExpenses.date.gte = new Date(filter.startDate)
       }
       if (filter.endDate) {
-        whereExpenses.date.lte = new Date(filter.endDate);
+        whereExpenses.date.lte = new Date(filter.endDate)
       }
     }
 
     const expenses = await this.prisma.expense.findMany({
       where: whereExpenses,
-      orderBy: { date: 'asc' },
-    });
+      orderBy: { date: "asc" },
+    })
 
-    return { installments, expenses };
+    return { installments, expenses }
   }
 
   async summary(dto: GetResumenDto) {
-    const baseDate = dto.date ? new Date(dto.date) : new Date();
+    const baseDate = dto.date ? new Date(dto.date) : new Date()
 
-    const { startUtc: todayStart, endUtc: todayEnd } = getColombiaDayRange(baseDate);
-    const { startUtc: yesterdayStart, endUtc: yesterdayEnd } = getColombiaDayRange(subDays(baseDate, 1));
+    const { startUtc: todayStart, endUtc: todayEnd } = getColombiaDayRange(baseDate)
+    const { startUtc: yesterdayStart, endUtc: yesterdayEnd } = getColombiaDayRange(subDays(baseDate, 1))
 
     const [todayInstallments, yesterdayInstallments, todayExpenses] = await Promise.all([
       this.prisma.installment.findMany({
@@ -313,6 +299,12 @@ export class ClosingService {
           },
         },
         include: {
+          loan: {
+            select: {
+              id: true,
+              user: { select: { id: true, name: true } },
+            },
+          },
           createdBy: {
             select: {
               id: true,
@@ -326,6 +318,13 @@ export class ClosingService {
           paymentDate: {
             gte: yesterdayStart,
             lte: yesterdayEnd,
+          },
+        },
+        include: {
+          loan: {
+            select: {
+              id: true,
+            },
           },
         },
       }),
@@ -345,54 +344,50 @@ export class ClosingService {
           },
         },
       }),
-    ]);
+    ])
 
-    const sum = (arr: { amount: number }[]) =>
-      arr.reduce((acc, item) => acc + item.amount, 0);
+    const sum = (arr: { amount: number; gps?: number }[]) =>
+      arr.reduce((acc, item) => acc + item.amount + (item.gps || 0), 0)
 
-    const totalIncome = sum(todayInstallments);
-    const totalExpenses = sum(todayExpenses);
-    const balance = totalIncome - totalExpenses;
+    const totalIncome = sum(todayInstallments)
+    const totalExpenses = sum(todayExpenses)
+    const balance = totalIncome - totalExpenses
 
     const sumByMethod = (method: string) =>
-      todayInstallments
-        .filter((i) => i.paymentMethod === method)
-        .reduce((acc, i) => acc + i.amount, 0);
+      todayInstallments.filter((i) => i.paymentMethod === method).reduce((acc, i) => acc + i.amount + (i.gps || 0), 0)
 
     const paymentMethods = {
-      cash: sumByMethod('CASH'),
-      transfer: sumByMethod('TRANSACTION'),
-      card: sumByMethod('CARD'),
+      cash: sumByMethod("CASH"),
+      transfer: sumByMethod("TRANSACTION"),
+      card: sumByMethod("CARD"),
       other: 0,
-    };
+    }
 
     const expenseByCategory = todayExpenses.reduce(
       (acc, e) => {
-        acc[e.category] = (acc[e.category] || 0) + e.amount;
-        return acc;
+        acc[e.category] = (acc[e.category] || 0) + e.amount
+        return acc
       },
       {} as Record<string, number>,
-    );
+    )
 
     const expenseByMethod = todayExpenses.reduce(
       (acc, e) => {
-        acc[e.paymentMethod] = (acc[e.paymentMethod] || 0) + e.amount;
-        return acc;
+        acc[e.paymentMethod] = (acc[e.paymentMethod] || 0) + e.amount
+        return acc
       },
       {} as Record<string, number>,
-    );
+    )
 
     const categories = {
       loanPayments: totalIncome,
       otherIncome: 0,
       expenses: expenseByCategory,
-    };
+    }
 
-    const previousTotal = sum(yesterdayInstallments);
+    const previousTotal = sum(yesterdayInstallments)
     const previousDayComparison =
-      previousTotal > 0
-        ? Math.round(((totalIncome - previousTotal) / previousTotal) * 100)
-        : 100;
+      previousTotal > 0 ? Math.round(((totalIncome - previousTotal) / previousTotal) * 100) : 100
 
     return {
       totalIncome,
@@ -404,7 +399,6 @@ export class ClosingService {
       previousDayComparison,
       allTodayInstallments: todayInstallments,
       allTodayExpenses: todayExpenses,
-    };
+    }
   }
-
 }
