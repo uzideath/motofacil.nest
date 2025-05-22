@@ -159,7 +159,7 @@ export class InstallmentService {
       where: { id },
       data: {
         ...rest,
-        paymentDate: rest.PaymentDate ? toColombiaUtc(rest.PaymentDate) : undefined,
+        paymentDate: rest.paymentDate ? toColombiaUtc(rest.paymentDate) : undefined,
         latePaymentDate: rest.latePaymentDate ? toColombiaUtc(rest.latePaymentDate) : undefined,
         ...(createdById ? { createdBy: { connect: { id: createdById } } } : {}),
       },

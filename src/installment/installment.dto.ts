@@ -32,7 +32,7 @@ export class CreateInstallmentDto {
 
   @IsOptional()
   @IsDateString()
-  PaymentDate?: string;
+  paymentDate?: string;
 
   @IsString()
   @IsOptional()
