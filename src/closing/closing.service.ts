@@ -10,6 +10,9 @@ import type {
 } from "./dto"
 import { subDays } from "date-fns"
 import { getColombiaDayRange } from "src/lib/dates"
+import * as puppeteer from "puppeteer"
+import { templateHtml } from "./template"
+import { format, utcToZonedTime } from "date-fns-tz"
 
 @Injectable()
 export class ClosingService {
@@ -400,5 +403,273 @@ export class ClosingService {
       allTodayInstallments: todayInstallments,
       allTodayExpenses: todayExpenses,
     }
+  }
+
+  async printClosing(id: string): Promise<Buffer> {
+    const closing = await this.prisma.cashRegister.findUnique({
+      where: { id },
+      include: {
+        payments: {
+          include: {
+            loan: {
+              include: {
+                user: { select: { id: true, name: true } },
+                motorcycle: { select: { id: true, plate: true } },
+              },
+            },
+            createdBy: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+        },
+        expense: {
+          include: {
+            createdBy: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+    })
+
+    if (!closing) {
+      throw new NotFoundException(`Closing with ID ${id} not found`)
+    }
+
+    // Calculate totals
+    const totalPayments = closing.payments.reduce(
+      (acc, payment) => acc + payment.amount + (payment.gps || 0),
+      0
+    )
+
+    const totalExpenses = closing.expense.reduce(
+      (acc, expense) => acc + expense.amount,
+      0
+    )
+
+    const balance = totalPayments - totalExpenses
+
+    // Group payments by method
+    const paymentsByMethod = closing.payments.reduce(
+      (acc, payment) => {
+        const method = payment.paymentMethod
+        if (!acc[method]) {
+          acc[method] = 0
+        }
+        acc[method] += payment.amount + (payment.gps || 0)
+        return acc
+      },
+      {} as Record<string, number>
+    )
+
+    // Group expenses by category
+    const expensesByCategory = closing.expense.reduce(
+      (acc, expense) => {
+        const category = expense.category
+        if (!acc[category]) {
+          acc[category] = 0
+        }
+        acc[category] += expense.amount
+        return acc
+      },
+      {} as Record<string, number>
+    )
+
+    // Generate PDF
+    const html = this.fillTemplate({
+      id: closing.id,
+      date: closing.date,
+      provider: closing.provider,
+      cashInRegister: closing.cashInRegister,
+      cashFromTransfers: closing.cashFromTransfers,
+      cashFromCards: closing.cashFromCards,
+      notes: closing.notes,
+      createdAt: closing.createdAt,
+      updatedAt: closing.updatedAt,
+      createdBy: closing.createdBy,
+      payments: closing.payments,
+      expense: closing.expense,
+      totalPayments,
+      totalExpenses,
+      balance,
+      paymentsByMethod,
+      expensesByCategory
+    })
+
+    return this.generatePdf(html)
+  }
+
+  private async generatePdf(html: string): Promise<Buffer> {
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    })
+
+    const page = await browser.newPage()
+    await page.setContent(html, { waitUntil: "networkidle0" })
+
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+      preferCSSPageSize: true,
+    })
+
+    await browser.close()
+    return Buffer.from(pdfBuffer)
+  }
+
+  private fillTemplate(data: any): string {
+    // Format the data for the template
+    const formattedData = {
+      ...data,
+      formattedDate: this.formatDate(data.date),
+      formattedGeneratedDate: this.formatDate(new Date()),
+      formattedTotalPayments: this.formatCurrency(data.totalPayments),
+      formattedTotalExpenses: this.formatCurrency(data.totalExpenses),
+      formattedBalance: this.formatCurrency(data.balance),
+      provider: data.provider,
+      formattedCashInRegister: this.formatCurrency(data.cashInRegister),
+      formattedCashFromTransfers: this.formatCurrency(data.cashFromTransfers),
+      formattedCashFromCards: this.formatCurrency(data.cashFromCards),
+      createdBy: data.createdBy?.username || 'Sistema',
+      paymentMethods: this.generatePaymentMethodsHtml(data.paymentsByMethod),
+      expenseCategories: this.generateExpenseCategoriesHtml(data.expensesByCategory),
+      paymentRows: this.generatePaymentRowsHtml(data.payments),
+      expenseRows: this.generateExpenseRowsHtml(data.expense),
+    }
+
+    // Replace template placeholders
+    let result = templateHtml
+      .replace(/{{id}}/g, formattedData.id)
+      .replace(/{{provider}}/g, formattedData.provider)
+      .replace(/{{formattedDate}}/g, formattedData.formattedDate)
+      .replace(/{{formattedGeneratedDate}}/g, formattedData.formattedGeneratedDate)
+      .replace(/{{createdBy}}/g, formattedData.createdBy)
+      .replace(/{{formattedTotalPayments}}/g, formattedData.formattedTotalPayments)
+      .replace(/{{formattedTotalExpenses}}/g, formattedData.formattedTotalExpenses)
+      .replace(/{{formattedBalance}}/g, formattedData.formattedBalance)
+      .replace(/{{formattedCashInRegister}}/g, formattedData.formattedCashInRegister)
+      .replace(/{{formattedCashFromTransfers}}/g, formattedData.formattedCashFromTransfers)
+      .replace(/{{formattedCashFromCards}}/g, formattedData.formattedCashFromCards)
+      .replace(/{{paymentMethods}}/g, formattedData.paymentMethods)
+      .replace(/{{expenseCategories}}/g, formattedData.expenseCategories)
+      .replace(/{{paymentRows}}/g, formattedData.paymentRows)
+      .replace(/{{expenseRows}}/g, formattedData.expenseRows)
+
+    // Handle conditional notes section
+    if (data.notes) {
+      result = result.replace(/{{#if notes}}([\s\S]*?){{\/if}}/g, '$1')
+      result = result.replace(/{{notes}}/g, data.notes)
+    } else {
+      result = result.replace(/{{#if notes}}[\s\S]*?{{\/if}}/g, '')
+    }
+
+    return result
+  }
+
+  private formatCurrency(value: number): string {
+    return new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
+      minimumFractionDigits: 0,
+    }).format(value)
+  }
+
+  private formatDate(dateInput: string | Date | null | undefined): string {
+    if (!dateInput) return "—"
+    const timeZone = "America/Bogota"
+
+    const raw = typeof dateInput === "string" ? dateInput : dateInput.toISOString()
+    const utcDate = new Date(raw.endsWith("Z") ? raw : `${raw}Z`)
+    const zoned = utcToZonedTime(utcDate, timeZone)
+
+    return format(zoned, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
+  }
+
+  private generatePaymentMethodsHtml(methods: Record<string, number>): string {
+    return Object.entries(methods).map(([method, amount]) => {
+      const readableMethod = this.getReadablePaymentMethod(method)
+      return `
+        <div class="method-box">
+          <div class="method-name">${readableMethod}</div>
+          <div class="amount">${this.formatCurrency(amount)}</div>
+        </div>
+      `
+    }).join('')
+  }
+
+  private generateExpenseCategoriesHtml(categories: Record<string, number>): string {
+    return Object.entries(categories).map(([category, amount]) => {
+      const readableCategory = this.getReadableExpenseCategory(category)
+      return `
+        <div class="category-box">
+          <div class="category-name">${readableCategory}</div>
+          <div class="amount">${this.formatCurrency(amount)}</div>
+        </div>
+      `
+    }).join('')
+  }
+
+  private generatePaymentRowsHtml(payments: any[]): string {
+    return payments.map(payment => {
+      return `
+        <tr>
+          <td>${payment.loan.user.name}</td>
+          <td>${payment.loan.motorcycle.plate}</td>
+          <td>${this.formatDate(payment.paymentDate)}</td>
+          <td>${this.getReadablePaymentMethod(payment.paymentMethod)}</td>
+          <td class="right">${this.formatCurrency(payment.amount + (payment.gps || 0))}</td>
+        </tr>
+      `
+    }).join('')
+  }
+
+  private generateExpenseRowsHtml(expenses: any[]): string {
+    return expenses.map(expense => {
+      return `
+        <tr>
+          <td>${this.getReadableExpenseCategory(expense.category)}</td>
+          <td>${expense.beneficiary}</td>
+          <td>${this.formatDate(expense.date)}</td>
+          <td>${this.getReadablePaymentMethod(expense.paymentMethod)}</td>
+          <td class="right">${this.formatCurrency(expense.amount)}</td>
+        </tr>
+      `
+    }).join('')
+  }
+
+  private getReadablePaymentMethod(method: string): string {
+    const methods: Record<string, string> = {
+      'CASH': 'Efectivo',
+      'TRANSACTION': 'Transferencia',
+      'CARD': 'Tarjeta',
+      'OTHER': 'Otro'
+    }
+    return methods[method] || method
+  }
+
+  private getReadableExpenseCategory(category: string): string {
+    const categories: Record<string, string> = {
+      'FUEL': 'Combustible',
+      'MAINTENANCE': 'Mantenimiento',
+      'SALARY': 'Salario',
+      'RENT': 'Alquiler',
+      'UTILITIES': 'Servicios',
+      'OTHER': 'Otro'
+    }
+    return categories[category] || category
   }
 }

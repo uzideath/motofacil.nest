@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Res, HttpException, HttpStatus } from '@nestjs/common';
 import { ClosingService } from './closing.service';
 import {
   CreateCashRegisterDto,
@@ -6,6 +6,7 @@ import {
   FilterInstallmentsDto,
   GetResumenDto,
   FindOneCashRegisterResponseDto,
+  PrintClosingDto,
 } from './dto';
 import {
   CashRegister,
@@ -14,6 +15,7 @@ import {
   PaymentMethod,
   ExpenseCategory,
 } from 'generated/prisma';
+import { Response } from 'express';
 
 @Controller('closing')
 export class ClosingController {
@@ -54,5 +56,22 @@ export class ClosingController {
   @Get('summary')
   getResumen(@Query() query: GetResumenDto): ReturnType<ClosingService['summary']> {
     return this.closingService.summary(query);
+  }
+
+  @Get('print/:id')
+  async printClosing(@Param('id') id: string, @Res() res: Response) {
+    try {
+      const pdfBuffer = await this.closingService.printClosing(id);
+      
+      // Set the correct headers for PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename=closing-${id}.pdf`);
+      
+      // Send the PDF buffer as the response
+      return res.send(pdfBuffer);
+    } catch (err) {
+      console.error(err);
+      throw new HttpException('No se pudo generar el PDF del cierre.', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

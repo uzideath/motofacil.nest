@@ -209,3 +209,8 @@ export class CashRegisterExpenseDto {
   @IsOptional()
   createdBy?: OwnerDto
 }
+
+export class PrintClosingDto {
+  @IsUUID()
+  id: string
+}
