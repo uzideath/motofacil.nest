@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as puppeteer from 'puppeteer';
 import { CreateContractDto } from './dto';
 import { contractTemplate } from './contract';
+import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class ContractService {

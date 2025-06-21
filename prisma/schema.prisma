@@ -84,6 +84,7 @@ model Loan {
   paymentFrequency          String
   installmentPaymentAmmount Float
   gpsInstallmentPayment     Float
+  archived                  Boolean    @default(false)
   createdAt                 DateTime   @default(now())
   updatedAt                 DateTime   @updatedAt
   startDate                 DateTime   @default(now())
@@ -106,6 +107,7 @@ model Installment {
   notes           String?       @db.Text()
   attachmentUrl   String?
   createdById     String?
+  archived        Boolean       @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   createdBy       Owners?       @relation(fields: [createdById], references: [id])

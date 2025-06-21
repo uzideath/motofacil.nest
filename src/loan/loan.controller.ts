@@ -12,7 +12,7 @@ import { CreateLoanDto, UpdateLoanDto } from './loan.dto';
 
 @Controller('loans')
 export class LoanController {
-  constructor(private readonly loanService: LoanService) {}
+  constructor(private readonly loanService: LoanService) { }
 
   @Post()
   create(@Body() dto: CreateLoanDto) {
@@ -34,8 +34,16 @@ export class LoanController {
     return this.loanService.update(id, dto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.loanService.remove(id);
+  @Post(':id/archive')
+  async archiveLoan(@Param('id') id: string): Promise<{ ok: boolean }> {
+    await this.loanService.archive(id);
+    return { ok: true };
+  }
+
+
+  @Post(':id/unarchive')
+  async unarchiveLoan(@Param('id') id: string): Promise<{ ok: boolean }> {
+    await this.loanService.unarchive(id);
+    return { ok: true };
   }
 }
