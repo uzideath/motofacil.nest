@@ -14,7 +14,7 @@ export class CreateReceiptDto {
   amount: number;
 
   @IsNumber()
-  gps: number
+  gps: number;
 
   @IsNumber()
   total: number;
@@ -22,6 +22,7 @@ export class CreateReceiptDto {
   @IsDateString()
   date: string;
 
+  @IsString()
   paymentDate: string;
 
   @IsDateString()
@@ -30,6 +31,10 @@ export class CreateReceiptDto {
 
   @IsString()
   receiptNumber: string;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
 }
 
 export class SendReceiptWhatsappDto {

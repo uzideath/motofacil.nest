@@ -86,6 +86,11 @@ export const templateHtml = `
       padding-top: 6px;
     }
 
+    .notes {
+      margin-top: 12px;
+      font-size: 17px;
+    }
+
     .thank-you {
       font-weight: bold;
       font-size: 18px;
@@ -133,6 +138,11 @@ export const templateHtml = `
     </div>
 
     <div class="total">TOTAL: {{formattedTotal}}</div>
+
+    <div class="notes">
+      <div class="label">Notas:</div>
+      <div>{{notes}}</div>
+    </div>
 
     <div class="footer">
       <div class="thank-you">¡Gracias por su pago!</div>

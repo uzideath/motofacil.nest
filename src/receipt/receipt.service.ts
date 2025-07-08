@@ -36,7 +36,7 @@ export class ReceiptService {
 
   private fillTemplate(dto: CreateReceiptDto): string {
     console.log("paymentDate en DTO:", dto.paymentDate);
-    const paymentDate = dto.paymentDate ? new Date(dto.paymentDate) : new Date()
+    const paymentDate = dto.paymentDate ? new Date(dto.paymentDate) : new Date();
 
     const data = {
       ...dto,
@@ -48,7 +48,8 @@ export class ReceiptService {
       concept: dto.concept || "Servicio de transporte",
       formattedPaymentDate: this.formatDate(paymentDate),
       formattedGeneratedDate: this.formatDate(new Date()),
-    }
+      notes: dto.notes || "Sin observaciones adicionales." 
+    };
 
     return templateHtml
       .replace(/{{name}}/g, data.name)
@@ -61,6 +62,7 @@ export class ReceiptService {
       .replace(/{{receiptNumber}}/g, data.receiptNumber)
       .replace(/{{paymentDate}}/g, data.formattedPaymentDate)
       .replace(/{{generatedDate}}/g, data.formattedGeneratedDate)
+      .replace(/{{notes}}/g, data.notes) 
   }
 
   private formatCurrency(value: number): string {
@@ -71,16 +73,16 @@ export class ReceiptService {
     }).format(value)
   }
 
-private formatDate(dateInput: string | Date | null | undefined): string {
-  if (!dateInput) return "—"
-  const timeZone = "America/Bogota"
+  private formatDate(dateInput: string | Date | null | undefined): string {
+    if (!dateInput) return "—"
+    const timeZone = "America/Bogota"
 
-  const raw = typeof dateInput === "string" ? dateInput : dateInput.toISOString()
-  const utcDate = new Date(raw.endsWith("Z") ? raw : `${raw}Z`)
-  const zoned = utcToZonedTime(utcDate, timeZone)
+    const raw = typeof dateInput === "string" ? dateInput : dateInput.toISOString()
+    const utcDate = new Date(raw.endsWith("Z") ? raw : `${raw}Z`)
+    const zoned = utcToZonedTime(utcDate, timeZone)
 
-  return format(zoned, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
-}
+    return format(zoned, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
+  }
 
 
 
