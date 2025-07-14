@@ -92,8 +92,8 @@ export class WhatsappService implements OnModuleInit {
     }
 
     async onModuleInit() {
-        // await this.cleanupLockFiles()
-        // await this.initializeClient()
+        await this.cleanupLockFiles()
+        await this.initializeClient()
     }
 
     private async cleanupLockFiles() {
@@ -119,7 +119,7 @@ export class WhatsappService implements OnModuleInit {
             }
 
             // Establecer permisos
-            // await execAsync(`chmod -R 777 ${sessionDir}`)
+            await execAsync(`chmod -R 777 ${sessionDir}`)
 
             this.logger.log("Limpieza de archivos de bloqueo completada")
         } catch (error) {
