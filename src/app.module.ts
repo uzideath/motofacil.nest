@@ -19,6 +19,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ProvidersModule } from './providers/providers.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       rootPath: join(__dirname, "..", "uploads"),
       serveRoot: "/uploads",
     }),
+    ProvidersModule,
   ],
   controllers: [AppController],
   providers: [

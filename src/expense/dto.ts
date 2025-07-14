@@ -8,7 +8,7 @@ import {
   IsArray,
   IsDateString,
 } from 'class-validator';
-import { ExpenseCategory, PaymentMethod, Providers } from 'generated/prisma';
+import { ExpenseCategory, PaymentMethod } from 'generated/prisma';
 
 export class CreateExpenseDto {
   @IsNumber()
@@ -35,17 +35,17 @@ export class CreateExpenseDto {
   @IsNotEmpty()
   description: string;
 
-  @IsString()
-  @IsNotEmpty()
-  provider: Providers;
+  @IsUUID()
+  @IsOptional()
+  providerId?: string; // 👈 reemplaza al enum Providers
 
   @IsString()
   @IsOptional()
-  attachmentUrl?: string
+  attachmentUrl?: string;
 
   @IsUUID()
   @IsOptional()
-  cashRegisterId: string;
+  cashRegisterId?: string;
 
   @IsUUID()
   createdById: string;

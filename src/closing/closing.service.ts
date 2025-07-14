@@ -18,44 +18,56 @@ import { format, utcToZonedTime } from "date-fns-tz"
 export class ClosingService {
   constructor(private readonly prisma: PrismaService) { }
 
-  async create(dto: CreateCashRegisterDto): Promise<CashRegister & { payments: Installment[] }> {
+  // src/cash-register/cash-register.service.ts
+  async create(
+    dto: CreateCashRegisterDto,
+  ): Promise<CashRegister & { payments: Installment[]; expense: Expense[] }> {
     const {
       cashInRegister,
       cashFromTransfers,
       cashFromCards,
       notes,
-      provider,
+      providerId,          // 👈 UUID del proveedor
       installmentIds,
       expenseIds = [],
       createdById,
-    } = dto
+    } = dto;
 
+    /* 1. Validar pagos ------------------------------------------------------ */
     const installments = await this.prisma.installment.findMany({
       where: { id: { in: installmentIds } },
-    })
-
+    });
     if (installments.length !== installmentIds.length) {
-      throw new NotFoundException("Algunos pagos no fueron encontrados")
+      throw new NotFoundException('Algunos pagos no fueron encontrados');
     }
 
-    if (expenseIds.length > 0) {
+    /* 2. Validar egresos (opcional) ---------------------------------------- */
+    if (expenseIds.length) {
       const expenses = await this.prisma.expense.findMany({
         where: { id: { in: expenseIds } },
-      })
-
+      });
       if (expenses.length !== expenseIds.length) {
-        throw new NotFoundException("Algunos egresos no fueron encontrados")
+        throw new NotFoundException('Algunos egresos no fueron encontrados');
       }
     }
 
-    const cashRegister = await this.prisma.cashRegister.create({
+    /* 3. Validar proveedor -------------------------------------------------- */
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: providerId },
+    });
+    if (!provider) {
+      throw new NotFoundException('Proveedor no encontrado');
+    }
+
+    /* 4. Crear CashRegister ------------------------------------------------- */
+    return this.prisma.cashRegister.create({
       data: {
         cashInRegister,
         cashFromTransfers,
         cashFromCards,
         notes,
-        provider,
-        createdById,
+        provider: { connect: { id: providerId } }, // 👈 relación
+        createdBy: createdById ? { connect: { id: createdById } } : undefined,
         payments: {
           connect: installmentIds.map((id) => ({ id })),
         },
@@ -67,10 +79,9 @@ export class ClosingService {
         payments: true,
         expense: true,
       },
-    })
-
-    return cashRegister
+    });
   }
+
 
   async findAll(filter: FilterCashRegisterDto): Promise<
     (CashRegister & {
@@ -409,6 +420,9 @@ export class ClosingService {
     const closing = await this.prisma.cashRegister.findUnique({
       where: { id },
       include: {
+        provider: {
+          select: { id: true, name: true },
+        },
         payments: {
           include: {
             loan: {
@@ -417,81 +431,52 @@ export class ClosingService {
                 motorcycle: { select: { id: true, plate: true } },
               },
             },
-            createdBy: {
-              select: {
-                id: true,
-                username: true,
-              },
-            },
+            createdBy: { select: { id: true, username: true } },
           },
         },
         expense: {
           include: {
-            createdBy: {
-              select: {
-                id: true,
-                username: true,
-              },
-            },
+            createdBy: { select: { id: true, username: true } },
           },
         },
-        createdBy: {
-          select: {
-            id: true,
-            username: true,
-          },
-        },
+        createdBy: { select: { id: true, username: true } },
       },
-    })
+    });
 
     if (!closing) {
-      throw new NotFoundException(`Closing with ID ${id} not found`)
+      throw new NotFoundException(`Closing with ID ${id} not found`);
     }
 
-    // Calculate totals
+    /* Totales -------------------------------------------------------------- */
     const totalPayments = closing.payments.reduce(
-      (acc, payment) => acc + payment.amount + (payment.gps || 0),
-      0
-    )
+      (acc, p) => acc + p.amount + (p.gps ?? 0),
+      0,
+    );
+    const totalExpenses = closing.expense.reduce((acc, e) => acc + e.amount, 0);
+    const balance = totalPayments - totalExpenses;
 
-    const totalExpenses = closing.expense.reduce(
-      (acc, expense) => acc + expense.amount,
-      0
-    )
-
-    const balance = totalPayments - totalExpenses
-
-    // Group payments by method
-    const paymentsByMethod = closing.payments.reduce(
-      (acc, payment) => {
-        const method = payment.paymentMethod
-        if (!acc[method]) {
-          acc[method] = 0
-        }
-        acc[method] += payment.amount + (payment.gps || 0)
-        return acc
+    /* Agrupar -------------------------------------------------------------- */
+    const paymentsByMethod = closing.payments.reduce<Record<string, number>>(
+      (acc, p) => {
+        acc[p.paymentMethod] = (acc[p.paymentMethod] ?? 0) + p.amount + (p.gps ?? 0);
+        return acc;
       },
-      {} as Record<string, number>
-    )
+      {},
+    );
 
-    // Group expenses by category
-    const expensesByCategory = closing.expense.reduce(
-      (acc, expense) => {
-        const category = expense.category
-        if (!acc[category]) {
-          acc[category] = 0
-        }
-        acc[category] += expense.amount
-        return acc
+    const expensesByCategory = closing.expense.reduce<Record<string, number>>(
+      (acc, e) => {
+        acc[e.category] = (acc[e.category] ?? 0) + e.amount;
+        return acc;
       },
-      {} as Record<string, number>
-    )
+      {},
+    );
 
-    // Generate PDF
+    /* PDF ------------------------------------------------------------------ */
     const html = this.fillTemplate({
       id: closing.id,
       date: closing.date,
-      provider: closing.provider,
+      provider: closing.provider,        // 👈 ahora sí existe
       cashInRegister: closing.cashInRegister,
       cashFromTransfers: closing.cashFromTransfers,
       cashFromCards: closing.cashFromCards,
@@ -505,10 +490,10 @@ export class ClosingService {
       totalExpenses,
       balance,
       paymentsByMethod,
-      expensesByCategory
-    })
+      expensesByCategory,
+    });
 
-    return this.generatePdf(html)
+    return this.generatePdf(html);
   }
 
   private async generatePdf(html: string): Promise<Buffer> {

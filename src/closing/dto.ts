@@ -1,6 +1,6 @@
 import { Type } from "class-transformer"
 import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator"
-import { ExpenseCategory, PaymentMethod, type Providers } from "generated/prisma"
+import { ExpenseCategory, PaymentMethod } from "generated/prisma"
 
 export class OwnerDto {
   @IsUUID()
@@ -24,10 +24,11 @@ export class CreateCashRegisterDto {
   @IsString()
   notes?: string
 
-  @IsString()
-  provider: Providers
+  @IsUUID()
+  providerId: string // 👈 actualizado
 
   @IsArray()
+  @IsUUID("all", { each: true })
   installmentIds: string[]
 
   @IsOptional()
@@ -38,6 +39,7 @@ export class CreateCashRegisterDto {
   @IsUUID()
   createdById: string
 }
+
 
 export class GetResumenDto {
   @IsOptional()
