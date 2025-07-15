@@ -21,7 +21,12 @@ export class ProvidersService {
    * Returns all providers.
    */
   async findAll() {
-    return this.prismaService.provider.findMany();
+    return this.prismaService.provider.findMany({
+      include: {
+        motorcycles: true,
+        cashRegisters: true,
+      }
+    });
   }
 
   /**
@@ -31,6 +36,10 @@ export class ProvidersService {
   async findOne(id: string) {
     const provider = await this.prismaService.provider.findUnique({
       where: { id },
+      include: {
+        motorcycles: true,
+        cashRegisters: true,
+      },
     });
 
     if (!provider) {
