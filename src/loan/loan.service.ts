@@ -1,5 +1,3 @@
-// src/loan/loan.service.ts
-
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import {
@@ -14,13 +12,8 @@ import { addDays, addWeeks, addMonths } from 'date-fns';
 export class LoanService {
   constructor(private readonly prisma: PrismaService) { }
 
-  /**
-   * Crea un nuevo préstamo (loan), validando que:
-   * - El usuario y la moto existan.
-   * - No haya ya un préstamo activo/no archivado para la misma moto.
-   */
   async create(dto: CreateLoanDto) {
-    // 1. Validar existencia de usuario y moto
+
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
     });
@@ -31,7 +24,6 @@ export class LoanService {
     });
     if (!motorcycle) throw new NotFoundException('Motorcycle does not exist');
 
-    // 2. Verificar que la moto esté libre (sin loans activos/no archivados)
     const existingLoan = await this.prisma.loan.findFirst({
       where: {
         motorcycleId: dto.motorcycleId,
@@ -45,7 +37,10 @@ export class LoanService {
       );
     }
 
-    // 3. Calcular montos y fechas
+
+    /**
+     * Calculate the remaining debt and installment payment amount.
+     */
     const debtRemaining = dto.totalAmount - dto.downPayment;
     const installmentPaymentAmmount =
       dto.installmentPaymentAmmount ??
@@ -60,12 +55,10 @@ export class LoanService {
             ? addWeeks(new Date(), dto.installments * 2)
             : addMonths(new Date(), dto.installments);
 
-    // 4. Generar número de contrato
     const totalLoans = await this.prisma.loan.count();
     const nextNumber = totalLoans + 1;
     const contractNumber = `C${String(nextNumber).padStart(6, '0')}`;
 
-    // 5. Crear el préstamo en la base de datos
     return this.prisma.loan.create({
       data: {
         contractNumber,
@@ -92,9 +85,7 @@ export class LoanService {
     });
   }
 
-  /**
-   * Devuelve todos los préstamos, incluyendo usuario, moto y pagos.
-   */
+
   async findAll() {
     return this.prisma.loan.findMany({
       include: {
@@ -105,9 +96,7 @@ export class LoanService {
     });
   }
 
-  /**
-   * Busca un préstamo por ID, lanza NotFound si no existe.
-   */
+
   async findOne(id: string) {
     const loan = await this.prisma.loan.findUnique({
       where: { id },
@@ -121,9 +110,6 @@ export class LoanService {
     return loan;
   }
 
-  /**
-   * Actualiza un préstamo existente.
-   */
   async update(id: string, dto: UpdateLoanDto) {
     await this.findOne(id);
     return this.prisma.loan.update({
@@ -132,9 +118,6 @@ export class LoanService {
     });
   }
 
-  /**
-   * Elimina un préstamo por ID.
-   */
   async remove(id: string) {
     await this.findOne(id);
     return this.prisma.loan.delete({
@@ -142,9 +125,7 @@ export class LoanService {
     });
   }
 
-  /**
-   * Archiva un préstamo y todas sus cuotas relacionadas.
-   */
+
   async archive(id: string): Promise<void> {
     const loan = await this.prisma.loan.findUnique({ where: { id } });
     if (!loan) {
@@ -165,10 +146,6 @@ export class LoanService {
     });
   }
 
-  /**
-   * Desarchiva un préstamo y todas sus cuotas relacionadas,
-   * volviendo a marcarlas como activas.
-   */
   async unarchive(id: string): Promise<void> {
     const loan = await this.prisma.loan.findUnique({ where: { id } });
     if (!loan) {

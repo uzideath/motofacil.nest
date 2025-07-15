@@ -58,7 +58,7 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
                 client.emit("qr", { qr: lastQr })
                 this.logger.log(`🧾 Reemitiendo QR al cliente ${client.id}`)
             } else {
-                client.emit("qr_expired") // nuevo evento
+                client.emit("qr_expired") 
                 this.logger.warn(`⚠️ Cliente ${client.id} conectado pero el QR expiró`)
             }
         }
@@ -131,7 +131,6 @@ export class WhatsappGateway implements OnGatewayInit, OnGatewayConnection, OnGa
             if ('success' in result && result.success) {
                 this.logger.log("✅ QR generado correctamente desde request_qr")
 
-                // ✅ reenviar el último QR directamente al cliente
                 const qr = this.whatsappService.getLastQrCode?.()
                 if (qr) {
                     client.emit("qr", { qr })

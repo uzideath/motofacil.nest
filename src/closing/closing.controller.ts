@@ -63,11 +63,9 @@ export class ClosingController {
     try {
       const pdfBuffer = await this.closingService.printClosing(id);
       
-      // Set the correct headers for PDF
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename=closing-${id}.pdf`);
       
-      // Send the PDF buffer as the response
       return res.send(pdfBuffer);
     } catch (err) {
       console.error(err);

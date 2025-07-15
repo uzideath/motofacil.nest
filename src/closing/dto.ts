@@ -25,7 +25,7 @@ export class CreateCashRegisterDto {
   notes?: string
 
   @IsUUID()
-  providerId: string // 👈 actualizado
+  providerId: string 
 
   @IsArray()
   @IsUUID("all", { each: true })
@@ -66,11 +66,11 @@ export class FilterCashRegisterDto {
 export class FilterInstallmentsDto {
   @IsOptional()
   @IsString()
-  startDate?: string // ISO: "2025-05-01"
+  startDate?: string
 
   @IsOptional()
   @IsString()
-  endDate?: string // ISO: "2025-05-10"
+  endDate?: string
 
   @IsOptional()
   @IsEnum(PaymentMethod)
@@ -143,7 +143,6 @@ export class LoanDto {
   motorcycle: MotorcycleDto
 }
 
-// Update the CashRegisterInstallmentDto to include totalAmount and gpsAmount
 export class CashRegisterInstallmentDto {
   @IsUUID()
   id: string

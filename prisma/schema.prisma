@@ -177,15 +177,15 @@ model Expense {
  */
 
 enum ExpenseCategory {
-  RENT // Alquiler
-  SERVICES // Servicios
-  SALARIES // Salarios
-  TAXES // Impuestos
-  MAINTENANCE // Mantenimiento
-  PURCHASES // Compras
-  MARKETING // Marketing
-  TRANSPORT // Transporte
-  OTHER // Otros
+  RENT
+  SERVICES 
+  SALARIES 
+  TAXES 
+  MAINTENANCE
+  PURCHASES 
+  MARKETING 
+  TRANSPORT 
+  OTHER 
 }
 
 enum PaymentMethod {

@@ -13,11 +13,9 @@ export class ReceiptController {
     try {
       const pdfBuffer = await this.receiptService.generateReceipt(dto)
 
-      // Set the correct headers
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename=receipt-${Date.now()}.pdf`);
 
-      // Send the buffer as the response
       return res.send(pdfBuffer);
     } catch (err) {
       console.log(err)
@@ -30,7 +28,6 @@ export class ReceiptController {
     try {
       const { phoneNumber, caption, ...receiptData } = dto;
 
-      // Generate and send the PDF receipt as an attachment via WhatsApp
       const result = await this.receiptService.sendReceiptViaWhatsapp(
         phoneNumber,
         receiptData,

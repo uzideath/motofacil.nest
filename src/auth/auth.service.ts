@@ -108,20 +108,20 @@ export class AuthService {
       throw new ForbiddenException('Token inválido');
     }
 
-    // Crear nuevo payload sin 'exp'
+
     const newPayload: JwtPayload = {
       sub: payload.sub,
       username: payload.username,
       roles: payload.roles,
     };
 
-    // Nuevo access token
+
     const newAccessToken = await this.jwt.signAsync(newPayload, {
       secret: this.config.get('JWT_ACCESS_SECRET'),
       expiresIn: this.config.get('JWT_ACCESS_EXPIRES_IN') || '15m',
     });
 
-    // Nuevo refresh token
+
     const newRefreshToken = await this.jwt.signAsync(newPayload, {
       secret: this.config.get('JWT_REFRESH_SECRET'),
       expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN') || '7d',
@@ -129,7 +129,6 @@ export class AuthService {
 
     const hashedNewRefreshToken = await bcrypt.hash(newRefreshToken, 10);
 
-    // Guardar nuevo refresh token hasheado
     await this.prisma.owners.update({
       where: { id: payload.sub },
       data: { refreshToken: hashedNewRefreshToken },

@@ -36,7 +36,7 @@ class RegisterDto {
   @IsArray()
   @ArrayNotEmpty()
   @IsEnum(Role, { each: true })
-  @Type(() => String) // Optional: ensures each value is treated as a string
+  @Type(() => String)
   roles?: Role[];
 }
 

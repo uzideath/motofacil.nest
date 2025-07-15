@@ -3,7 +3,7 @@ import { IsNumber, IsString, IsUUID, IsOptional } from 'class-validator';
 
 export class CreateMotorcycleDto {
   @IsUUID()
-  providerId: string; // 👈 relación con Provider
+  providerId: string;
 
   @IsString()
   brand: string;
