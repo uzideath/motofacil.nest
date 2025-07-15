@@ -128,6 +128,12 @@ export class ClosingService {
             username: true,
           },
         },
+        provider: {
+          select: {
+            id: true,
+            name: true,
+          },
+        }
       },
       orderBy: { date: "desc" },
     })
@@ -169,6 +175,12 @@ export class ClosingService {
             username: true,
           },
         },
+        provider: {
+          select: {
+            id: true,
+            name: true,
+          },
+        }
       },
     })
 
@@ -325,6 +337,7 @@ export class ClosingService {
               username: true,
             },
           },
+
         },
       }),
       this.prisma.installment.findMany({
@@ -476,7 +489,7 @@ export class ClosingService {
     const html = this.fillTemplate({
       id: closing.id,
       date: closing.date,
-      provider: closing.provider,        // 👈 ahora sí existe
+      provider: closing.provider.name,        // 👈 ahora sí existe
       cashInRegister: closing.cashInRegister,
       cashFromTransfers: closing.cashFromTransfers,
       cashFromCards: closing.cashFromCards,

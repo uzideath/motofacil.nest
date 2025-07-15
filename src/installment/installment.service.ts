@@ -97,8 +97,11 @@ export class InstallmentService {
         loan: {
           include: {
             user: true,
-            motorcycle: true,
-            // payments: true,
+            motorcycle: {
+              include: {
+                provider: true,
+              }
+            }
           },
         },
         createdBy: {
@@ -122,7 +125,11 @@ export class InstallmentService {
         loan: {
           include: {
             user: true,
-            motorcycle: true,
+            motorcycle: {
+              include: {
+                provider: true,
+              }
+            }
           },
         },
         createdBy: true,

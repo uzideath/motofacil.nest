@@ -4,14 +4,18 @@ import { CreateMotorcycleDto, UpdateMotorcycleDto } from './motorcycle.dto';
 
 @Injectable()
 export class MotorcycleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   create(dto: CreateMotorcycleDto) {
     return this.prisma.motorcycle.create({ data: dto });
   }
 
   findAll() {
-    return this.prisma.motorcycle.findMany();
+    return this.prisma.motorcycle.findMany({
+      include: {
+        provider: true,
+      }
+    });
   }
 
   async findOne(id: string) {

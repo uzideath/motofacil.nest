@@ -11,12 +11,14 @@ export class ProvidersService {
    * @param createProviderDto - The data transfer object containing provider details.
    * @returns A message indicating the action performed.
    */
-  create(createProviderDto: CreateProviderDto) {
-    return 'This action adds a new provider';
+  async create(createProviderDto: CreateProviderDto) {
+    return await this.prismaService.provider.create({
+      data: createProviderDto,
+    });
   }
 
-  findAll() {
-    return `This action returns all providers`;
+  async findAll() {
+    return await this.prismaService.provider.findMany()
   }
 
   findOne(id: number) {

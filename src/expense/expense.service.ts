@@ -65,6 +65,12 @@ export class ExpenseService {
             name: true,
           },
         },
+        provider: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
   }
@@ -78,6 +84,12 @@ export class ExpenseService {
           select: {
             id: true,
             username: true,
+          },
+        },
+        provider: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
