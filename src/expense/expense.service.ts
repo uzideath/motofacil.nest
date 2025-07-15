@@ -1,18 +1,23 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateExpenseDto, FindExpenseFiltersDto } from './dto';
-import { toColombiaEndOfDayUtc, toColombiaMidnightUtc } from 'src/lib/dates';
+import {
+  toColombiaEndOfDayUtc,
+  toColombiaMidnightUtc,
+} from 'src/lib/dates';
 import { Prisma } from 'generated/prisma';
 import { addDays } from 'date-fns';
-
-
 
 @Injectable()
 export class ExpenseService {
   constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateExpenseDto) {
-    return this.prisma.expense.create({
+    return await this.prisma.expense.create({
       data: {
         amount: dto.amount,
         date: toColombiaMidnightUtc(dto.date),
@@ -22,13 +27,16 @@ export class ExpenseService {
         reference: dto.reference,
         description: dto.description,
         attachmentUrl: dto.attachmentUrl,
-        provider: dto.provider,
-        cashRegisterId: dto.cashRegisterId ?? null,
-        createdById: dto.createdById,
-      },
+        cashRegister: dto.cashRegisterId
+          ? { connect: { id: dto.cashRegisterId } }
+          : undefined,
+        createdBy: { connect: { id: dto.createdById } },
+        provider: dto.providerId
+          ? { connect: { id: dto.providerId } }
+          : undefined,
+      }
     });
   }
-
 
   async findAll(filters: FindExpenseFiltersDto): Promise<Expense[]> {
     const { startDate, endDate } = filters;
@@ -57,6 +65,12 @@ export class ExpenseService {
             name: true,
           },
         },
+        provider: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
   }
@@ -72,17 +86,24 @@ export class ExpenseService {
             username: true,
           },
         },
+        provider: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
   }
-
 
   async update(id: string, dto: CreateExpenseDto) {
     const expense = await this.prisma.expense.findUnique({ where: { id } });
     if (!expense) throw new NotFoundException('Expense not found');
 
     if (expense.cashRegisterId) {
-      throw new Error('Cannot update an expense that is already associated with a cash register');
+      throw new Error(
+        'Cannot update an expense that is already associated with a cash register'
+      );
     }
 
     return this.prisma.expense.update({
@@ -94,14 +115,18 @@ export class ExpenseService {
         paymentMethod: dto.paymentMethod,
         beneficiary: dto.beneficiary,
         reference: dto.reference,
-        provider: dto.provider,
         description: dto.description,
         attachmentUrl: dto.attachmentUrl,
-        cashRegisterId: dto.cashRegisterId ?? null,
-      },
+        cashRegister: dto.cashRegisterId
+          ? { connect: { id: dto.cashRegisterId } }
+          : undefined,
+        createdBy: { connect: { id: dto.createdById } },
+        provider: dto.providerId
+          ? { connect: { id: dto.providerId } }
+          : undefined,
+      }
     });
   }
-
 
   async delete(id: string) {
     const expense = await this.prisma.expense.findUnique({ where: { id } });
@@ -118,5 +143,4 @@ export class ExpenseService {
 
     return this.prisma.expense.delete({ where: { id } });
   }
-
 }

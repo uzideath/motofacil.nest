@@ -1,9 +1,9 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsString, IsUUID, IsOptional } from 'class-validator';
 
 export class CreateMotorcycleDto {
-  @IsString()
-  provider: string;
+  @IsUUID()
+  providerId: string; // 👈 relación con Provider
 
   @IsString()
   brand: string;
@@ -20,14 +20,17 @@ export class CreateMotorcycleDto {
   @IsString()
   chassis: string;
 
+  @IsOptional()
   @IsString()
-  color: string;
+  color?: string;
 
+  @IsOptional()
   @IsNumber()
-  cc: number;
+  cc?: number;
 
+  @IsOptional()
   @IsNumber()
-  gps: number;
+  gps?: number;
 }
 
 export class UpdateMotorcycleDto extends PartialType(CreateMotorcycleDto) { }

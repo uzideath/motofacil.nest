@@ -49,6 +49,7 @@
     "jsreport-handlebars": "^2.1.0",
     "motoapp.api": "file:",
     "multer": "1.4.5-lts.2",
+    "p-map": "^7.0.3",
     "passport-jwt": "^4.0.1",
     "puppeteer": "^24.8.2",
     "qrcode-terminal": "^0.12.0",
@@ -111,7 +112,13 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "bcrypt"
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "@swc/core",
+      "bcrypt",
+      "prisma",
+      "puppeteer"
     ],
     "ignoredBuiltDependencies": [
       "bcrypt"
