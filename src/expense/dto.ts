@@ -37,7 +37,7 @@ export class CreateExpenseDto {
 
   @IsUUID()
   @IsOptional()
-  providerId?: string; // 👈 reemplaza al enum Providers
+  providerId?: string; 
 
   @IsString()
   @IsOptional()

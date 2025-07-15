@@ -98,29 +98,22 @@ export class ReceiptService {
     caption?: string,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      // Generate the receipt PDF using your existing method
       const pdfBuffer = await this.generateReceipt(dto)
 
-      // Create a temporary file to store the PDF
       const tempDir = "temp"
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true })
       }
 
-      // Generate a unique filename
       const filename = `receipt-${Date.now()}.pdf`
       const filePath = path.join(tempDir, filename)
 
-      // Write the PDF buffer to the file
       fs.writeFileSync(filePath, pdfBuffer)
 
-      // Default caption if none provided
       const defaultCaption = `Recibo #${this.generateReceiptNumber(dto.receiptNumber)}`
 
-      // Send the PDF as an attachment via WhatsApp
       const result = await this.whatsappService.sendAttachment(phoneNumber, filePath, caption || defaultCaption)
 
-      // Clean up the temporary file
       fs.unlinkSync(filePath)
 
       return result

@@ -34,7 +34,6 @@ export class InstallmentService {
       throw new BadRequestException('Payment amount exceeds remaining debt.');
     }
 
-    // Crear cuota
     const installment = await this.prisma.installment.create({
       data: {
         loanId: dto.loanId,

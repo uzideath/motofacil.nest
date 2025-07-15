@@ -18,7 +18,6 @@ import { format, utcToZonedTime } from "date-fns-tz"
 export class ClosingService {
   constructor(private readonly prisma: PrismaService) { }
 
-  // src/cash-register/cash-register.service.ts
   async create(
     dto: CreateCashRegisterDto,
   ): Promise<CashRegister & { payments: Installment[]; expense: Expense[] }> {
@@ -27,13 +26,12 @@ export class ClosingService {
       cashFromTransfers,
       cashFromCards,
       notes,
-      providerId,          // 👈 UUID del proveedor
+      providerId,
       installmentIds,
       expenseIds = [],
       createdById,
     } = dto;
 
-    /* 1. Validar pagos ------------------------------------------------------ */
     const installments = await this.prisma.installment.findMany({
       where: { id: { in: installmentIds } },
     });
@@ -41,7 +39,6 @@ export class ClosingService {
       throw new NotFoundException('Algunos pagos no fueron encontrados');
     }
 
-    /* 2. Validar egresos (opcional) ---------------------------------------- */
     if (expenseIds.length) {
       const expenses = await this.prisma.expense.findMany({
         where: { id: { in: expenseIds } },
@@ -51,7 +48,6 @@ export class ClosingService {
       }
     }
 
-    /* 3. Validar proveedor -------------------------------------------------- */
     const provider = await this.prisma.provider.findUnique({
       where: { id: providerId },
     });
@@ -59,14 +55,13 @@ export class ClosingService {
       throw new NotFoundException('Proveedor no encontrado');
     }
 
-    /* 4. Crear CashRegister ------------------------------------------------- */
     return this.prisma.cashRegister.create({
       data: {
         cashInRegister,
         cashFromTransfers,
         cashFromCards,
         notes,
-        provider: { connect: { id: providerId } }, // 👈 relación
+        provider: { connect: { id: providerId } }, 
         createdBy: createdById ? { connect: { id: createdById } } : undefined,
         payments: {
           connect: installmentIds.map((id) => ({ id })),
@@ -489,7 +484,7 @@ export class ClosingService {
     const html = this.fillTemplate({
       id: closing.id,
       date: closing.date,
-      provider: closing.provider.name,        // 👈 ahora sí existe
+      provider: closing.provider.name,
       cashInRegister: closing.cashInRegister,
       cashFromTransfers: closing.cashFromTransfers,
       cashFromCards: closing.cashFromCards,
@@ -530,7 +525,6 @@ export class ClosingService {
   }
 
   private fillTemplate(data: any): string {
-    // Format the data for the template
     const formattedData = {
       ...data,
       formattedDate: this.formatDate(data.date),
@@ -549,7 +543,6 @@ export class ClosingService {
       expenseRows: this.generateExpenseRowsHtml(data.expense),
     }
 
-    // Replace template placeholders
     let result = templateHtml
       .replace(/{{id}}/g, formattedData.id)
       .replace(/{{provider}}/g, formattedData.provider)
@@ -567,7 +560,6 @@ export class ClosingService {
       .replace(/{{paymentRows}}/g, formattedData.paymentRows)
       .replace(/{{expenseRows}}/g, formattedData.expenseRows)
 
-    // Handle conditional notes section
     if (data.notes) {
       result = result.replace(/{{#if notes}}([\s\S]*?){{\/if}}/g, '$1')
       result = result.replace(/{{notes}}/g, data.notes)

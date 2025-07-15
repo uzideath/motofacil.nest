@@ -1,4 +1,3 @@
-// Asumiendo que tienes interfaces como estas:
 interface ResumenResponse {
   totalIncome: number;
   totalExpenses: number;
@@ -16,18 +15,16 @@ interface ResumenResponse {
     expenses: Record<string, number>;
   };
   previousDayComparison: number;
-  // Nuevos campos para mostrar todos los registros
   allTodayInstallments: Installment[];
   allTodayExpenses: Expense[];
 }
 
-// También necesitarías tener definidas estas interfaces
 interface Installment {
   id: string;
   amount: number;
   paymentDate: Date;
   paymentMethod: string;
-  // otros campos relevantes...
+
 }
 
 interface Expense {
@@ -36,5 +33,5 @@ interface Expense {
   date: Date;
   category: string;
   paymentMethod: string;
-  // otros campos relevantes...
+
 }
