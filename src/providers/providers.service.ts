@@ -24,7 +24,16 @@ export class ProvidersService {
     return this.prismaService.provider.findMany({
       include: {
         motorcycles: true,
-        cashRegisters: true,
+        cashRegisters: {
+          include: {
+            createdBy: {
+              select: {
+                name: true,
+                username: true
+              }
+            }
+          }
+        },
       }
     });
   }
