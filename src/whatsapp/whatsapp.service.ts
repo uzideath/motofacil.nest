@@ -4,6 +4,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { exec } from "child_process"
 import { promisify } from "util"
+import * as qrcode from "qrcode-terminal"
 import type { SendMessageDto } from "./dto"
 import { WhatsappGateway } from "./whatsapp.gateway"
 import { Cron, CronExpression } from "@nestjs/schedule"
@@ -276,6 +277,14 @@ export class WhatsappService implements OnModuleInit {
         this.lastQrCode = qr
         this.lastQrTimestamp = Date.now()
         this.gateway.sendQrCode(qr)
+
+        // Also render the QR in the terminal for quick scanning
+        try {
+            this.logger.log("Mostrando QR en la terminal (escanea con WhatsApp):")
+            qrcode.generate(qr, { small: true })
+        } catch (e) {
+            this.logger.warn(`No se pudo renderizar el QR en la terminal: ${e.message}`)
+        }
 
         if (this.qrTimeout) {
             clearTimeout(this.qrTimeout)
