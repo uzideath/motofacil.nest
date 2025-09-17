@@ -13,23 +13,6 @@ export class WhatsappController {
         return this.whatsappService.getStatus()
     }
 
-    @Post("reconnect")
-    async reconnect() {
-        await this.whatsappService.reconnect()
-        return { success: true, message: "Reconexión iniciada" }
-    }
-
-    @Post("request-qr")
-    async requestQr() {
-        const result = await this.whatsappService.requestQrCode()
-        return result
-    }
-
-    @Get("qr")
-    getLastQr(): { qr: string | null } {
-        return { qr: this.whatsappService.getLastQrCode() }
-    }
-
     @Post("send-message")
     async sendMessage(@Body() sendMessageDto: SendMessageDto) {
         return this.whatsappService.sendMessage(sendMessageDto)
@@ -44,11 +27,5 @@ export class WhatsappController {
     @Post("send-remote-attachment")
     async sendRemoteAttachment(@Body() dto: SendRemoteAttachmentDto) {
         return this.whatsappService.sendRemoteAttachment(dto.phoneNumber, dto.url, dto.filename, dto.mimeType, dto.caption)
-    }
-
-    @Post("logout")
-    async logout() {
-        await this.whatsappService.logout()
-        return { success: true, message: "Logged out successfully" }
     }
 }
