@@ -1,20 +1,19 @@
 FROM node:20-alpine
 
-# 1) Dependencias del sistema para Chromium + Prisma en Alpine
+# Dependencias del sistema para Chromium + Prisma en Alpine 3.22
 RUN apk add --no-cache \
   chromium \
   nss \
   freetype \
   harfbuzz \
   ca-certificates \
-  ttf-freefonts \
-  udev \
+  font-freefont \
   libstdc++ \
   openssl \
   libc6-compat
+# Opcional: más cobertura de fuentes (si existen en tu mirror)
+# RUN apk add --no-cache font-noto font-noto-cjk font-noto-emoji || true
 
-# 2) Variables de entorno (en su propia instrucción, fuera del RUN anterior)
-#    Importante: defínelas antes de instalar dependencias de Node
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     CHROME_BIN=/usr/bin/chromium \
     PUPPETEER_SKIP_DOWNLOAD=true \
@@ -22,15 +21,13 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
 
 WORKDIR /app
 
-# 3) Habilitar pnpm (con corepack) y usar el lockfile
+# Habilitar pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-# 4) Copiar código y construir
 COPY . .
-# Usa pnpm exec en lugar de pnpx para coherencia
 RUN pnpm exec prisma generate
 RUN pnpm run build
 
