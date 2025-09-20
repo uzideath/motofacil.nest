@@ -14,6 +14,7 @@ RUN pnpm install
 # Copia el código y compila
 COPY . .
 RUN pnpm run build
+RUN pnpx prisma generate
 
 EXPOSE 3005
 CMD ["sh", "-c", "pnpm run start"]
