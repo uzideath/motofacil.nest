@@ -3,8 +3,6 @@ import * as puppeteer from "puppeteer"
 import type { CreateReceiptDto } from "./dto"
 import { templateHtml } from "./template"
 import { WhatsappService } from "../whatsapp/whatsapp.service"
-import * as fs from "fs"
-import * as path from "path"
 import { format, utcToZonedTime } from "date-fns-tz"
 
 @Injectable()
@@ -100,23 +98,18 @@ export class ReceiptService {
     try {
       const pdfBuffer = await this.generateReceipt(dto)
 
-      const tempDir = "temp"
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true })
-      }
+      // Always send as PDF with fixed caption and filename
+      const fileName = `Recibo_${this.generateReceiptNumber(dto.receiptNumber)}.pdf`
+      const base64 = pdfBuffer.toString("base64")
 
-      const filename = `receipt-${Date.now()}.pdf`
-      const filePath = path.join(tempDir, filename)
-
-      fs.writeFileSync(filePath, pdfBuffer)
-
-      const defaultCaption = `Recibo #${this.generateReceiptNumber(dto.receiptNumber)}`
-
-      const result = await this.whatsappService.sendAttachment(phoneNumber, filePath, caption || defaultCaption)
-
-      fs.unlinkSync(filePath)
-
-      return result
+      return await this.whatsappService.sendMediaBase64({
+        number: phoneNumber,
+        mediatype: "document",
+        mimetype: "application/pdf",
+        caption: caption || `Recibo #${this.generateReceiptNumber(dto.receiptNumber)}`,
+        media: base64,
+        fileName,
+      })
     } catch (error) {
       return {
         success: false,
