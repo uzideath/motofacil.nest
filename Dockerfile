@@ -8,14 +8,14 @@ RUN set -ex; \
 WORKDIR /app
 
 # Instala dependencias con pnpm usando el lockfile
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install
+COPY package.json  ./
+RUN npm install
 
 # Copia el código y compila
 COPY . .
-RUN pnpx prisma generate
-RUN pnpm run build
+RUN npx prisma generate
+RUN npm run build
 
 
 EXPOSE 3005
-CMD ["sh", "-c", "pnpm run start"]
+CMD ["sh", "-c", "npm run start"]
