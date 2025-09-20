@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common"
+import { HttpModule } from "@nestjs/axios"
 import { WhatsappService } from "./whatsapp.service"
 import { WhatsappController } from "./whatsapp.controller"
-import { WhatsappGateway } from "./whatsapp.gateway"
 import { MulterModule } from "@nestjs/platform-express"
 import { diskStorage } from "multer"
 import { extname } from "path"
@@ -9,6 +9,7 @@ import { extname } from "path"
 
 @Module({
   imports: [
+    HttpModule,
     MulterModule.register({
       storage: diskStorage({
         destination: "./uploads",
@@ -22,7 +23,7 @@ import { extname } from "path"
     }),
   ],
   controllers: [WhatsappController],
-  providers: [WhatsappService, WhatsappGateway],
-  exports: [WhatsappService, WhatsappGateway],
+  providers: [WhatsappService],
+  exports: [WhatsappService],
 })
 export class WhatsappModule { }
