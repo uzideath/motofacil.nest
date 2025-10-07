@@ -326,10 +326,24 @@ export class ClosingService {
     // If specificDate is provided, filter by exact date (ignoring time)
     if (filter.specificDate) {
       const targetDate = new Date(filter.specificDate)
-      const startOfDay = new Date(targetDate)
-      startOfDay.setHours(0, 0, 0, 0)
-      const endOfDay = new Date(targetDate)
-      endOfDay.setHours(23, 59, 59, 999)
+      // Use UTC to avoid timezone issues
+      const startOfDay = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        0, 0, 0, 0
+      ))
+      const endOfDay = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        23, 59, 59, 999
+      ))
+
+      console.log('🔍 Backend - Filtering installments by date:')
+      console.log('   Input specificDate:', filter.specificDate)
+      console.log('   Parsed targetDate:', targetDate)
+      console.log('   Query range:', { startOfDay, endOfDay })
 
       whereInstallments.paymentDate = {
         gte: startOfDay,
@@ -362,6 +376,11 @@ export class ClosingService {
       orderBy: { paymentDate: "asc" },
     }) as InstallmentWithLoan[]
 
+    console.log('✅ Backend - Found installments:', installments.length)
+    if (installments.length > 0) {
+      console.log('   Sample payment dates:', installments.slice(0, 3).map(i => i.paymentDate))
+    }
+
     const whereExpenses: Prisma.ExpenseWhereInput = {
       cashRegisterId: null,
     }
@@ -369,10 +388,19 @@ export class ClosingService {
     // If specificDate is provided, filter expenses by exact date too
     if (filter.specificDate) {
       const targetDate = new Date(filter.specificDate)
-      const startOfDay = new Date(targetDate)
-      startOfDay.setHours(0, 0, 0, 0)
-      const endOfDay = new Date(targetDate)
-      endOfDay.setHours(23, 59, 59, 999)
+      // Use UTC to avoid timezone issues
+      const startOfDay = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        0, 0, 0, 0
+      ))
+      const endOfDay = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        23, 59, 59, 999
+      ))
 
       whereExpenses.date = {
         gte: startOfDay,
