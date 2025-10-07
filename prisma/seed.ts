@@ -12,9 +12,9 @@ async function main() {
     data:
 
     {
-      name: 'Administrador 2',
+      name: 'Administrador 1',
       passwordHash: hashedAdminPassword,
-      username: 'admin2',
+      username: 'admin',
       roles: ['ADMIN']
     }
   });

@@ -70,4 +70,9 @@ export class LoanController {
     await this.loanService.unarchive(id);
     return { ok: true };
   }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.loanService.remove(id);
+  }
 }

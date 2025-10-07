@@ -29,6 +29,28 @@ type LoanStatus = LoanWithRelations & {
 export class LoanService {
   constructor(private readonly prisma: PrismaService) { }
 
+  /**
+   * Add business days (Monday-Saturday, excluding Sundays) to a date
+   * @param startDate - The starting date
+   * @param daysToAdd - Number of business days to add
+   * @returns The calculated end date
+   */
+  private addBusinessDays(startDate: Date, daysToAdd: number): Date {
+    let currentDate = new Date(startDate);
+    let addedDays = 0;
+
+    while (addedDays < daysToAdd) {
+      currentDate = addDays(currentDate, 1);
+      
+      // Check if it's not Sunday (0 = Sunday, 6 = Saturday)
+      if (currentDate.getDay() !== 0) {
+        addedDays++;
+      }
+    }
+
+    return currentDate;
+  }
+
   async create(dto: CreateLoanDto) {
 
     const user = await this.prisma.user.findUnique({
@@ -66,12 +88,12 @@ export class LoanService {
     const startDate = dto.startDate ? new Date(dto.startDate) : new Date();
     const paymentFrequency = dto.paymentFrequency ?? PaymentFrequency.DAILY;
 
-    // Calculate endDate: use provided endDate or calculate based on startDate + installments
-    // Default to 540 daily payments (18 months) if no endDate provided
+    // Calculate endDate: use provided endDate or calculate based on startDate
+    // Default to 540 business days (18 months, Monday-Saturday, excluding Sundays)
     const endDate: Date = dto.endDate 
       ? new Date(dto.endDate)
       : paymentFrequency === PaymentFrequency.DAILY
-        ? addDays(startDate, 540) // 540 days ahead
+        ? this.addBusinessDays(startDate, 540) // 540 business days ahead (Mon-Sat)
         : paymentFrequency === PaymentFrequency.WEEKLY
           ? addWeeks(startDate, dto.installments)
           : paymentFrequency === PaymentFrequency.BIWEEKLY
@@ -145,10 +167,10 @@ export class LoanService {
       const paymentFrequency = dto.paymentFrequency;
       const installments = dto.installments;
       
-      // Default to 540 daily payments if payment frequency is DAILY
+      // Default to 540 business days (Monday-Saturday) if payment frequency is DAILY
       const endDate: Date =
         paymentFrequency === PaymentFrequency.DAILY
-          ? addDays(startDate, 540) // 540 days ahead
+          ? this.addBusinessDays(startDate, 540) // 540 business days ahead (Mon-Sat)
           : paymentFrequency === PaymentFrequency.WEEKLY
             ? addWeeks(startDate, installments)
             : paymentFrequency === PaymentFrequency.BIWEEKLY
@@ -219,11 +241,11 @@ export class LoanService {
       newEndDate = new Date(endDate);
     } else {
       // Recalculate end date based on new start date
-      // Default to 540 daily payments if payment frequency is DAILY
+      // Default to 540 business days (Monday-Saturday) if payment frequency is DAILY
       const paymentFrequency = loan.paymentFrequency as PaymentFrequency;
       newEndDate =
         paymentFrequency === PaymentFrequency.DAILY
-          ? addDays(newStartDate, 540) // 540 days ahead
+          ? this.addBusinessDays(newStartDate, 540) // 540 business days ahead (Mon-Sat)
           : paymentFrequency === PaymentFrequency.WEEKLY
             ? addWeeks(newStartDate, loan.installments)
             : paymentFrequency === PaymentFrequency.BIWEEKLY
