@@ -8,6 +8,7 @@ import {
   IsPositive,
   IsOptional,
   IsDateString,
+  ValidateIf,
 } from 'class-validator';
 
 export enum InterestType {
@@ -62,10 +63,12 @@ export class CreateLoanDto {
   @IsPositive()
   gpsInstallmentPayment: number;
 
+  @ValidateIf((o) => o.startDate !== null && o.startDate !== '' && o.startDate !== undefined)
   @IsDateString()
   @IsOptional()
   startDate?: string;
 
+  @ValidateIf((o) => o.endDate !== null && o.endDate !== '' && o.endDate !== undefined)
   @IsDateString()
   @IsOptional()
   endDate?: string;
@@ -74,10 +77,12 @@ export class CreateLoanDto {
 export class UpdateLoanDto extends PartialType(CreateLoanDto) { }
 
 export class UpdateLoanDatesDto {
+  @ValidateIf((o) => o.startDate !== null && o.startDate !== '' && o.startDate !== undefined)
   @IsDateString()
   @IsOptional()
   startDate?: string;
 
+  @ValidateIf((o) => o.endDate !== null && o.endDate !== '' && o.endDate !== undefined)
   @IsDateString()
   @IsOptional()
   endDate?: string;

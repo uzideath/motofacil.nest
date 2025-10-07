@@ -67,10 +67,11 @@ export class LoanService {
     const paymentFrequency = dto.paymentFrequency ?? PaymentFrequency.DAILY;
 
     // Calculate endDate: use provided endDate or calculate based on startDate + installments
+    // Default to 540 daily payments (18 months) if no endDate provided
     const endDate: Date = dto.endDate 
       ? new Date(dto.endDate)
       : paymentFrequency === PaymentFrequency.DAILY
-        ? addDays(startDate, dto.installments)
+        ? addDays(startDate, 540) // 540 days ahead
         : paymentFrequency === PaymentFrequency.WEEKLY
           ? addWeeks(startDate, dto.installments)
           : paymentFrequency === PaymentFrequency.BIWEEKLY
@@ -144,9 +145,10 @@ export class LoanService {
       const paymentFrequency = dto.paymentFrequency;
       const installments = dto.installments;
       
+      // Default to 540 daily payments if payment frequency is DAILY
       const endDate: Date =
         paymentFrequency === PaymentFrequency.DAILY
-          ? addDays(startDate, installments)
+          ? addDays(startDate, 540) // 540 days ahead
           : paymentFrequency === PaymentFrequency.WEEKLY
             ? addWeeks(startDate, installments)
             : paymentFrequency === PaymentFrequency.BIWEEKLY
@@ -217,10 +219,11 @@ export class LoanService {
       newEndDate = new Date(endDate);
     } else {
       // Recalculate end date based on new start date
+      // Default to 540 daily payments if payment frequency is DAILY
       const paymentFrequency = loan.paymentFrequency as PaymentFrequency;
       newEndDate =
         paymentFrequency === PaymentFrequency.DAILY
-          ? addDays(newStartDate, loan.installments)
+          ? addDays(newStartDate, 540) // 540 days ahead
           : paymentFrequency === PaymentFrequency.WEEKLY
             ? addWeeks(newStartDate, loan.installments)
             : paymentFrequency === PaymentFrequency.BIWEEKLY
