@@ -21,6 +21,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ProvidersModule } from './providers/providers.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { PrismaModule } from './prisma.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
       isGlobal: true,
     }),
     ScheduleModule.forRoot(),
+    PrismaModule,
     UserModule,
     LoanModule,
     InstallmentModule,

@@ -11,6 +11,9 @@ async function main() {
   }
   const app = await NestFactory.create(AppModule);
   
+  // Enable shutdown hooks to properly disconnect from database
+  app.enableShutdownHooks();
+  
   const config = app.get<ConfigService>(ConfigService);
   const port = config.get<number>('PORT') || 3000;
   const host = config.get<string>('HOST') || '0.0.0.0';

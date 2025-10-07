@@ -32,7 +32,9 @@ type CashRegisterWithRelations = CashRegister & {
 type InstallmentWithLoan = Installment & {
   loan: Loan & {
     user: Pick<User, "id" | "name">
-    vehicle: Pick<Vehicle, "id" | "plate" | "providerId">
+    vehicle: (Pick<Vehicle, "id" | "plate" | "providerId"> & {
+      provider: Provider | null
+    })
   }
 }
 
