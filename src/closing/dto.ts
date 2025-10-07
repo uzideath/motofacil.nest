@@ -125,7 +125,7 @@ export class UserDto {
   name: string
 }
 
-export class MotorcycleDto {
+export class VehicleDto {
   @IsUUID()
   id: string
 
@@ -139,8 +139,8 @@ export class LoanDto {
   user: UserDto
 
   @ValidateNested()
-  @Type(() => MotorcycleDto)
-  motorcycle: MotorcycleDto
+  @Type(() => VehicleDto)
+  vehicle: VehicleDto
 }
 
 export class CashRegisterInstallmentDto {

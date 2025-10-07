@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common"
-import type { CashRegister, Expense, Installment, Loan, Motorcycle, Prisma, User } from "generated/prisma"
+import type { CashRegister, Expense, Installment, Loan, Vehicle, Prisma, User, Owners, Provider } from "generated/prisma"
 import { PrismaService } from "src/prisma.service"
 import type {
   CreateCashRegisterDto,
@@ -13,6 +13,28 @@ import { getColombiaDayRange } from "src/lib/dates"
 import * as puppeteer from "puppeteer"
 import { templateHtml } from "./template"
 import { format, utcToZonedTime } from "date-fns-tz"
+
+type CashRegisterWithRelations = CashRegister & {
+  payments: (Installment & {
+    loan: Loan & {
+      user: Pick<User, "id" | "name">
+      vehicle: Pick<Vehicle, "id" | "plate">
+    }
+    createdBy: Pick<Owners, "id" | "username"> | null
+  })[]
+  expense: (Expense & {
+    createdBy: Pick<Owners, "id" | "username"> | null
+  })[]
+  createdBy: Pick<Owners, "id" | "username"> | null
+  provider: Pick<Provider, "id" | "name">
+}
+
+type InstallmentWithLoan = Installment & {
+  loan: Loan & {
+    user: Pick<User, "id" | "name">
+    vehicle: Pick<Vehicle, "id" | "plate" | "providerId">
+  }
+}
 
 @Injectable()
 export class ClosingService {
@@ -78,13 +100,7 @@ export class ClosingService {
   }
 
 
-  async findAll(filter: FilterCashRegisterDto): Promise<
-    (CashRegister & {
-      payments: Installment[]
-      expense: Expense[]
-      createdBy: { id: string; username: string } | null
-    })[]
-  > {
+  async findAll(filter: FilterCashRegisterDto): Promise<CashRegisterWithRelations[]> {
     let dateRange: { gte: Date; lte: Date } | undefined
 
     if (filter.date) {
@@ -105,7 +121,7 @@ export class ClosingService {
             loan: {
               include: {
                 user: { select: { id: true, name: true } },
-                motorcycle: { select: { id: true, plate: true } },
+                vehicle: { select: { id: true, plate: true } },
               },
             },
             createdBy: {
@@ -131,7 +147,7 @@ export class ClosingService {
         }
       },
       orderBy: { date: "desc" },
-    })
+    }) as Promise<CashRegisterWithRelations[]>
   }
 
   async findOne(id: string): Promise<FindOneCashRegisterResponseDto> {
@@ -143,7 +159,7 @@ export class ClosingService {
             loan: {
               include: {
                 user: { select: { id: true, name: true } },
-                motorcycle: { select: { id: true, plate: true } },
+                vehicle: { select: { id: true, plate: true } },
               },
             },
             createdBy: {
@@ -177,7 +193,7 @@ export class ClosingService {
           },
         }
       },
-    })
+    }) as CashRegisterWithRelations | null
 
     if (!cierre) {
       throw new NotFoundException("Cierre no encontrado")
@@ -209,9 +225,9 @@ export class ClosingService {
             id: p.loan.user.id,
             name: p.loan.user.name,
           },
-          motorcycle: {
-            id: p.loan.motorcycle.id,
-            plate: p.loan.motorcycle.plate,
+          vehicle: {
+            id: p.loan.vehicle.id,
+            plate: p.loan.vehicle.plate,
           },
         },
         createdBy: p.createdBy
@@ -244,12 +260,7 @@ export class ClosingService {
   }
 
   async getUnassignedPayments(filter: FilterInstallmentsDto): Promise<{
-    installments: (Installment & {
-      loan: Loan & {
-        user: Pick<User, "id" | "name">
-        motorcycle: Pick<Motorcycle, "id" | "plate">
-      }
-    })[]
+    installments: InstallmentWithLoan[]
     expenses: Expense[]
   }> {
     const whereInstallments: Prisma.InstallmentWhereInput = {
@@ -276,12 +287,12 @@ export class ClosingService {
         loan: {
           include: {
             user: { select: { id: true, name: true } },
-            motorcycle: { select: { id: true, plate: true, provider: true } },
+            vehicle: { select: { id: true, plate: true, providerId: true } },
           },
         },
       },
       orderBy: { paymentDate: "asc" },
-    })
+    }) as InstallmentWithLoan[]
 
     const whereExpenses: Prisma.ExpenseWhereInput = {
       cashRegisterId: null,
@@ -436,7 +447,7 @@ export class ClosingService {
             loan: {
               include: {
                 user: { select: { id: true, name: true } },
-                motorcycle: { select: { id: true, plate: true } },
+                vehicle: { select: { id: true, plate: true } },
               },
             },
             createdBy: { select: { id: true, username: true } },
@@ -449,7 +460,7 @@ export class ClosingService {
         },
         createdBy: { select: { id: true, username: true } },
       },
-    });
+    }) as CashRegisterWithRelations | null;
 
     if (!closing) {
       throw new NotFoundException(`Closing with ID ${id} not found`);
@@ -524,7 +535,25 @@ export class ClosingService {
     return Buffer.from(pdfBuffer)
   }
 
-  private fillTemplate(data: any): string {
+  private fillTemplate(data: {
+    id: string;
+    date: Date;
+    provider: string;
+    cashInRegister: number;
+    cashFromTransfers: number;
+    cashFromCards: number;
+    notes: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    createdBy: Pick<Owners, "id" | "username"> | null;
+    payments: CashRegisterWithRelations['payments'];
+    expense: CashRegisterWithRelations['expense'];
+    totalPayments: number;
+    totalExpenses: number;
+    balance: number;
+    paymentsByMethod: Record<string, number>;
+    expensesByCategory: Record<string, number>;
+  }): string {
     const formattedData = {
       ...data,
       formattedDate: this.formatDate(data.date),
@@ -613,12 +642,12 @@ export class ClosingService {
     }).join('')
   }
 
-  private generatePaymentRowsHtml(payments: any[]): string {
+  private generatePaymentRowsHtml(payments: CashRegisterWithRelations['payments']): string {
     return payments.map(payment => {
       return `
         <tr>
           <td>${payment.loan.user.name}</td>
-          <td>${payment.loan.motorcycle.plate}</td>
+          <td>${payment.loan.vehicle.plate}</td>
           <td>${this.formatDate(payment.paymentDate)}</td>
           <td>${this.getReadablePaymentMethod(payment.paymentMethod)}</td>
           <td class="right">${this.formatCurrency(payment.amount + (payment.gps || 0))}</td>
@@ -627,7 +656,7 @@ export class ClosingService {
     }).join('')
   }
 
-  private generateExpenseRowsHtml(expenses: any[]): string {
+  private generateExpenseRowsHtml(expenses: CashRegisterWithRelations['expense']): string {
     return expenses.map(expense => {
       return `
         <tr>

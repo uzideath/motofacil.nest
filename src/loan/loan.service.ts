@@ -6,7 +6,24 @@ import {
   PaymentFrequency,
   UpdateLoanDto,
 } from './loan.dto';
-import { addDays, addWeeks, addMonths } from 'date-fns';
+import { addDays, addWeeks, addMonths, differenceInDays, differenceInWeeks, differenceInMonths } from 'date-fns';
+import { Loan, User, Vehicle, Installment } from '../../generated/prisma';
+
+type LoanWithRelations = Loan & {
+  user: User;
+  vehicle: Vehicle;
+  payments: Installment[];
+};
+
+type LoanStatus = LoanWithRelations & {
+  expectedInstallments: number;
+  installmentsPending: number;
+  installmentsRemaining: number;
+  isUpToDate: boolean;
+  daysLate: number;
+  lastPaymentDate: Date | null;
+  daysSinceLastPayment: number | null;
+};
 
 @Injectable()
 export class LoanService {
@@ -19,21 +36,21 @@ export class LoanService {
     });
     if (!user) throw new NotFoundException('User does not exist');
 
-    const motorcycle = await this.prisma.motorcycle.findUnique({
-      where: { id: dto.motorcycleId },
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id: dto.vehicleId },
     });
-    if (!motorcycle) throw new NotFoundException('Motorcycle does not exist');
+    if (!vehicle) throw new NotFoundException('Vehicle does not exist');
 
     const existingLoan = await this.prisma.loan.findFirst({
       where: {
-        motorcycleId: dto.motorcycleId,
+        vehicleId: dto.vehicleId,
         archived: false,
         status: { not: 'COMPLETED' },
       },
     });
     if (existingLoan) {
       throw new ConflictException(
-        `La moto ${dto.motorcycleId} ya tiene un contrato activo: ${existingLoan.contractNumber}`
+        `El vehículo ${dto.vehicleId} ya tiene un contrato activo: ${existingLoan.contractNumber}`
       );
     }
 
@@ -46,14 +63,19 @@ export class LoanService {
       dto.installmentPaymentAmmount ??
       parseFloat((debtRemaining / dto.installments).toFixed(2));
 
-    const endDate: Date =
-      dto.paymentFrequency === PaymentFrequency.DAILY
-        ? addDays(new Date(), dto.installments)
-        : dto.paymentFrequency === PaymentFrequency.WEEKLY
-          ? addWeeks(new Date(), dto.installments)
-          : dto.paymentFrequency === PaymentFrequency.BIWEEKLY
-            ? addWeeks(new Date(), dto.installments * 2)
-            : addMonths(new Date(), dto.installments);
+    const startDate = dto.startDate ? new Date(dto.startDate) : new Date();
+    const paymentFrequency = dto.paymentFrequency ?? PaymentFrequency.DAILY;
+
+    // Calculate endDate: use provided endDate or calculate based on startDate + installments
+    const endDate: Date = dto.endDate 
+      ? new Date(dto.endDate)
+      : paymentFrequency === PaymentFrequency.DAILY
+        ? addDays(startDate, dto.installments)
+        : paymentFrequency === PaymentFrequency.WEEKLY
+          ? addWeeks(startDate, dto.installments)
+          : paymentFrequency === PaymentFrequency.BIWEEKLY
+            ? addWeeks(startDate, dto.installments * 2)
+            : addMonths(startDate, dto.installments);
 
     const totalLoans = await this.prisma.loan.count();
     const nextNumber = totalLoans + 1;
@@ -63,46 +85,47 @@ export class LoanService {
       data: {
         contractNumber,
         userId: dto.userId,
-        motorcycleId: dto.motorcycleId,
+        vehicleId: dto.vehicleId,
         totalAmount: dto.totalAmount,
         downPayment: dto.downPayment,
         installments: dto.installments,
         interestRate: dto.interestRate,
         interestType: dto.interestType ?? InterestType.FIXED,
-        paymentFrequency: dto.paymentFrequency ?? PaymentFrequency.DAILY,
+        paymentFrequency,
         installmentPaymentAmmount,
         gpsInstallmentPayment: dto.gpsInstallmentPayment,
         paidInstallments: 0,
         remainingInstallments: dto.installments,
         totalPaid: dto.downPayment,
         debtRemaining,
+        startDate,
         endDate,
       },
       include: {
         user: true,
-        motorcycle: true,
+        vehicle: true,
       },
     });
   }
 
 
-  async findAll() {
+  async findAll(): Promise<LoanWithRelations[]> {
     return this.prisma.loan.findMany({
       include: {
         user: true,
-        motorcycle: true,
+        vehicle: true,
         payments: true,
       },
     });
   }
 
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<LoanWithRelations> {
     const loan = await this.prisma.loan.findUnique({
       where: { id },
       include: {
         user: true,
-        motorcycle: true,
+        vehicle: true,
         payments: true,
       },
     });
@@ -110,12 +133,117 @@ export class LoanService {
     return loan;
   }
 
-  async update(id: string, dto: UpdateLoanDto) {
+  async update(id: string, dto: UpdateLoanDto): Promise<Loan> {
     await this.findOne(id);
+    
+    // If startDate or endDate is being updated, recalculate endDate if needed
+    let updateData: any = { ...dto };
+    
+    if (dto.startDate && !dto.endDate && dto.installments && dto.paymentFrequency) {
+      const startDate = new Date(dto.startDate);
+      const paymentFrequency = dto.paymentFrequency;
+      const installments = dto.installments;
+      
+      const endDate: Date =
+        paymentFrequency === PaymentFrequency.DAILY
+          ? addDays(startDate, installments)
+          : paymentFrequency === PaymentFrequency.WEEKLY
+            ? addWeeks(startDate, installments)
+            : paymentFrequency === PaymentFrequency.BIWEEKLY
+              ? addWeeks(startDate, installments * 2)
+              : addMonths(startDate, installments);
+      
+      updateData.endDate = endDate;
+    } else if (dto.endDate) {
+      updateData.endDate = new Date(dto.endDate);
+    }
+    
+    if (dto.startDate) {
+      updateData.startDate = new Date(dto.startDate);
+    }
+    
     return this.prisma.loan.update({
       where: { id },
-      data: dto,
+      data: updateData,
     });
+  }
+
+  /**
+   * Recalculate and update loan installments based on current date
+   * This syncs the loan's expected installments with actual time elapsed
+   */
+  async recalculateInstallments(id: string): Promise<LoanWithRelations> {
+    const loan = await this.findOne(id);
+    
+    const expectedInstallments = this.calculateExpectedInstallments(loan);
+    const installmentsRemaining = loan.installments - loan.paidInstallments;
+    
+    // Update the loan with recalculated values
+    const updated = await this.prisma.loan.update({
+      where: { id },
+      data: {
+        remainingInstallments: installmentsRemaining,
+        // Optional: update status based on payment progress
+        status: loan.paidInstallments >= loan.installments 
+          ? 'COMPLETED' 
+          : loan.paidInstallments >= expectedInstallments 
+            ? 'ACTIVE' 
+            : 'PENDING',
+      },
+      include: {
+        user: true,
+        vehicle: true,
+        payments: true,
+      },
+    });
+    
+    return updated;
+  }
+
+  /**
+   * Update loan with new start/end dates and recalculate all time-based fields
+   */
+  async updateLoanDates(
+    id: string, 
+    startDate?: string, 
+    endDate?: string
+  ): Promise<LoanWithRelations> {
+    const loan = await this.findOne(id);
+    
+    const newStartDate = startDate ? new Date(startDate) : new Date(loan.startDate);
+    let newEndDate: Date;
+    
+    if (endDate) {
+      newEndDate = new Date(endDate);
+    } else {
+      // Recalculate end date based on new start date
+      const paymentFrequency = loan.paymentFrequency as PaymentFrequency;
+      newEndDate =
+        paymentFrequency === PaymentFrequency.DAILY
+          ? addDays(newStartDate, loan.installments)
+          : paymentFrequency === PaymentFrequency.WEEKLY
+            ? addWeeks(newStartDate, loan.installments)
+            : paymentFrequency === PaymentFrequency.BIWEEKLY
+              ? addWeeks(newStartDate, loan.installments * 2)
+              : addMonths(newStartDate, loan.installments);
+    }
+    
+    // Update the loan with new dates
+    const updated = await this.prisma.loan.update({
+      where: { id },
+      data: {
+        startDate: newStartDate,
+        endDate: newEndDate,
+      },
+      include: {
+        user: true,
+        vehicle: true,
+        payments: true,
+      },
+    });
+    
+    // Recalculate installments after date update
+    return this.recalculateInstallments(id);
   }
 
   async remove(id: string) {
@@ -163,6 +291,121 @@ export class LoanService {
           },
         },
       },
+    });
+  }
+
+  /**
+   * Calculate how many installments should have been paid based on time elapsed
+   * since the loan start date
+   */
+  private calculateExpectedInstallments(loan: Loan): number {
+    const now = new Date();
+    const startDate = new Date(loan.startDate);
+    
+    // If start date is in the future, no installments are expected yet
+    if (startDate > now) {
+      return 0;
+    }
+
+    let periodsElapsed = 0;
+
+    switch (loan.paymentFrequency) {
+      case PaymentFrequency.DAILY:
+        periodsElapsed = differenceInDays(now, startDate);
+        break;
+      case PaymentFrequency.WEEKLY:
+        periodsElapsed = differenceInWeeks(now, startDate);
+        break;
+      case PaymentFrequency.BIWEEKLY:
+        periodsElapsed = Math.floor(differenceInWeeks(now, startDate) / 2);
+        break;
+      case PaymentFrequency.MONTHLY:
+        periodsElapsed = differenceInMonths(now, startDate);
+        break;
+      default:
+        periodsElapsed = 0;
+    }
+
+    // Can't expect more installments than the total
+    return Math.min(periodsElapsed, loan.installments);
+  }
+
+  /**
+   * Get the last payment date from a loan's payments
+   */
+  private getLastPaymentDate(loan: LoanWithRelations): Date | null {
+    if (!loan.payments || loan.payments.length === 0) {
+      return null;
+    }
+
+    // Find the most recent payment by paymentDate
+    const sortedPayments = [...loan.payments].sort((a, b) => {
+      return new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime();
+    });
+
+    return sortedPayments[0]?.paymentDate || null;
+  }
+
+  /**
+   * Calculate days since last payment
+   */
+  private calculateDaysSinceLastPayment(lastPaymentDate: Date | null): number | null {
+    if (!lastPaymentDate) {
+      return null;
+    }
+
+    return differenceInDays(new Date(), new Date(lastPaymentDate));
+  }
+
+  /**
+   * Get loan status with calculated expected installments
+   */
+  async getLoanStatus(id: string): Promise<LoanStatus> {
+    const loan = await this.findOne(id);
+    
+    const expectedInstallments = this.calculateExpectedInstallments(loan);
+    const installmentsPaid = loan.paidInstallments;
+    const installmentsPending = expectedInstallments - installmentsPaid;
+    const installmentsRemaining = loan.installments - installmentsPaid;
+    const lastPaymentDate = this.getLastPaymentDate(loan);
+    const daysSinceLastPayment = this.calculateDaysSinceLastPayment(lastPaymentDate);
+    
+    return {
+      ...loan,
+      expectedInstallments,
+      installmentsPending, // How many they should have paid but haven't
+      installmentsRemaining, // Total remaining until loan is complete
+      isUpToDate: installmentsPaid >= expectedInstallments,
+      daysLate: installmentsPending > 0 ? installmentsPending : 0,
+      lastPaymentDate,
+      daysSinceLastPayment,
+    };
+  }
+
+  /**
+   * Get all loans with their calculated status
+   */
+  async findAllWithStatus(): Promise<LoanStatus[]> {
+    const loans = await this.findAll();
+    
+    return loans.map(loan => {
+      const expectedInstallments = this.calculateExpectedInstallments(loan);
+      const installmentsPaid = loan.paidInstallments;
+      const installmentsPending = expectedInstallments - installmentsPaid;
+      const installmentsRemaining = loan.installments - installmentsPaid;
+      const lastPaymentDate = this.getLastPaymentDate(loan);
+      const daysSinceLastPayment = this.calculateDaysSinceLastPayment(lastPaymentDate);
+      
+      return {
+        ...loan,
+        expectedInstallments,
+        installmentsPending,
+        installmentsRemaining,
+        isUpToDate: installmentsPaid >= expectedInstallments,
+        daysLate: installmentsPending > 0 ? installmentsPending : 0,
+        lastPaymentDate,
+        daysSinceLastPayment,
+      };
     });
   }
 }

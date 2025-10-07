@@ -35,7 +35,7 @@ model Provider {
   name          String         @unique
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  motorcycles   Motorcycle[]
+  vehicles      Vehicle[]
   cashRegisters CashRegister[]
   expenses      Expense[]
 }
@@ -59,21 +59,22 @@ model User {
   loans Loan[]
 }
 
-model Motorcycle {
-  id         String   @id @default(uuid())
-  provider   Provider @relation(fields: [providerId], references: [id])
-  providerId String
-  brand      String
-  model      String
-  plate      String   @unique
-  price      Float?
-  engine     String
-  chassis    String
-  color      String?
-  cc         Int?
-  gps        Float?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model Vehicle {
+  id           String      @id @default(uuid())
+  provider     Provider    @relation(fields: [providerId], references: [id])
+  providerId   String
+  vehicleType  VehicleType @default(MOTORCYCLE)
+  brand        String
+  model        String
+  plate        String      @unique
+  price        Float?
+  engine       String?
+  chassis      String?
+  color        String?
+  cc           Int?
+  gps          Float?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   // Relaciones
   loans Loan[]
@@ -84,8 +85,8 @@ model Loan {
   user                      User       @relation(fields: [userId], references: [id])
   userId                    String
   contractNumber            String?
-  motorcycle                Motorcycle @relation(fields: [motorcycleId], references: [id])
-  motorcycleId              String
+  vehicle                   Vehicle    @relation(fields: [vehicleId], references: [id])
+  vehicleId                 String
   totalAmount               Float
   downPayment               Float
   installments              Int
@@ -175,6 +176,15 @@ model Expense {
 /**
  * ───────────────────────── Enums ─────────────────────────
  */
+
+enum VehicleType {
+  MOTORCYCLE
+  CAR
+  TRUCK
+  VAN
+  ATV
+  OTHER
+}
 
 enum ExpenseCategory {
   RENT

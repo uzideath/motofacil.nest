@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { LoanModule } from './loan/loan.module';
 import { UserModule } from './user/user.module';
 import { InstallmentModule } from './installment/installment.module';
-import { MotorcycleModule } from './motorcycle/motorcycle.module';
+import { VehicleModule } from './vehicle/vehicle.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { APP_GUARD } from '@nestjs/core';
@@ -30,7 +30,7 @@ import { ProvidersModule } from './providers/providers.module';
     UserModule,
     LoanModule,
     InstallmentModule,
-    MotorcycleModule,
+    VehicleModule,
     AuthModule,
     OwnersModule,
     ClosingModule,

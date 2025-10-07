@@ -23,7 +23,7 @@ export class ProvidersService {
   async findAll() {
     return this.prismaService.provider.findMany({
       include: {
-        motorcycles: true,
+        vehicles: true,
         cashRegisters: {
           include: {
             createdBy: {
@@ -46,7 +46,7 @@ export class ProvidersService {
     const provider = await this.prismaService.provider.findUnique({
       where: { id },
       include: {
-        motorcycles: true,
+        vehicles: true,
         cashRegisters: true,
       },
     });
