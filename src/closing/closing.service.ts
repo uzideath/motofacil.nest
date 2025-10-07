@@ -287,7 +287,11 @@ export class ClosingService {
         loan: {
           include: {
             user: { select: { id: true, name: true } },
-            vehicle: { select: { id: true, plate: true, providerId: true } },
+            vehicle: {
+              include: {
+                provider: true,
+              },
+            },
           },
         },
       },
