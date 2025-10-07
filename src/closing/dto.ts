@@ -38,6 +38,10 @@ export class CreateCashRegisterDto {
 
   @IsUUID()
   createdById: string
+
+  @IsOptional()
+  @IsDateString()
+  closingDate?: string // ISO format date for which this closing belongs to (defaults to current date)
 }
 
 
@@ -75,6 +79,10 @@ export class FilterInstallmentsDto {
   @IsOptional()
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod
+
+  @IsOptional()
+  @IsDateString()
+  specificDate?: string // Filter payments for a specific date (YYYY-MM-DD)
 }
 
 export class FindOneCashRegisterResponseDto {

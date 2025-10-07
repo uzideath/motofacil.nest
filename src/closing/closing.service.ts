@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common"
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common"
 import type { CashRegister, Expense, Installment, Loan, Vehicle, Prisma, User, Owners, Provider } from "generated/prisma"
 import { PrismaService } from "src/prisma.service"
 import type {
@@ -52,21 +52,70 @@ export class ClosingService {
       installmentIds,
       expenseIds = [],
       createdById,
+      closingDate,
     } = dto;
 
+    // Determine the closing date (defaults to today if not provided)
+    const targetClosingDate = closingDate ? new Date(closingDate) : new Date();
+    
+    // Normalize to just the date part (YYYY-MM-DD) for comparison
+    const normalizeDate = (date: Date): string => {
+      return date.toISOString().split('T')[0];
+    };
+    
+    const targetDateStr = normalizeDate(targetClosingDate);
+
+    // Fetch and validate installments
     const installments = await this.prisma.installment.findMany({
       where: { id: { in: installmentIds } },
     });
+    
     if (installments.length !== installmentIds.length) {
       throw new NotFoundException('Algunos pagos no fueron encontrados');
     }
 
+    // Validate that ALL installments belong to the target closing date
+    const invalidInstallments = installments.filter(installment => {
+      const installmentDateStr = normalizeDate(new Date(installment.paymentDate));
+      return installmentDateStr !== targetDateStr;
+    });
+
+    if (invalidInstallments.length > 0) {
+      const invalidDates = invalidInstallments.map(i => 
+        `ID: ${i.id.substring(0, 8)}... (Fecha: ${normalizeDate(new Date(i.paymentDate))})`
+      ).join(', ');
+      
+      throw new BadRequestException(
+        `Todos los pagos deben pertenecer a la fecha del cierre (${targetDateStr}). ` +
+        `Pagos inválidos: ${invalidDates}`
+      );
+    }
+
+    // Validate expenses if provided
     if (expenseIds.length) {
       const expenses = await this.prisma.expense.findMany({
         where: { id: { in: expenseIds } },
       });
+      
       if (expenses.length !== expenseIds.length) {
         throw new NotFoundException('Algunos egresos no fueron encontrados');
+      }
+
+      // Validate that ALL expenses belong to the target closing date
+      const invalidExpenses = expenses.filter(expense => {
+        const expenseDateStr = normalizeDate(new Date(expense.date));
+        return expenseDateStr !== targetDateStr;
+      });
+
+      if (invalidExpenses.length > 0) {
+        const invalidDates = invalidExpenses.map(e => 
+          `ID: ${e.id.substring(0, 8)}... (Fecha: ${normalizeDate(new Date(e.date))})`
+        ).join(', ');
+        
+        throw new BadRequestException(
+          `Todos los egresos deben pertenecer a la fecha del cierre (${targetDateStr}). ` +
+          `Egresos inválidos: ${invalidDates}`
+        );
       }
     }
 
@@ -79,6 +128,7 @@ export class ClosingService {
 
     return this.prisma.cashRegister.create({
       data: {
+        date: targetClosingDate,
         cashInRegister,
         cashFromTransfers,
         cashFromCards,
@@ -271,7 +321,19 @@ export class ClosingService {
       whereInstallments.paymentMethod = filter.paymentMethod
     }
 
-    if (filter.startDate || filter.endDate) {
+    // If specificDate is provided, filter by exact date (ignoring time)
+    if (filter.specificDate) {
+      const targetDate = new Date(filter.specificDate)
+      const startOfDay = new Date(targetDate)
+      startOfDay.setHours(0, 0, 0, 0)
+      const endOfDay = new Date(targetDate)
+      endOfDay.setHours(23, 59, 59, 999)
+
+      whereInstallments.paymentDate = {
+        gte: startOfDay,
+        lte: endOfDay,
+      }
+    } else if (filter.startDate || filter.endDate) {
       whereInstallments.paymentDate = {}
       if (filter.startDate) {
         whereInstallments.paymentDate.gte = new Date(filter.startDate)
@@ -302,7 +364,19 @@ export class ClosingService {
       cashRegisterId: null,
     }
 
-    if (filter.startDate || filter.endDate) {
+    // If specificDate is provided, filter expenses by exact date too
+    if (filter.specificDate) {
+      const targetDate = new Date(filter.specificDate)
+      const startOfDay = new Date(targetDate)
+      startOfDay.setHours(0, 0, 0, 0)
+      const endOfDay = new Date(targetDate)
+      endOfDay.setHours(23, 59, 59, 999)
+
+      whereExpenses.date = {
+        gte: startOfDay,
+        lte: endOfDay,
+      }
+    } else if (filter.startDate || filter.endDate) {
       whereExpenses.date = {}
       if (filter.startDate) {
         whereExpenses.date.gte = new Date(filter.startDate)
