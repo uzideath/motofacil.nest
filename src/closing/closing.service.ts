@@ -57,15 +57,10 @@ export class ClosingService {
       closingDate,
     } = dto;
 
-    // Determine the closing date (defaults to today if not provided)
-    const targetClosingDate = closingDate ? new Date(closingDate) : new Date();
-    
     // Normalize to just the date part (YYYY-MM-DD) for comparison
     const normalizeDate = (date: Date): string => {
       return date.toISOString().split('T')[0];
     };
-    
-    const targetDateStr = normalizeDate(targetClosingDate);
 
     // Fetch and validate installments
     const installments = await this.prisma.installment.findMany({
@@ -76,16 +71,43 @@ export class ClosingService {
       throw new NotFoundException('Algunos pagos no fueron encontrados');
     }
 
+    // Determine the closing date from the transactions
+    // For late payments, use latePaymentDate; for on-time payments, use paymentDate
+    // ALWAYS determine from transactions, NEVER trust the provided closingDate
+    let targetClosingDate: Date;
+    
+    if (installments.length > 0) {
+      // Determine from first installment's closing date
+      const firstInstallment = installments[0];
+      targetClosingDate = firstInstallment.isLate && firstInstallment.latePaymentDate
+        ? new Date(firstInstallment.latePaymentDate)
+        : new Date(firstInstallment.paymentDate);
+    } else {
+      // Fallback: use provided closingDate or current date
+      targetClosingDate = closingDate ? new Date(closingDate) : new Date();
+    }
+    
+    // Normalize to midnight UTC to avoid timezone issues
+    targetClosingDate.setUTCHours(0, 0, 0, 0);
+    
+    const targetDateStr = normalizeDate(targetClosingDate);
+
     // Validate that ALL installments belong to the target closing date
     const invalidInstallments = installments.filter(installment => {
-      const installmentDateStr = normalizeDate(new Date(installment.paymentDate));
+      const installmentClosingDate = installment.isLate && installment.latePaymentDate
+        ? new Date(installment.latePaymentDate)
+        : new Date(installment.paymentDate);
+      const installmentDateStr = normalizeDate(installmentClosingDate);
       return installmentDateStr !== targetDateStr;
     });
 
     if (invalidInstallments.length > 0) {
-      const invalidDates = invalidInstallments.map(i => 
-        `ID: ${i.id.substring(0, 8)}... (Fecha: ${normalizeDate(new Date(i.paymentDate))})`
-      ).join(', ');
+      const invalidDates = invalidInstallments.map(i => {
+        const closingDate = i.isLate && i.latePaymentDate
+          ? new Date(i.latePaymentDate)
+          : new Date(i.paymentDate);
+        return `ID: ${i.id.substring(0, 8)}... (Fecha: ${normalizeDate(closingDate)})`;
+      }).join(', ');
       
       throw new BadRequestException(
         `Todos los pagos deben pertenecer a la fecha del cierre (${targetDateStr}). ` +

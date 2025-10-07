@@ -39,8 +39,8 @@ export class InstallmentService {
         loanId: dto.loanId,
         amount: dto.amount,
         gps: dto.gps,
-        latePaymentDate: dto.latePaymentDate ? toColombiaUtc(dto.latePaymentDate) : null,
-        paymentDate: toColombiaUtc(new Date()),
+        paymentDate: dto.paymentDate ? toColombiaUtc(dto.paymentDate) : toColombiaUtc(new Date()), // Actual payment date from form, or now if not provided
+        latePaymentDate: dto.latePaymentDate ? toColombiaUtc(dto.latePaymentDate) : null, // Original due date (if late)
         notes: dto.notes,
         paymentMethod: dto.paymentMethod,
         isLate: dto.isLate ?? false,

@@ -41,7 +41,7 @@ export class CreateCashRegisterDto {
 
   @IsOptional()
   @IsDateString()
-  closingDate?: string // ISO format date for which this closing belongs to (defaults to current date)
+  closingDate?: string // DEPRECATED: Now auto-determined from transactions' closing dates (latePaymentDate for late, paymentDate for on-time)
 }
 
 
