@@ -13,6 +13,7 @@ import { getColombiaDayRange } from "src/lib/dates"
 import * as puppeteer from "puppeteer"
 import { templateHtml } from "./template"
 import { format, utcToZonedTime } from "date-fns-tz"
+import { es } from "date-fns/locale"
 
 type CashRegisterWithRelations = CashRegister & {
   payments: (Installment & {
@@ -686,8 +687,8 @@ export class ClosingService {
   }): string {
     const formattedData = {
       ...data,
-      formattedDate: this.formatDate(data.date),
-      formattedGeneratedDate: this.formatDate(new Date()),
+      formattedDate: this.formatDateOnly(data.date), // Closing date (date only)
+      formattedGeneratedDate: this.formatDate(data.createdAt), // When it was registered (with time)
       formattedTotalPayments: this.formatCurrency(data.totalPayments),
       formattedTotalExpenses: this.formatCurrency(data.totalExpenses),
       formattedBalance: this.formatCurrency(data.balance),
@@ -748,6 +749,21 @@ export class ClosingService {
     return format(zoned, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
   }
 
+  private formatDateOnly(dateInput: string | Date | null | undefined): string {
+    if (!dateInput) return "—"
+    
+    // Parse UTC date and format as date only (no time, no timezone conversion)
+    const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput
+    const year = date.getUTCFullYear()
+    const month = date.getUTCMonth()
+    const day = date.getUTCDate()
+    
+    // Create a local date with the UTC components to avoid timezone shift
+    const localDate = new Date(year, month, day)
+    
+    return format(localDate, "dd 'de' MMMM 'de' yyyy", { locale: es })
+  }
+
   private generatePaymentMethodsHtml(methods: Record<string, number>): string {
     return Object.entries(methods).map(([method, amount]) => {
       const readableMethod = this.getReadablePaymentMethod(method)
@@ -774,11 +790,16 @@ export class ClosingService {
 
   private generatePaymentRowsHtml(payments: CashRegisterWithRelations['payments']): string {
     return payments.map(payment => {
+      // Use the closing date: latePaymentDate for late payments, paymentDate for on-time
+      const closingDate = payment.isLate && payment.latePaymentDate 
+        ? payment.latePaymentDate 
+        : payment.paymentDate
+      
       return `
         <tr>
           <td>${payment.loan.user.name}</td>
           <td>${payment.loan.vehicle.plate}</td>
-          <td>${this.formatDate(payment.paymentDate)}</td>
+          <td>${this.formatDateOnly(closingDate)}</td>
           <td>${this.getReadablePaymentMethod(payment.paymentMethod)}</td>
           <td class="right">${this.formatCurrency(payment.amount + (payment.gps || 0))}</td>
         </tr>
@@ -792,7 +813,7 @@ export class ClosingService {
         <tr>
           <td>${this.getReadableExpenseCategory(expense.category)}</td>
           <td>${expense.beneficiary}</td>
-          <td>${this.formatDate(expense.date)}</td>
+          <td>${this.formatDateOnly(expense.date)}</td>
           <td>${this.getReadablePaymentMethod(expense.paymentMethod)}</td>
           <td class="right">${this.formatCurrency(expense.amount)}</td>
         </tr>

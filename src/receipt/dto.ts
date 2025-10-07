@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsDateString, IsOptional, IsNotEmpty, Matches } from 'class-validator';
+import { IsString, IsNumber, IsDateString, IsOptional, IsNotEmpty, Matches, IsBoolean } from 'class-validator';
 
 export class CreateReceiptDto {
   @IsString()
@@ -24,6 +24,10 @@ export class CreateReceiptDto {
 
   @IsString()
   paymentDate: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isLate?: boolean;
 
   @IsDateString()
   @IsOptional()
