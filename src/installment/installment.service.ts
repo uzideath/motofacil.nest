@@ -39,8 +39,8 @@ export class InstallmentService {
         loanId: dto.loanId,
         amount: dto.amount,
         gps: dto.gps,
-        latePaymentDate: dto.latePaymentDate ? toColombiaUtc(dto.latePaymentDate) : null,
-        paymentDate: toColombiaUtc(new Date()),
+        paymentDate: dto.paymentDate ? toColombiaUtc(dto.paymentDate) : toColombiaUtc(new Date()), // Actual payment date from form, or now if not provided
+        latePaymentDate: dto.latePaymentDate ? toColombiaUtc(dto.latePaymentDate) : null, // Original due date (if late)
         notes: dto.notes,
         paymentMethod: dto.paymentMethod,
         isLate: dto.isLate ?? false,
@@ -75,10 +75,25 @@ export class InstallmentService {
     return installment;
   }
 
-  async findAll(filters: FindInstallmentFiltersDto): Promise<Installment[]> {
-    const { startDate, endDate } = filters;
+  async findAll(filters: FindInstallmentFiltersDto) {
+    const { 
+      startDate, 
+      endDate, 
+      plate, 
+      userId, 
+      loanId, 
+      vehicleType, 
+      paymentMethod, 
+      isLate,
+      minAmount,
+      maxAmount,
+      page = 1, 
+      limit = 50 
+    } = filters;
+    
     const where: Prisma.InstallmentWhereInput = {};
 
+    // Date filters
     if (startDate || endDate) {
       where.paymentDate = {};
       if (startDate) {
@@ -90,32 +105,98 @@ export class InstallmentService {
       }
     }
 
-    return this.prisma.installment.findMany({
-      where,
-      include: {
-        loan: {
-          include: {
-            user: true,
-            motorcycle: {
-              include: {
-                provider: true,
+    // Amount filters
+    if (minAmount !== undefined || maxAmount !== undefined) {
+      where.amount = {};
+      if (minAmount !== undefined) {
+        where.amount.gte = minAmount;
+      }
+      if (maxAmount !== undefined) {
+        where.amount.lte = maxAmount;
+      }
+    }
+
+    // Payment method filter
+    if (paymentMethod) {
+      where.paymentMethod = paymentMethod;
+    }
+
+    // Late payment filter
+    if (isLate !== undefined) {
+      where.isLate = isLate;
+    }
+
+    // Loan filters
+    if (loanId || userId || plate || vehicleType) {
+      where.loan = {};
+      
+      if (loanId) {
+        where.loan.id = loanId;
+      }
+      
+      if (userId) {
+        where.loan.userId = userId;
+      }
+
+      if (plate || vehicleType) {
+        where.loan.vehicle = {};
+        
+        if (plate) {
+          where.loan.vehicle.plate = {
+            contains: plate,
+            mode: 'insensitive',
+          };
+        }
+        
+        if (vehicleType) {
+          where.loan.vehicle.vehicleType = vehicleType;
+        }
+      }
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.installment.findMany({
+        where,
+        include: {
+          loan: {
+            include: {
+              user: true,
+              vehicle: {
+                include: {
+                  provider: true,
+                }
               }
-            }
+            },
+          },
+          createdBy: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+            },
           },
         },
-        createdBy: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
+        orderBy: [
+          { paymentDate: 'desc' },
+          { createdAt: 'desc' }
+        ],
+        skip,
+        take: limit,
+      }),
+      this.prisma.installment.count({ where }),
+    ]);
+
+    return {
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-      orderBy: [
-        { paymentDate: 'desc' },
-        { createdAt: 'desc' }
-      ],
-    });
+    };
   }
 
   async findAllRaw(): Promise<Installment[]> {
@@ -124,7 +205,7 @@ export class InstallmentService {
         loan: {
           include: {
             user: true,
-            motorcycle: {
+            vehicle: {
               include: {
                 provider: true,
               }
@@ -144,7 +225,7 @@ export class InstallmentService {
         loan: {
           include: {
             user: true,
-            motorcycle: true,
+            vehicle: true,
           }
         },
         createdBy: true,

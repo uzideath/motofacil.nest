@@ -4,6 +4,7 @@ import type { CreateReceiptDto } from "./dto"
 import { templateHtml } from "./template"
 import { WhatsappService } from "../whatsapp/whatsapp.service"
 import { format, utcToZonedTime } from "date-fns-tz"
+import { es } from "date-fns/locale"
 
 @Injectable()
 export class ReceiptService {
@@ -34,7 +35,15 @@ export class ReceiptService {
 
   private fillTemplate(dto: CreateReceiptDto): string {
     console.log("paymentDate en DTO:", dto.paymentDate);
-    const paymentDate = dto.paymentDate ? new Date(dto.paymentDate) : new Date();
+    console.log("isLate:", dto.isLate);
+    console.log("latePaymentDate:", dto.latePaymentDate);
+    
+    // Determine the correct date to show:
+    // - For late payments: use latePaymentDate (original due date)
+    // - For on-time payments: use paymentDate (actual payment date)
+    const displayDate = dto.isLate && dto.latePaymentDate 
+      ? new Date(dto.latePaymentDate)
+      : new Date(dto.paymentDate);
 
     const data = {
       ...dto,
@@ -44,8 +53,8 @@ export class ReceiptService {
       formattedDate: this.formatDate(dto.date),
       receiptNumber: this.generateReceiptNumber(dto.receiptNumber),
       concept: dto.concept || "Servicio de transporte",
-      formattedPaymentDate: this.formatDate(paymentDate),
-      formattedGeneratedDate: this.formatDate(new Date()),
+      formattedPaymentDate: this.formatDateOnly(displayDate), // Show closing date (latePaymentDate for late, paymentDate for on-time)
+      formattedGeneratedDate: this.formatDate(new Date()), // Generated date (with time)
       notes: dto.notes || "Sin observaciones adicionales." 
     };
 
@@ -80,6 +89,21 @@ export class ReceiptService {
     const zoned = utcToZonedTime(utcDate, timeZone)
 
     return format(zoned, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
+  }
+
+  private formatDateOnly(dateInput: string | Date | null | undefined): string {
+    if (!dateInput) return "—"
+    
+    // Parse UTC date and format as date only (no time, no timezone conversion)
+    const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput
+    const year = date.getUTCFullYear()
+    const month = date.getUTCMonth()
+    const day = date.getUTCDate()
+    
+    // Create a local date with the UTC components to avoid timezone shift
+    const localDate = new Date(year, month, day)
+    
+    return format(localDate, "dd 'de' MMMM 'de' yyyy", { locale: es })
   }
 
 

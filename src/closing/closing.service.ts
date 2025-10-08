@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from "@nestjs/common"
-import type { CashRegister, Expense, Installment, Loan, Motorcycle, Prisma, User } from "generated/prisma"
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common"
+import type { CashRegister, Expense, Installment, Loan, Vehicle, Prisma, User, Owners, Provider } from "generated/prisma"
 import { PrismaService } from "src/prisma.service"
 import type {
   CreateCashRegisterDto,
@@ -13,6 +13,31 @@ import { getColombiaDayRange } from "src/lib/dates"
 import * as puppeteer from "puppeteer"
 import { templateHtml } from "./template"
 import { format, utcToZonedTime } from "date-fns-tz"
+import { es } from "date-fns/locale"
+
+type CashRegisterWithRelations = CashRegister & {
+  payments: (Installment & {
+    loan: Loan & {
+      user: Pick<User, "id" | "name">
+      vehicle: Pick<Vehicle, "id" | "plate">
+    }
+    createdBy: Pick<Owners, "id" | "username"> | null
+  })[]
+  expense: (Expense & {
+    createdBy: Pick<Owners, "id" | "username"> | null
+  })[]
+  createdBy: Pick<Owners, "id" | "username"> | null
+  provider: Pick<Provider, "id" | "name">
+}
+
+type InstallmentWithLoan = Installment & {
+  loan: Loan & {
+    user: Pick<User, "id" | "name">
+    vehicle: (Pick<Vehicle, "id" | "plate" | "providerId"> & {
+      provider: Provider | null
+    })
+  }
+}
 
 @Injectable()
 export class ClosingService {
@@ -30,21 +55,92 @@ export class ClosingService {
       installmentIds,
       expenseIds = [],
       createdById,
+      closingDate,
     } = dto;
 
+    // Normalize to just the date part (YYYY-MM-DD) for comparison
+    const normalizeDate = (date: Date): string => {
+      return date.toISOString().split('T')[0];
+    };
+
+    // Fetch and validate installments
     const installments = await this.prisma.installment.findMany({
       where: { id: { in: installmentIds } },
     });
+    
     if (installments.length !== installmentIds.length) {
       throw new NotFoundException('Algunos pagos no fueron encontrados');
     }
 
+    // Determine the closing date from the transactions
+    // For late payments, use latePaymentDate; for on-time payments, use paymentDate
+    // ALWAYS determine from transactions, NEVER trust the provided closingDate
+    let targetClosingDate: Date;
+    
+    if (installments.length > 0) {
+      // Determine from first installment's closing date
+      const firstInstallment = installments[0];
+      targetClosingDate = firstInstallment.isLate && firstInstallment.latePaymentDate
+        ? new Date(firstInstallment.latePaymentDate)
+        : new Date(firstInstallment.paymentDate);
+    } else {
+      // Fallback: use provided closingDate or current date
+      targetClosingDate = closingDate ? new Date(closingDate) : new Date();
+    }
+    
+    // Normalize to midnight UTC to avoid timezone issues
+    targetClosingDate.setUTCHours(0, 0, 0, 0);
+    
+    const targetDateStr = normalizeDate(targetClosingDate);
+
+    // Validate that ALL installments belong to the target closing date
+    const invalidInstallments = installments.filter(installment => {
+      const installmentClosingDate = installment.isLate && installment.latePaymentDate
+        ? new Date(installment.latePaymentDate)
+        : new Date(installment.paymentDate);
+      const installmentDateStr = normalizeDate(installmentClosingDate);
+      return installmentDateStr !== targetDateStr;
+    });
+
+    if (invalidInstallments.length > 0) {
+      const invalidDates = invalidInstallments.map(i => {
+        const closingDate = i.isLate && i.latePaymentDate
+          ? new Date(i.latePaymentDate)
+          : new Date(i.paymentDate);
+        return `ID: ${i.id.substring(0, 8)}... (Fecha: ${normalizeDate(closingDate)})`;
+      }).join(', ');
+      
+      throw new BadRequestException(
+        `Todos los pagos deben pertenecer a la fecha del cierre (${targetDateStr}). ` +
+        `Pagos inválidos: ${invalidDates}`
+      );
+    }
+
+    // Validate expenses if provided
     if (expenseIds.length) {
       const expenses = await this.prisma.expense.findMany({
         where: { id: { in: expenseIds } },
       });
+      
       if (expenses.length !== expenseIds.length) {
         throw new NotFoundException('Algunos egresos no fueron encontrados');
+      }
+
+      // Validate that ALL expenses belong to the target closing date
+      const invalidExpenses = expenses.filter(expense => {
+        const expenseDateStr = normalizeDate(new Date(expense.date));
+        return expenseDateStr !== targetDateStr;
+      });
+
+      if (invalidExpenses.length > 0) {
+        const invalidDates = invalidExpenses.map(e => 
+          `ID: ${e.id.substring(0, 8)}... (Fecha: ${normalizeDate(new Date(e.date))})`
+        ).join(', ');
+        
+        throw new BadRequestException(
+          `Todos los egresos deben pertenecer a la fecha del cierre (${targetDateStr}). ` +
+          `Egresos inválidos: ${invalidDates}`
+        );
       }
     }
 
@@ -57,6 +153,7 @@ export class ClosingService {
 
     return this.prisma.cashRegister.create({
       data: {
+        date: targetClosingDate,
         cashInRegister,
         cashFromTransfers,
         cashFromCards,
@@ -78,13 +175,7 @@ export class ClosingService {
   }
 
 
-  async findAll(filter: FilterCashRegisterDto): Promise<
-    (CashRegister & {
-      payments: Installment[]
-      expense: Expense[]
-      createdBy: { id: string; username: string } | null
-    })[]
-  > {
+  async findAll(filter: FilterCashRegisterDto): Promise<CashRegisterWithRelations[]> {
     let dateRange: { gte: Date; lte: Date } | undefined
 
     if (filter.date) {
@@ -105,7 +196,7 @@ export class ClosingService {
             loan: {
               include: {
                 user: { select: { id: true, name: true } },
-                motorcycle: { select: { id: true, plate: true } },
+                vehicle: { select: { id: true, plate: true } },
               },
             },
             createdBy: {
@@ -131,7 +222,7 @@ export class ClosingService {
         }
       },
       orderBy: { date: "desc" },
-    })
+    }) as Promise<CashRegisterWithRelations[]>
   }
 
   async findOne(id: string): Promise<FindOneCashRegisterResponseDto> {
@@ -143,7 +234,7 @@ export class ClosingService {
             loan: {
               include: {
                 user: { select: { id: true, name: true } },
-                motorcycle: { select: { id: true, plate: true } },
+                vehicle: { select: { id: true, plate: true } },
               },
             },
             createdBy: {
@@ -177,7 +268,7 @@ export class ClosingService {
           },
         }
       },
-    })
+    }) as CashRegisterWithRelations | null
 
     if (!cierre) {
       throw new NotFoundException("Cierre no encontrado")
@@ -209,9 +300,9 @@ export class ClosingService {
             id: p.loan.user.id,
             name: p.loan.user.name,
           },
-          motorcycle: {
-            id: p.loan.motorcycle.id,
-            plate: p.loan.motorcycle.plate,
+          vehicle: {
+            id: p.loan.vehicle.id,
+            plate: p.loan.vehicle.plate,
           },
         },
         createdBy: p.createdBy
@@ -244,12 +335,7 @@ export class ClosingService {
   }
 
   async getUnassignedPayments(filter: FilterInstallmentsDto): Promise<{
-    installments: (Installment & {
-      loan: Loan & {
-        user: Pick<User, "id" | "name">
-        motorcycle: Pick<Motorcycle, "id" | "plate">
-      }
-    })[]
+    installments: InstallmentWithLoan[]
     expenses: Expense[]
   }> {
     const whereInstallments: Prisma.InstallmentWhereInput = {
@@ -260,7 +346,33 @@ export class ClosingService {
       whereInstallments.paymentMethod = filter.paymentMethod
     }
 
-    if (filter.startDate || filter.endDate) {
+    // If specificDate is provided, filter by exact date (ignoring time)
+    if (filter.specificDate) {
+      const targetDate = new Date(filter.specificDate)
+      // Use UTC to avoid timezone issues
+      const startOfDay = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        0, 0, 0, 0
+      ))
+      const endOfDay = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        23, 59, 59, 999
+      ))
+
+      console.log('🔍 Backend - Filtering installments by date:')
+      console.log('   Input specificDate:', filter.specificDate)
+      console.log('   Parsed targetDate:', targetDate)
+      console.log('   Query range:', { startOfDay, endOfDay })
+
+      whereInstallments.paymentDate = {
+        gte: startOfDay,
+        lte: endOfDay,
+      }
+    } else if (filter.startDate || filter.endDate) {
       whereInstallments.paymentDate = {}
       if (filter.startDate) {
         whereInstallments.paymentDate.gte = new Date(filter.startDate)
@@ -276,18 +388,48 @@ export class ClosingService {
         loan: {
           include: {
             user: { select: { id: true, name: true } },
-            motorcycle: { select: { id: true, plate: true, provider: true } },
+            vehicle: {
+              include: {
+                provider: true,
+              },
+            },
           },
         },
       },
       orderBy: { paymentDate: "asc" },
-    })
+    }) as InstallmentWithLoan[]
+
+    console.log('✅ Backend - Found installments:', installments.length)
+    if (installments.length > 0) {
+      console.log('   Sample payment dates:', installments.slice(0, 3).map(i => i.paymentDate))
+    }
 
     const whereExpenses: Prisma.ExpenseWhereInput = {
       cashRegisterId: null,
     }
 
-    if (filter.startDate || filter.endDate) {
+    // If specificDate is provided, filter expenses by exact date too
+    if (filter.specificDate) {
+      const targetDate = new Date(filter.specificDate)
+      // Use UTC to avoid timezone issues
+      const startOfDay = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        0, 0, 0, 0
+      ))
+      const endOfDay = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        23, 59, 59, 999
+      ))
+
+      whereExpenses.date = {
+        gte: startOfDay,
+        lte: endOfDay,
+      }
+    } else if (filter.startDate || filter.endDate) {
       whereExpenses.date = {}
       if (filter.startDate) {
         whereExpenses.date.gte = new Date(filter.startDate)
@@ -436,7 +578,7 @@ export class ClosingService {
             loan: {
               include: {
                 user: { select: { id: true, name: true } },
-                motorcycle: { select: { id: true, plate: true } },
+                vehicle: { select: { id: true, plate: true } },
               },
             },
             createdBy: { select: { id: true, username: true } },
@@ -449,7 +591,7 @@ export class ClosingService {
         },
         createdBy: { select: { id: true, username: true } },
       },
-    });
+    }) as CashRegisterWithRelations | null;
 
     if (!closing) {
       throw new NotFoundException(`Closing with ID ${id} not found`);
@@ -524,11 +666,29 @@ export class ClosingService {
     return Buffer.from(pdfBuffer)
   }
 
-  private fillTemplate(data: any): string {
+  private fillTemplate(data: {
+    id: string;
+    date: Date;
+    provider: string;
+    cashInRegister: number;
+    cashFromTransfers: number;
+    cashFromCards: number;
+    notes: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    createdBy: Pick<Owners, "id" | "username"> | null;
+    payments: CashRegisterWithRelations['payments'];
+    expense: CashRegisterWithRelations['expense'];
+    totalPayments: number;
+    totalExpenses: number;
+    balance: number;
+    paymentsByMethod: Record<string, number>;
+    expensesByCategory: Record<string, number>;
+  }): string {
     const formattedData = {
       ...data,
-      formattedDate: this.formatDate(data.date),
-      formattedGeneratedDate: this.formatDate(new Date()),
+      formattedDate: this.formatDateOnly(data.date), // Closing date (date only)
+      formattedGeneratedDate: this.formatDate(data.createdAt), // When it was registered (with time)
       formattedTotalPayments: this.formatCurrency(data.totalPayments),
       formattedTotalExpenses: this.formatCurrency(data.totalExpenses),
       formattedBalance: this.formatCurrency(data.balance),
@@ -589,6 +749,21 @@ export class ClosingService {
     return format(zoned, "dd 'de' MMMM 'de' yyyy, hh:mm aaaa", { timeZone })
   }
 
+  private formatDateOnly(dateInput: string | Date | null | undefined): string {
+    if (!dateInput) return "—"
+    
+    // Parse UTC date and format as date only (no time, no timezone conversion)
+    const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput
+    const year = date.getUTCFullYear()
+    const month = date.getUTCMonth()
+    const day = date.getUTCDate()
+    
+    // Create a local date with the UTC components to avoid timezone shift
+    const localDate = new Date(year, month, day)
+    
+    return format(localDate, "dd 'de' MMMM 'de' yyyy", { locale: es })
+  }
+
   private generatePaymentMethodsHtml(methods: Record<string, number>): string {
     return Object.entries(methods).map(([method, amount]) => {
       const readableMethod = this.getReadablePaymentMethod(method)
@@ -613,13 +788,18 @@ export class ClosingService {
     }).join('')
   }
 
-  private generatePaymentRowsHtml(payments: any[]): string {
+  private generatePaymentRowsHtml(payments: CashRegisterWithRelations['payments']): string {
     return payments.map(payment => {
+      // Use the closing date: latePaymentDate for late payments, paymentDate for on-time
+      const closingDate = payment.isLate && payment.latePaymentDate 
+        ? payment.latePaymentDate 
+        : payment.paymentDate
+      
       return `
         <tr>
           <td>${payment.loan.user.name}</td>
-          <td>${payment.loan.motorcycle.plate}</td>
-          <td>${this.formatDate(payment.paymentDate)}</td>
+          <td>${payment.loan.vehicle.plate}</td>
+          <td>${this.formatDateOnly(closingDate)}</td>
           <td>${this.getReadablePaymentMethod(payment.paymentMethod)}</td>
           <td class="right">${this.formatCurrency(payment.amount + (payment.gps || 0))}</td>
         </tr>
@@ -627,13 +807,13 @@ export class ClosingService {
     }).join('')
   }
 
-  private generateExpenseRowsHtml(expenses: any[]): string {
+  private generateExpenseRowsHtml(expenses: CashRegisterWithRelations['expense']): string {
     return expenses.map(expense => {
       return `
         <tr>
           <td>${this.getReadableExpenseCategory(expense.category)}</td>
           <td>${expense.beneficiary}</td>
-          <td>${this.formatDate(expense.date)}</td>
+          <td>${this.formatDateOnly(expense.date)}</td>
           <td>${this.getReadablePaymentMethod(expense.paymentMethod)}</td>
           <td class="right">${this.formatCurrency(expense.amount)}</td>
         </tr>
