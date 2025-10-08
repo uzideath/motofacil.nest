@@ -6,8 +6,11 @@ import {
   IsBoolean,
   IsString,
   IsDateString,
+  IsEnum,
+  Min,
 } from 'class-validator';
-import { PaymentMethod } from 'generated/prisma';
+import { PaymentMethod, VehicleType } from 'generated/prisma';
+import { Type } from 'class-transformer';
 
 export class CreateInstallmentDto {
   @IsUUID()
@@ -55,6 +58,55 @@ export class FindInstallmentFiltersDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
+
+  @IsOptional()
+  @IsString()
+  plate?: string;
+
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  loanId?: string;
+
+  @IsOptional()
+  @IsEnum(VehicleType)
+  vehicleType?: VehicleType;
+
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isLate?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  minAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  maxAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
+  page?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
+  limit?: number;
 }
 
 export class UpdateInstallmentDto extends PartialType(CreateInstallmentDto) { }

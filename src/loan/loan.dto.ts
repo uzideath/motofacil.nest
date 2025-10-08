@@ -7,6 +7,8 @@ import {
   Min,
   IsPositive,
   IsOptional,
+  IsDateString,
+  ValidateIf,
 } from 'class-validator';
 
 export enum InterestType {
@@ -26,7 +28,7 @@ export class CreateLoanDto {
   userId: string;
 
   @IsUUID()
-  motorcycleId: string;
+  vehicleId: string;
 
   @IsNumber()
   @Min(0)
@@ -60,6 +62,28 @@ export class CreateLoanDto {
   @IsNumber()
   @IsPositive()
   gpsInstallmentPayment: number;
+
+  @ValidateIf((o) => o.startDate !== null && o.startDate !== '' && o.startDate !== undefined)
+  @IsDateString()
+  @IsOptional()
+  startDate?: string;
+
+  @ValidateIf((o) => o.endDate !== null && o.endDate !== '' && o.endDate !== undefined)
+  @IsDateString()
+  @IsOptional()
+  endDate?: string;
 }
 
 export class UpdateLoanDto extends PartialType(CreateLoanDto) { }
+
+export class UpdateLoanDatesDto {
+  @ValidateIf((o) => o.startDate !== null && o.startDate !== '' && o.startDate !== undefined)
+  @IsDateString()
+  @IsOptional()
+  startDate?: string;
+
+  @ValidateIf((o) => o.endDate !== null && o.endDate !== '' && o.endDate !== undefined)
+  @IsDateString()
+  @IsOptional()
+  endDate?: string;
+}

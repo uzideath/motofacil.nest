@@ -17,9 +17,19 @@ export class ProvidersController {
     return this.providersService.findAll();
   }
 
+  @Get('stats')
+  getProvidersStats() {
+    return this.providersService.getProvidersStats();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.providersService.findOne(id);
+  }
+
+  @Get(':id/details')
+  getProviderDetails(@Param('id') id: string) {
+    return this.providersService.getProviderDetails(id);
   }
 
   @Patch(':id')

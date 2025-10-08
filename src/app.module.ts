@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { LoanModule } from './loan/loan.module';
 import { UserModule } from './user/user.module';
 import { InstallmentModule } from './installment/installment.module';
-import { MotorcycleModule } from './motorcycle/motorcycle.module';
+import { VehicleModule } from './vehicle/vehicle.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { APP_GUARD } from '@nestjs/core';
@@ -20,6 +20,10 @@ import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ProvidersModule } from './providers/providers.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { PrismaModule } from './prisma.module';
+import { CashFlowModule } from './cash-flow/cash-flow.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -27,10 +31,11 @@ import { ProvidersModule } from './providers/providers.module';
       isGlobal: true,
     }),
     ScheduleModule.forRoot(),
+    PrismaModule,
     UserModule,
     LoanModule,
     InstallmentModule,
-    MotorcycleModule,
+    VehicleModule,
     AuthModule,
     OwnersModule,
     ClosingModule,
@@ -43,6 +48,9 @@ import { ProvidersModule } from './providers/providers.module';
       serveRoot: "/uploads",
     }),
     ProvidersModule,
+    DashboardModule,
+    CashFlowModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [
