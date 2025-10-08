@@ -238,18 +238,46 @@ export class InstallmentService {
 
 
   async update(id: string, dto: UpdateInstallmentDto) {
+    console.log('📅 Received update DTO:', {
+      id,
+      paymentDate: dto.paymentDate,
+      latePaymentDate: dto.latePaymentDate,
+      fullDto: dto
+    });
+
     await this.findOne(id);
 
-    const { loanId, createdById, ...rest } = dto;
+    const { loanId, createdById, paymentDate, latePaymentDate, ...rest } = dto;
+
+    const updateData: any = {
+      ...rest,
+      updatedAt: toColombiaUtc(new Date()),
+    };
+
+    // Handle paymentDate - convert to Colombia UTC if provided
+    if (paymentDate !== undefined) {
+      updateData.paymentDate = toColombiaUtc(paymentDate);
+      console.log('📅 Converting paymentDate:', {
+        original: paymentDate,
+        converted: updateData.paymentDate
+      });
+    }
+
+    // Handle latePaymentDate - convert to Colombia UTC if provided, null if explicitly null
+    if (latePaymentDate !== undefined) {
+      updateData.latePaymentDate = latePaymentDate ? toColombiaUtc(latePaymentDate) : null;
+    }
+
+    // Handle createdBy relationship if provided
+    if (createdById) {
+      updateData.createdBy = { connect: { id: createdById } };
+    }
+
+    console.log('📅 Final update data:', updateData);
 
     return this.prisma.installment.update({
       where: { id },
-      data: {
-        ...rest,
-        paymentDate: rest.paymentDate ? toColombiaUtc(rest.paymentDate) : undefined,
-        latePaymentDate: rest.latePaymentDate ? toColombiaUtc(rest.latePaymentDate) : undefined,
-        ...(createdById ? { createdBy: { connect: { id: createdById } } } : {}),
-      },
+      data: updateData,
     });
 
   }
