@@ -560,6 +560,54 @@ export class ReportsService {
         ]);
         break;
 
+      case 'missing-installments':
+        const missingInstallmentsReport = await this.getMissingInstallmentsReport(filters);
+        data = missingInstallmentsReport.items;
+        filename = `missing-installments-report-${new Date().toISOString().split('T')[0]}`;
+        headers = [
+          'Cliente',
+          'Documento',
+          'Teléfono',
+          'Dirección',
+          'Contrato',
+          'Vehículo',
+          'Placa',
+          'Último Pago',
+          'Pago Atrasado',
+          'Días Desde Último Pago',
+          'Cuotas Perdidas',
+          'Monto Cuota',
+          'Monto GPS',
+          'Total Adeudado',
+          'Cuotas Pagadas',
+          'Total Cuotas',
+          'Progreso %',
+          'Frecuencia',
+          'Estado Préstamo',
+        ];
+        rows = data.map((item: any) => [
+          item.userName,
+          item.userDocument,
+          item.userPhone,
+          item.userAddress,
+          item.contractNumber || 'N/A',
+          item.vehicle,
+          item.plate,
+          item.lastPaymentDate ? new Date(item.lastPaymentDate).toLocaleDateString('es-CO') : 'Sin pagos',
+          item.lastPaymentWasLate ? 'Sí' : 'No',
+          item.daysSinceLastPayment,
+          item.missedInstallments,
+          `$${item.installmentAmount.toLocaleString('es-CO')}`,
+          `$${item.gpsAmount.toLocaleString('es-CO')}`,
+          `$${item.totalMissedAmount.toLocaleString('es-CO')}`,
+          item.paidInstallments,
+          item.totalInstallments,
+          `${Math.round((item.paidInstallments / item.totalInstallments) * 100)}%`,
+          item.paymentFrequency,
+          item.loanStatus,
+        ]);
+        break;
+
       default:
         throw new Error('Invalid report type');
     }
