@@ -22,6 +22,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ProvidersModule } from './providers/providers.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { PrismaModule } from './prisma.module';
+import { CashFlowModule } from './cash-flow/cash-flow.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -47,6 +49,8 @@ import { PrismaModule } from './prisma.module';
     }),
     ProvidersModule,
     DashboardModule,
+    CashFlowModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [

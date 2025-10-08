@@ -174,6 +174,145 @@ model Expense {
 }
 
 /**
+ * ───────────────────────── Cash Flow Models ─────────────────────────
+ */
+
+model CashFlowAccount {
+  id              String                 @id @default(uuid())
+  name            String
+  accountType     CashFlowAccountType
+  currency        String                 @default("COP")
+  balance         Float                  @default(0)
+  isActive        Boolean                @default(true)
+  description     String?
+  metadata        Json?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  // Relations
+  transactions    CashFlowTransaction[]
+  transfersFrom   CashFlowTransfer[]     @relation("TransferFrom")
+  transfersTo     CashFlowTransfer[]     @relation("TransferTo")
+}
+
+model CashFlowTransaction {
+  id              String                    @id @default(uuid())
+  idempotencyKey  String                    @unique
+  account         CashFlowAccount           @relation(fields: [accountId], references: [id])
+  accountId       String
+  type            CashFlowTransactionType
+  category        CashFlowCategory
+  amount          Float
+  currency        String                    @default("COP")
+  date            DateTime
+  counterparty    String?
+  memo            String?
+  reference       String?
+  tags            String[]
+  attachmentUrls  String[]
+  metadata        Json?
+  isReconciled    Boolean                   @default(false)
+  reconciledAt    DateTime?
+  transferId      String?
+  createdById     String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  
+  @@index([accountId, date])
+  @@index([category, date])
+  @@index([counterparty])
+  @@index([date])
+}
+
+model CashFlowTransfer {
+  id              String                 @id @default(uuid())
+  idempotencyKey  String                 @unique
+  fromAccount     CashFlowAccount        @relation("TransferFrom", fields: [fromAccountId], references: [id])
+  fromAccountId   String
+  toAccount       CashFlowAccount        @relation("TransferTo", fields: [toAccountId], references: [id])
+  toAccountId     String
+  amount          Float
+  currency        String                 @default("COP")
+  date            DateTime
+  memo            String?
+  metadata        Json?
+  createdById     String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  // Relations - linked transaction IDs (stored as strings, not relations to avoid circular dependency)
+  debitTxId       String                 @unique
+  creditTxId      String                 @unique
+  
+  @@index([fromAccountId, date])
+  @@index([toAccountId, date])
+}
+
+model CashFlowRule {
+  id              String                 @id @default(uuid())
+  name            String
+  description     String?
+  priority        Int                    @default(0)
+  isActive        Boolean                @default(true)
+  
+  // Matching conditions
+  accountIds      String[]
+  counterpartyRegex String?
+  memoRegex       String?
+  amountMin       Float?
+  amountMax       Float?
+  categories      CashFlowCategory[]
+  
+  // Actions
+  targetCategory  CashFlowCategory?
+  targetCounterparty String?
+  addTags         String[]
+  
+  metadata        Json?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  
+  @@index([priority])
+}
+
+model CashFlowScheduledItem {
+  id              String                 @id @default(uuid())
+  name            String
+  type            CashFlowTransactionType
+  category        CashFlowCategory
+  accountId       String
+  amount          Float
+  currency        String                 @default("COP")
+  frequency       ScheduleFrequency
+  startDate       DateTime
+  endDate         DateTime?
+  nextOccurrence  DateTime
+  counterparty    String?
+  memo            String?
+  isActive        Boolean                @default(true)
+  metadata        Json?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  
+  @@index([nextOccurrence, isActive])
+  @@index([accountId])
+}
+
+model ExchangeRate {
+  id              String   @id @default(uuid())
+  fromCurrency    String
+  toCurrency      String
+  rate            Float
+  effectiveDate   DateTime
+  source          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([fromCurrency, toCurrency, effectiveDate])
+  @@index([fromCurrency, toCurrency, effectiveDate])
+}
+
+/**
  * ───────────────────────── Enums ─────────────────────────
  */
 
@@ -216,4 +355,59 @@ enum Role {
   USER
   ADMIN
   MODERATOR
+}
+
+enum CashFlowAccountType {
+  BANK
+  CASH
+  CREDIT_CARD
+  INVESTMENT
+  LOAN_RECEIVABLE
+  OTHER
+}
+
+enum CashFlowTransactionType {
+  INFLOW
+  OUTFLOW
+}
+
+enum CashFlowCategory {
+  // Operating Activities
+  CUSTOMER_PAYMENT
+  VENDOR_PAYMENT
+  SALARY_PAYMENT
+  RENT_PAYMENT
+  UTILITIES_PAYMENT
+  TAX_PAYMENT
+  INTEREST_PAYMENT
+  SERVICE_PAYMENT
+  
+  // Investing Activities
+  ASSET_PURCHASE
+  ASSET_SALE
+  INVESTMENT_PURCHASE
+  INVESTMENT_SALE
+  LOAN_DISBURSEMENT
+  LOAN_REPAYMENT_RECEIVED
+  
+  // Financing Activities
+  EQUITY_INJECTION
+  EQUITY_WITHDRAWAL
+  LOAN_RECEIVED
+  LOAN_REPAYMENT_MADE
+  DIVIDEND_PAYMENT
+  
+  // Other
+  TRANSFER
+  ADJUSTMENT
+  OTHER
+}
+
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
 }
