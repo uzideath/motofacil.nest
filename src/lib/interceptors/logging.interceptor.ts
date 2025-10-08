@@ -41,9 +41,9 @@ export class LoggingInterceptor implements NestInterceptor {
     // Log incoming request
     const requestInfo = {
       ...metadata,
-      ...(Object.keys(query).length > 0 && { query }),
-      ...(Object.keys(params).length > 0 && { params }),
-      ...(Object.keys(body).length > 0 && { bodyKeys: Object.keys(body) }),
+      ...(query && Object.keys(query).length > 0 && { query }),
+      ...(params && Object.keys(params).length > 0 && { params }),
+      ...(body && Object.keys(body).length > 0 && { bodyKeys: Object.keys(body) }),
     };
 
     this.logger.logRequest(method, url, requestInfo);
