@@ -33,6 +33,12 @@ export class ReportsController {
     return this.reportsService.getVehicleReport(filters);
   }
 
+  @Get('missing-installments')
+  @LogAction(ActionType.QUERY, 'Report', 'Missing installments report')
+  async getMissingInstallmentsReport(@Query() filters: ReportFilters) {
+    return this.reportsService.getMissingInstallmentsReport(filters);
+  }
+
   // Export endpoints
   @Get('export/:type/:format')
   @LogAction(ActionType.EXPORT, 'Report')

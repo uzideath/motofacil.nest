@@ -234,6 +234,185 @@ export class ReportsService {
     };
   }
 
+  // Missing Installments Report (Clientes con pagos pendientes/atrasados)
+  async getMissingInstallmentsReport(filters: ReportFilters) {
+    // Get all active loans with their payments
+    const loans = await this.prisma.loan.findMany({
+      where: {
+        status: { in: ['ACTIVE', 'DEFAULTED'] },
+        archived: false,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            identification: true,
+            phone: true,
+            address: true,
+          },
+        },
+        vehicle: {
+          select: {
+            id: true,
+            brand: true,
+            model: true,
+            plate: true,
+          },
+        },
+        payments: {
+          orderBy: { paymentDate: 'desc' },
+          take: 1, // Get only the last payment
+        },
+      },
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const clientsWithMissingPayments: Array<{
+      userId: string;
+      userName: string;
+      userDocument: string;
+      userPhone: string;
+      userAddress: string;
+      loanId: string;
+      contractNumber: string | null;
+      vehicle: string;
+      plate: string;
+      lastPaymentDate: Date | null;
+      lastPaymentWasLate: boolean;
+      daysSinceLastPayment: number;
+      missedInstallments: number;
+      installmentAmount: number;
+      gpsAmount: number;
+      totalMissedAmount: number;
+      totalInstallments: number;
+      paidInstallments: number;
+      loanStatus: string;
+      paymentFrequency: string;
+    }> = [];
+
+    for (const loan of loans) {
+      const lastPayment = loan.payments[0];
+      
+      if (!lastPayment) {
+        // No payments yet - calculate days since loan start
+        const loanStartDate = new Date(loan.startDate);
+        loanStartDate.setHours(0, 0, 0, 0);
+        
+        const daysSinceStart = Math.floor((today.getTime() - loanStartDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Calculate how many installments should have been paid
+        const paymentFrequencyDays = this.getPaymentFrequencyDays(loan.paymentFrequency);
+        const expectedInstallments = Math.floor(daysSinceStart / paymentFrequencyDays);
+        
+        if (expectedInstallments > 0) {
+          const missedInstallments = expectedInstallments;
+          const missedAmount = missedInstallments * Number(loan.installmentPaymentAmmount);
+          
+          clientsWithMissingPayments.push({
+            userId: loan.user.id,
+            userName: loan.user.name,
+            userDocument: loan.user.identification,
+            userPhone: loan.user.phone,
+            userAddress: loan.user.address,
+            loanId: loan.id,
+            contractNumber: loan.contractNumber,
+            vehicle: `${loan.vehicle.brand} ${loan.vehicle.model}`,
+            plate: loan.vehicle.plate,
+            lastPaymentDate: null,
+            lastPaymentWasLate: false,
+            daysSinceLastPayment: daysSinceStart,
+            missedInstallments,
+            installmentAmount: Number(loan.installmentPaymentAmmount),
+            gpsAmount: Number(loan.gpsInstallmentPayment),
+            totalMissedAmount: missedAmount + (missedInstallments * Number(loan.gpsInstallmentPayment)),
+            totalInstallments: loan.installments,
+            paidInstallments: 0,
+            loanStatus: loan.status,
+            paymentFrequency: loan.paymentFrequency,
+          });
+        }
+      } else {
+        // Has payments - check if late or if there are missing payments
+        const relevantDate = lastPayment.isLate && lastPayment.latePaymentDate
+          ? new Date(lastPayment.latePaymentDate)
+          : new Date(lastPayment.paymentDate);
+        
+        relevantDate.setHours(0, 0, 0, 0);
+        
+        const daysSinceLastPayment = Math.floor((today.getTime() - relevantDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Calculate expected payments based on payment frequency
+        const paymentFrequencyDays = this.getPaymentFrequencyDays(loan.paymentFrequency);
+        const expectedPaymentsSinceLastPayment = Math.floor(daysSinceLastPayment / paymentFrequencyDays);
+        
+        // Check if there are missing payments
+        if (expectedPaymentsSinceLastPayment > 0) {
+          const missedInstallments = expectedPaymentsSinceLastPayment;
+          const missedAmount = missedInstallments * Number(loan.installmentPaymentAmmount);
+          
+          clientsWithMissingPayments.push({
+            userId: loan.user.id,
+            userName: loan.user.name,
+            userDocument: loan.user.identification,
+            userPhone: loan.user.phone,
+            userAddress: loan.user.address,
+            loanId: loan.id,
+            contractNumber: loan.contractNumber,
+            vehicle: `${loan.vehicle.brand} ${loan.vehicle.model}`,
+            plate: loan.vehicle.plate,
+            lastPaymentDate: relevantDate,
+            lastPaymentWasLate: lastPayment.isLate || false,
+            daysSinceLastPayment,
+            missedInstallments,
+            installmentAmount: Number(loan.installmentPaymentAmmount),
+            gpsAmount: Number(loan.gpsInstallmentPayment),
+            totalMissedAmount: missedAmount + (missedInstallments * Number(loan.gpsInstallmentPayment)),
+            totalInstallments: loan.installments,
+            paidInstallments: loan.paidInstallments,
+            loanStatus: loan.status,
+            paymentFrequency: loan.paymentFrequency,
+          });
+        }
+      }
+    }
+
+    // Sort by days since last payment (most overdue first)
+    clientsWithMissingPayments.sort((a, b) => b.daysSinceLastPayment - a.daysSinceLastPayment);
+
+    // Calculate summary statistics
+    const totalClients = new Set(clientsWithMissingPayments.map(c => c.userId)).size;
+    const totalMissedPayments = clientsWithMissingPayments.reduce((sum, c) => sum + c.missedInstallments, 0);
+    const totalMissedAmount = clientsWithMissingPayments.reduce((sum, c) => sum + c.totalMissedAmount, 0);
+    const criticalClients = clientsWithMissingPayments.filter(c => c.daysSinceLastPayment > 30).length;
+
+    return {
+      totalClients,
+      totalMissedPayments,
+      totalMissedAmount,
+      criticalClients,
+      items: clientsWithMissingPayments,
+    };
+  }
+
+  // Helper method to get payment frequency in days
+  private getPaymentFrequencyDays(frequency: string): number {
+    switch (frequency) {
+      case 'DAILY':
+        return 1;
+      case 'WEEKLY':
+        return 7;
+      case 'BIWEEKLY':
+        return 14;
+      case 'MONTHLY':
+        return 30;
+      default:
+        return 30;
+    }
+  }
+
   // Vehicle Reports
   async getVehicleReport(filters: ReportFilters) {
     const where: any = {};
