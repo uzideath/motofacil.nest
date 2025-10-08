@@ -18,6 +18,7 @@ export class DashboardService {
       cashFlow,
       loanStatusDistribution,
       recentLoans,
+      archivedLoans,
       overview,
       upcomingPayments,
       pendingPaymentsThisWeek,
@@ -27,6 +28,7 @@ export class DashboardService {
       this.getCashFlow(),
       this.getLoanStatusDistribution(),
       this.getRecentLoans(),
+      this.getArchivedLoans(),
       this.getOverview(),
       this.getUpcomingPayments(),
       this.getPendingPaymentsThisWeek(),
@@ -38,6 +40,7 @@ export class DashboardService {
       cashFlow,
       loanStatusDistribution,
       recentLoans,
+      archivedLoans,
       overview,
       upcomingPayments,
       recentInstallments,
@@ -228,6 +231,9 @@ export class DashboardService {
   private async getRecentLoans() {
     const loans = await this.prisma.loan.findMany({
       take: 5,
+      where: {
+        archived: false,
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -262,6 +268,51 @@ export class DashboardService {
       status: loan.status,
       paidInstallments: loan.paidInstallments,
       totalInstallments: loan.installments,
+    }));
+  }
+
+  private async getArchivedLoans() {
+    const loans = await this.prisma.loan.findMany({
+      take: 10,
+      where: {
+        archived: true,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            identification: true,
+          },
+        },
+        vehicle: {
+          select: {
+            id: true,
+            brand: true,
+            model: true,
+            plate: true,
+          },
+        },
+      },
+    });
+
+    return loans.map((loan) => ({
+      id: loan.id,
+      userName: loan.user.name,
+      userIdentification: loan.user.identification,
+      vehicleModel: `${loan.vehicle.brand} ${loan.vehicle.model}`,
+      vehiclePlate: loan.vehicle.plate,
+      amount: loan.totalAmount,
+      downPayment: loan.downPayment,
+      date: loan.createdAt,
+      status: loan.status,
+      paidInstallments: loan.paidInstallments,
+      totalInstallments: loan.installments,
+      isArchived: loan.archived,
+      archivedAt: loan.updatedAt,
     }));
   }
 
