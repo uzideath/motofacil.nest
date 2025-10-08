@@ -1,6 +1,7 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Param, Res, StreamableFile } from '@nestjs/common';
 import { ReportsService, ReportFilters } from './reports.service';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
+import { Response } from 'express';
 
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
@@ -27,9 +28,21 @@ export class ReportsController {
     return this.reportsService.getVehicleReport(filters);
   }
 
-  // Export endpoints can be added later with libraries like exceljs, pdfkit, etc.
-  // @Get('loans/export/:format')
-  // async exportLoanReport(@Param('format') format: string, @Query() filters: ReportFilters) {
-  //   // Implementation for Excel/PDF/CSV export
-  // }
+  // Export endpoints
+  @Get('export/:type/:format')
+  async exportReport(
+    @Param('type') type: string,
+    @Param('format') format: string,
+    @Query() filters: ReportFilters,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.reportsService.exportReport(type, format, filters);
+    
+    res.set({
+      'Content-Type': result.contentType,
+      'Content-Disposition': `attachment; filename="${result.filename}"`,
+    });
+    
+    return new StreamableFile(result.buffer);
+  }
 }

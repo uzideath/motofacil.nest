@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import * as ExcelJS from 'exceljs';
+import { stringify } from 'csv-stringify/sync';
+import * as puppeteer from 'puppeteer';
 
 export interface ReportFilters {
   startDate?: string;
@@ -295,5 +298,252 @@ export class ReportsService {
       totalValue,
       items,
     };
+  }
+
+  // Export functionality
+  async exportReport(type: string, format: string, filters: ReportFilters) {
+    // Get data based on type
+    let data: any;
+    let filename: string;
+    let headers: string[];
+    let rows: any[][];
+
+    switch (type) {
+      case 'loans':
+        const loanReport = await this.getLoanReport(filters);
+        data = loanReport.items;
+        filename = `loans-report-${new Date().toISOString().split('T')[0]}`;
+        headers = ['ID', 'Cliente', 'Vehículo', 'Placa', 'Monto', 'Tasa', 'Cuotas', 'Pagadas', 'Fecha Inicio', 'Estado'];
+        rows = data.map((item: any) => [
+          item.id,
+          item.clientName,
+          item.motorcycle,
+          item.plate,
+          item.amount,
+          `${item.interestRate}%`,
+          item.installments,
+          item.paidInstallments,
+          new Date(item.startDate).toLocaleDateString('es-CO'),
+          item.status,
+        ]);
+        break;
+
+      case 'payments':
+        const paymentReport = await this.getPaymentReport(filters);
+        data = paymentReport.items;
+        filename = `payments-report-${new Date().toISOString().split('T')[0]}`;
+        headers = ['ID', 'Cliente', 'Vehículo', 'Monto', 'Fecha Vencimiento', 'Fecha Pago', 'Estado', 'Cuota #'];
+        rows = data.map((item: any) => [
+          item.id,
+          item.clientName,
+          item.motorcycle,
+          item.amount,
+          item.dueDate ? new Date(item.dueDate).toLocaleDateString('es-CO') : 'N/A',
+          item.paymentDate ? new Date(item.paymentDate).toLocaleDateString('es-CO') : 'N/A',
+          item.status,
+          item.installmentNumber,
+        ]);
+        break;
+
+      case 'clients':
+        const clientReport = await this.getClientReport(filters);
+        data = clientReport.items;
+        filename = `clients-report-${new Date().toISOString().split('T')[0]}`;
+        headers = ['ID', 'Nombre', 'Documento', 'Teléfono', 'Dirección', 'Préstamos Activos', 'Total Préstamos', 'Monto Total', 'Estado'];
+        rows = data.map((item: any) => [
+          item.id,
+          item.name,
+          item.document,
+          item.phone,
+          item.address,
+          item.activeLoans,
+          item.totalLoans,
+          item.totalAmount,
+          item.status,
+        ]);
+        break;
+
+      case 'vehicles':
+        const vehicleReport = await this.getVehicleReport(filters);
+        data = vehicleReport.items;
+        filename = `vehicles-report-${new Date().toISOString().split('T')[0]}`;
+        headers = ['ID', 'Marca', 'Modelo', 'Placa', 'Color', 'Precio', 'Fecha Compra', 'Estado', 'Cliente'];
+        rows = data.map((item: any) => [
+          item.id,
+          item.brand,
+          item.model,
+          item.plate,
+          item.color,
+          item.price,
+          new Date(item.purchaseDate).toLocaleDateString('es-CO'),
+          item.status,
+          item.clientName || 'N/A',
+        ]);
+        break;
+
+      default:
+        throw new Error('Invalid report type');
+    }
+
+    // Generate file based on format
+    switch (format.toLowerCase()) {
+      case 'excel':
+        return this.generateExcel(filename, headers, rows);
+      case 'csv':
+        return this.generateCSV(filename, headers, rows);
+      case 'pdf':
+        return this.generatePDF(filename, headers, rows);
+      default:
+        throw new Error('Invalid format');
+    }
+  }
+
+  private async generateExcel(filename: string, headers: string[], rows: any[][]) {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Reporte');
+
+    // Add headers with styling
+    worksheet.addRow(headers);
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF3B82F6' },
+    };
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+    // Add data rows
+    rows.forEach(row => worksheet.addRow(row));
+
+    // Auto-fit columns
+    worksheet.columns.forEach(column => {
+      column.width = 15;
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    return {
+      buffer: Buffer.from(buffer),
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      filename: `${filename}.xlsx`,
+    };
+  }
+
+  private async generateCSV(filename: string, headers: string[], rows: any[][]) {
+    const csv = stringify([headers, ...rows], {
+      delimiter: ',',
+      quoted: true,
+    });
+
+    return {
+      buffer: Buffer.from(csv, 'utf-8'),
+      contentType: 'text/csv',
+      filename: `${filename}.csv`,
+    };
+  }
+
+  private async generatePDF(filename: string, headers: string[], rows: any[][]) {
+    // Generate HTML table
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+          }
+          h1 {
+            color: #2563eb;
+            margin-bottom: 20px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+          }
+          th {
+            background-color: #2563eb;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #1e40af;
+          }
+          td {
+            padding: 10px;
+            border: 1px solid #ddd;
+          }
+          tr:nth-child(even) {
+            background-color: #f9fafb;
+          }
+          .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>${filename.replace(/-/g, ' ').toUpperCase()}</h1>
+        <table>
+          <thead>
+            <tr>
+              ${headers.map(h => `<th>${h}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(row => `
+              <tr>
+                ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="footer">
+          Generado el ${new Date().toLocaleDateString('es-CO', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Use Puppeteer to generate PDF
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
+    try {
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        landscape: true,
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px',
+        },
+        printBackground: true,
+      });
+
+      return {
+        buffer: Buffer.from(pdfBuffer),
+        contentType: 'application/pdf',
+        filename: `${filename}.pdf`,
+      };
+    } finally {
+      await browser.close();
+    }
   }
 }
