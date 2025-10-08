@@ -7,7 +7,7 @@ import { InstallmentModule } from './installment/installment.module';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { OwnersModule } from './owners/owners.module';
@@ -24,6 +24,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { PrismaModule } from './prisma.module';
 import { CashFlowModule } from './cash-flow/cash-flow.module';
 import { ReportsModule } from './reports/reports.module';
+import { LoggerModule } from './lib/logger/logger.module';
+import { LoggingInterceptor } from './lib/interceptors/logging.interceptor';
+import { ActionLoggingInterceptor } from './lib/interceptors/action-logging.interceptor';
 
 @Module({
   imports: [
@@ -31,6 +34,7 @@ import { ReportsModule } from './reports/reports.module';
       isGlobal: true,
     }),
     ScheduleModule.forRoot(),
+    LoggerModule,
     PrismaModule,
     UserModule,
     LoanModule,
@@ -57,6 +61,8 @@ import { ReportsModule } from './reports/reports.module';
     AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ActionLoggingInterceptor },
   ],
 })
 export class AppModule { }
