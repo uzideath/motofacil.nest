@@ -27,6 +27,7 @@ import { ReportsModule } from './reports/reports.module';
 import { LoggerModule } from './lib/logger/logger.module';
 import { LoggingInterceptor } from './lib/interceptors/logging.interceptor';
 import { ActionLoggingInterceptor } from './lib/interceptors/action-logging.interceptor';
+import { PermissionsModule } from './permissions/permissions.module';
 
 @Module({
   imports: [
@@ -36,6 +37,8 @@ import { ActionLoggingInterceptor } from './lib/interceptors/action-logging.inte
     ScheduleModule.forRoot(),
     LoggerModule,
     PrismaModule,
+    AuthModule,
+    PermissionsModule,
     UserModule,
     LoanModule,
     InstallmentModule,

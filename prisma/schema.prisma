@@ -18,6 +18,7 @@ model Owners {
   username     String    @unique
   passwordHash String
   roles        Role[]    @default([USER])
+  permissions  Json?     // Store permissions as JSON: { "CLOSING": ["VIEW", "CREATE"], "LOAN": ["VIEW", "EDIT"] }
   status       String    @default("ACTIVE")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
