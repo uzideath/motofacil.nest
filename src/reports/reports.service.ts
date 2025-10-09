@@ -32,19 +32,31 @@ export class ReportsService {
       where.status = filters.status;
     }
 
+    // Build AND conditions array
+    const andConditions: any[] = [];
+
     // Provider filtering
     if (filters.provider && filters.provider !== 'all') {
-      where.vehicle = {
-        providerId: filters.provider,
-      };
+      andConditions.push({
+        vehicle: {
+          providerId: filters.provider,
+        }
+      });
     }
 
     // Search filtering
     if (filters.search) {
-      where.OR = [
-        { user: { name: { contains: filters.search, mode: 'insensitive' } } },
-        { vehicle: { plate: { contains: filters.search, mode: 'insensitive' } } },
-      ];
+      andConditions.push({
+        OR: [
+          { user: { name: { contains: filters.search, mode: 'insensitive' } } },
+          { vehicle: { plate: { contains: filters.search, mode: 'insensitive' } } },
+        ]
+      });
+    }
+
+    // Apply AND conditions if any exist
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     const loans = await this.prisma.loan.findMany({
@@ -265,19 +277,31 @@ export class ReportsService {
       archived: false,
     };
 
+    // Build AND conditions array
+    const andConditions: any[] = [];
+
     // Provider filtering
     if (filters.provider && filters.provider !== 'all') {
-      where.vehicle = {
-        providerId: filters.provider,
-      };
+      andConditions.push({
+        vehicle: {
+          providerId: filters.provider,
+        }
+      });
     }
 
     // Search filtering
     if (filters.search) {
-      where.OR = [
-        { user: { name: { contains: filters.search, mode: 'insensitive' } } },
-        { vehicle: { plate: { contains: filters.search, mode: 'insensitive' } } },
-      ];
+      andConditions.push({
+        OR: [
+          { user: { name: { contains: filters.search, mode: 'insensitive' } } },
+          { vehicle: { plate: { contains: filters.search, mode: 'insensitive' } } },
+        ]
+      });
+    }
+
+    // Apply AND conditions if any exist
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     // Get all active loans with their payments
@@ -477,12 +501,12 @@ export class ReportsService {
       if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
     }
 
-    // Provider filtering
+    // Provider filtering - this is a direct field
     if (filters.provider && filters.provider !== 'all') {
       where.providerId = filters.provider;
     }
 
-    // Search filtering
+    // Search filtering - can coexist with provider filter since it's not on providerId
     if (filters.search) {
       where.OR = [
         { brand: { contains: filters.search, mode: 'insensitive' } },
