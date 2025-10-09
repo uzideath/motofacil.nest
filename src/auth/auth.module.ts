@@ -7,6 +7,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { RolesGuard } from './guards/roles.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         signOptions: { expiresIn: config.get('JWT_ACCESS_EXPIRES_IN') || '15m' },
       }),
     }),
+    forwardRef(() => PermissionsModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, RolesGuard, PermissionsGuard],
