@@ -9,6 +9,7 @@ export interface ReportFilters {
   endDate?: string;
   status?: string;
   search?: string;
+  provider?: string;
 }
 
 @Injectable()
@@ -31,6 +32,13 @@ export class ReportsService {
       where.status = filters.status;
     }
 
+    // Provider filtering
+    if (filters.provider && filters.provider !== 'all') {
+      where.vehicle = {
+        providerId: filters.provider,
+      };
+    }
+
     // Search filtering
     if (filters.search) {
       where.OR = [
@@ -43,7 +51,20 @@ export class ReportsService {
       where,
       include: {
         user: { select: { id: true, name: true } },
-        vehicle: { select: { id: true, brand: true, model: true, plate: true } },
+        vehicle: { 
+          select: { 
+            id: true, 
+            brand: true, 
+            model: true, 
+            plate: true,
+            provider: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
+          } 
+        },
         payments: {
           select: {
             id: true,
@@ -86,6 +107,8 @@ export class ReportsService {
         startDate: loan.startDate,
         status: loan.status,
         progress: Math.round(progress),
+        providerId: loan.vehicle.provider?.id,
+        providerName: loan.vehicle.provider?.name || 'Sin proveedor',
       };
     });
 
@@ -236,12 +259,30 @@ export class ReportsService {
 
   // Missing Installments Report (Clientes con pagos pendientes/atrasados)
   async getMissingInstallmentsReport(filters: ReportFilters) {
+    // Build where clause for filtering
+    const where: any = {
+      status: { in: ['ACTIVE', 'DEFAULTED'] },
+      archived: false,
+    };
+
+    // Provider filtering
+    if (filters.provider && filters.provider !== 'all') {
+      where.vehicle = {
+        providerId: filters.provider,
+      };
+    }
+
+    // Search filtering
+    if (filters.search) {
+      where.OR = [
+        { user: { name: { contains: filters.search, mode: 'insensitive' } } },
+        { vehicle: { plate: { contains: filters.search, mode: 'insensitive' } } },
+      ];
+    }
+
     // Get all active loans with their payments
     const loans = await this.prisma.loan.findMany({
-      where: {
-        status: { in: ['ACTIVE', 'DEFAULTED'] },
-        archived: false,
-      },
+      where,
       include: {
         user: {
           select: {
@@ -258,6 +299,12 @@ export class ReportsService {
             brand: true,
             model: true,
             plate: true,
+            provider: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
           },
         },
         payments: {
@@ -280,6 +327,8 @@ export class ReportsService {
       contractNumber: string | null;
       vehicle: string;
       plate: string;
+      providerId: string | null;
+      providerName: string | null;
       lastPaymentDate: Date | null;
       lastPaymentWasLate: boolean;
       daysSinceLastPayment: number;
@@ -321,6 +370,8 @@ export class ReportsService {
             contractNumber: loan.contractNumber,
             vehicle: `${loan.vehicle.brand} ${loan.vehicle.model}`,
             plate: loan.vehicle.plate,
+            providerId: loan.vehicle.provider?.id || null,
+            providerName: loan.vehicle.provider?.name || null,
             lastPaymentDate: null,
             lastPaymentWasLate: false,
             daysSinceLastPayment: daysSinceStart,
@@ -363,6 +414,8 @@ export class ReportsService {
             contractNumber: loan.contractNumber,
             vehicle: `${loan.vehicle.brand} ${loan.vehicle.model}`,
             plate: loan.vehicle.plate,
+            providerId: loan.vehicle.provider?.id || null,
+            providerName: loan.vehicle.provider?.name || null,
             lastPaymentDate: relevantDate,
             lastPaymentWasLate: lastPayment.isLate || false,
             daysSinceLastPayment,
@@ -424,6 +477,11 @@ export class ReportsService {
       if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
     }
 
+    // Provider filtering
+    if (filters.provider && filters.provider !== 'all') {
+      where.providerId = filters.provider;
+    }
+
     // Search filtering
     if (filters.search) {
       where.OR = [
@@ -436,6 +494,12 @@ export class ReportsService {
     const vehicles = await this.prisma.vehicle.findMany({
       where,
       include: {
+        provider: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
         loans: {
           where: { status: 'ACTIVE' },
           include: {
@@ -467,6 +531,8 @@ export class ReportsService {
         purchaseDate: vehicle.createdAt,
         status: activeLoan ? 'FINANCED' : 'AVAILABLE',
         clientName: activeLoan ? activeLoan.user.name : null,
+        providerId: vehicle.provider?.id,
+        providerName: vehicle.provider?.name || 'Sin proveedor',
       };
     });
 
