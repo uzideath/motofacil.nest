@@ -273,6 +273,13 @@ export class LoanService {
 
   async remove(id: string) {
     await this.findOne(id);
+    
+    // Delete associated installments first
+    await this.prisma.installment.deleteMany({
+      where: { loanId: id },
+    });
+    
+    // Then delete the loan
     return this.prisma.loan.delete({
       where: { id },
     });
