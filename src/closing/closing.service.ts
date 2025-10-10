@@ -21,12 +21,12 @@ type CashRegisterWithRelations = CashRegister & {
       user: Pick<User, "id" | "name">
       vehicle: Pick<Vehicle, "id" | "plate">
     }
-    createdBy: Pick<Owners, "id" | "username"> | null
+    createdBy: Pick<Owners, "id" | "username" | "name"> | null
   })[]
   expense: (Expense & {
-    createdBy: Pick<Owners, "id" | "username"> | null
+    createdBy: Pick<Owners, "id" | "username" | "name"> | null
   })[]
-  createdBy: Pick<Owners, "id" | "username"> | null
+  createdBy: Pick<Owners, "id" | "username" | "name"> | null
   provider: Pick<Provider, "id" | "name">
 }
 
@@ -148,6 +148,7 @@ export class ClosingService {
               select: {
                 id: true,
                 username: true,
+                name: true,
               },
             },
           },
@@ -157,6 +158,7 @@ export class ClosingService {
           select: {
             id: true,
             username: true,
+            name: true,
           },
         },
         provider: {
