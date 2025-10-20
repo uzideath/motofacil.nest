@@ -154,6 +154,12 @@ export class InstallmentService {
       }
     }
 
+    // Always exclude installments that belong to archived loans
+    if (!where.loan) {
+      where.loan = {};
+    }
+    where.loan.archived = false;
+
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
