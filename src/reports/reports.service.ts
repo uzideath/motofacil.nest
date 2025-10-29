@@ -374,7 +374,7 @@ export class ReportsService {
         const loanStartDate = new Date(loan.startDate);
         loanStartDate.setHours(0, 0, 0, 0);
         
-        const daysSinceStart = Math.floor((today.getTime() - loanStartDate.getTime()) / (1000 * 60 * 60 * 24));
+        const daysSinceStart = this.calculateBusinessDays(loanStartDate, today);
         
         // Calculate how many installments should have been paid
         const paymentFrequencyDays = this.getPaymentFrequencyDays(loan.paymentFrequency);
@@ -417,7 +417,7 @@ export class ReportsService {
         
         relevantDate.setHours(0, 0, 0, 0);
         
-        const daysSinceLastPayment = Math.floor((today.getTime() - relevantDate.getTime()) / (1000 * 60 * 60 * 24));
+        const daysSinceLastPayment = this.calculateBusinessDays(relevantDate, today);
         
         // Calculate expected payments based on payment frequency
         const paymentFrequencyDays = this.getPaymentFrequencyDays(loan.paymentFrequency);
@@ -472,6 +472,27 @@ export class ReportsService {
       criticalClients,
       items: clientsWithMissingPayments,
     };
+  }
+
+  // Helper method to calculate business days (excluding Sundays)
+  private calculateBusinessDays(startDate: Date, endDate: Date): number {
+    let count = 0;
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      const dayOfWeek = currentDate.getDay();
+      
+      // Only count if it's not Sunday (0)
+      if (dayOfWeek !== 0) {
+        count++;
+      }
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return count;
   }
 
   // Helper method to get payment frequency in days
