@@ -274,8 +274,12 @@ export class ReportsService {
     // Build where clause for filtering
     const where: any = {
       status: { in: ['ACTIVE', 'DEFAULTED'] },
-      archived: false,
     };
+
+    // Handle archived filter - only filter by archived:false if not explicitly including archived
+    if (filters.status !== 'include-archived') {
+      where.archived = false;
+    }
 
     // Build AND conditions array
     const andConditions: any[] = [];

@@ -132,14 +132,36 @@ export class LoanService {
   }
 
 
-  async findAll(): Promise<LoanWithRelations[]> {
-    return this.prisma.loan.findMany({
+  async findAll(): Promise<any[]> {
+    const loans = await this.prisma.loan.findMany({
       include: {
         user: true,
         vehicle: true,
         payments: true,
       },
     });
+
+    // Get archived loan count for each vehicle
+    const loansWithVehicleInfo = await Promise.all(
+      loans.map(async (loan) => {
+        const archivedCount = await this.prisma.loan.count({
+          where: {
+            vehicleId: loan.vehicleId,
+            archived: true,
+          },
+        });
+
+        return {
+          ...loan,
+          vehicle: {
+            ...loan.vehicle,
+            archivedLoansCount: archivedCount,
+          },
+        };
+      })
+    );
+
+    return loansWithVehicleInfo;
   }
 
 

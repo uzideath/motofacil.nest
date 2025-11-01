@@ -61,21 +61,22 @@ model User {
 }
 
 model Vehicle {
-  id           String      @id @default(uuid())
-  provider     Provider    @relation(fields: [providerId], references: [id])
+  id           String        @id @default(uuid())
+  provider     Provider      @relation(fields: [providerId], references: [id])
   providerId   String
-  vehicleType  VehicleType @default(MOTORCYCLE)
+  vehicleType  VehicleType   @default(MOTORCYCLE)
+  status       VehicleStatus @default(IN_CIRCULATION)
   brand        String
   model        String
-  plate        String      @unique
+  plate        String        @unique
   price        Float?
   engine       String?
   chassis      String?
   color        String?
   cc           Int?
   gps          Float?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   // Relaciones
   loans Loan[]
@@ -324,6 +325,12 @@ enum VehicleType {
   VAN
   ATV
   OTHER
+}
+
+enum VehicleStatus {
+  IN_CIRCULATION
+  IN_WORKSHOP
+  SEIZED_BY_PROSECUTOR
 }
 
 enum ExpenseCategory {
