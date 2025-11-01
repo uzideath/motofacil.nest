@@ -1,6 +1,3 @@
-// schema.prisma
-// Generated for HANNAMED.AI - Conversión de Providers enum → tabla relacional
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
