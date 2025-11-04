@@ -28,6 +28,7 @@ import { LoggerModule } from './lib/logger/logger.module';
 import { LoggingInterceptor } from './lib/interceptors/logging.interceptor';
 import { ActionLoggingInterceptor } from './lib/interceptors/action-logging.interceptor';
 import { PermissionsModule } from './permissions/permissions.module';
+import { StoreModule } from './store/store.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { PermissionsModule } from './permissions/permissions.module';
     AuthModule,
     PermissionsModule,
     UserModule,
+    StoreModule,
     LoanModule,
     InstallmentModule,
     VehicleModule,
