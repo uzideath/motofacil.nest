@@ -44,6 +44,15 @@ export class StoreController {
   }
 
   /**
+   * Get admin dashboard overview with all stores stats
+   * GET /stores/admin/dashboard
+   */
+  @Get('admin/dashboard')
+  getAdminDashboard() {
+    return this.storeService.getAdminDashboard();
+  }
+
+  /**
    * Get store by ID
    * GET /stores/:id
    */

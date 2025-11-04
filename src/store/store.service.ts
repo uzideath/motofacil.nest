@@ -435,4 +435,137 @@ export class StoreService {
       ),
     };
   }
+
+  /**
+   * Get admin dashboard with all stores overview
+   */
+  async getAdminDashboard() {
+    const stores = await this.prisma.store.findMany({
+      include: {
+        _count: {
+          select: {
+            vehicles: true,
+            loans: true,
+            employees: true,
+            providers: true,
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    // Get aggregate stats across all stores
+    const [totalVehicles, totalLoans, totalEmployees, totalProviders, activeLoans, revenueData] =
+      await Promise.all([
+        this.prisma.vehicle.count(),
+        this.prisma.loan.count(),
+        this.prisma.employee.count({ where: { role: UserRole.EMPLOYEE } }),
+        this.prisma.provider.count(),
+        this.prisma.loan.count({
+          where: {
+            status: {
+              in: ['ACTIVE', 'PENDING'],
+            },
+          },
+        }),
+        this.prisma.installment.aggregate({
+          _sum: {
+            amount: true,
+            gps: true,
+          },
+        }),
+      ]);
+
+    const totalRevenue =
+      ((revenueData._sum?.amount || 0) as number) + ((revenueData._sum?.gps || 0) as number);
+
+    // Get detailed stats per store
+    const storesWithStats = await Promise.all(
+      stores.map(async (store) => {
+        const [activeLoansCount, vehiclesInUse, monthlyRevenue, pendingPayments] =
+          await Promise.all([
+            this.prisma.loan.count({
+              where: {
+                storeId: store.id,
+                status: { in: ['ACTIVE', 'PENDING'] },
+              },
+            }),
+            this.prisma.vehicle.count({
+              where: {
+                storeId: store.id,
+                loans: {
+                  some: {
+                    status: { in: ['ACTIVE', 'PENDING'] },
+                  },
+                },
+              },
+            }),
+            this.prisma.installment.aggregate({
+              _sum: {
+                amount: true,
+                gps: true,
+              },
+              where: {
+                loan: { storeId: store.id },
+                createdAt: {
+                  gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+                },
+              },
+            }),
+            this.prisma.loan.aggregate({
+              _sum: {
+                debtRemaining: true,
+              },
+              where: {
+                storeId: store.id,
+                status: 'ACTIVE',
+              },
+            }),
+          ]);
+
+        const monthlyRevenueTotal =
+          ((monthlyRevenue._sum?.amount || 0) as number) +
+          ((monthlyRevenue._sum?.gps || 0) as number);
+        const pendingPaymentsTotal = (pendingPayments._sum?.debtRemaining || 0) as number;
+
+        return {
+          id: store.id,
+          name: store.name,
+          code: store.code,
+          city: store.city,
+          status: store.status,
+          whatsappEnabled: store.whatsappEnabled,
+          whatsappConfigured: !!(
+            store.whatsappApiUrl &&
+            store.whatsappInstanceId &&
+            store.whatsappApiKey
+          ),
+          stats: {
+            totalVehicles: store._count.vehicles,
+            totalLoans: store._count.loans,
+            totalEmployees: store._count.employees,
+            totalProviders: store._count.providers,
+            activeLoans: activeLoansCount,
+            vehiclesInUse,
+            monthlyRevenue: monthlyRevenueTotal,
+            pendingPayments: pendingPaymentsTotal,
+          },
+        };
+      }),
+    );
+
+    return {
+      overview: {
+        totalStores: stores.length,
+        activeStores: stores.filter((s) => s.status === 'ACTIVE').length,
+        totalVehicles,
+        totalLoans,
+        totalEmployees,
+        totalProviders,
+        activeLoans,
+        totalRevenue,
+      },
+      stores: storesWithStats,
+    };
+  }
 }
