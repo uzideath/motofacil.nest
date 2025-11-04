@@ -8,6 +8,7 @@ import {
 } from './loan.dto';
 import { addDays, addWeeks, addMonths, differenceInDays, differenceInWeeks, differenceInMonths } from 'date-fns';
 import { Loan, User, Vehicle, Installment } from '../../generated/prisma';
+import { BaseStoreService } from 'src/lib/base-store.service';
 
 type LoanWithRelations = Loan & {
   user: User;
@@ -26,8 +27,10 @@ type LoanStatus = LoanWithRelations & {
 };
 
 @Injectable()
-export class LoanService {
-  constructor(private readonly prisma: PrismaService) { }
+export class LoanService extends BaseStoreService {
+  constructor(protected readonly prisma: PrismaService) {
+    super(prisma);
+  }
 
   /**
    * Add business days (Monday-Saturday, excluding Sundays) to a date
@@ -133,8 +136,9 @@ export class LoanService {
   }
 
 
-  async findAll(): Promise<any[]> {
+  async findAll(userStoreId: string | null): Promise<any[]> {
     const loans = await this.prisma.loan.findMany({
+      where: this.storeFilter(userStoreId),
       include: {
         user: true,
         vehicle: true,
@@ -166,7 +170,25 @@ export class LoanService {
   }
 
 
-  async findOne(id: string): Promise<LoanWithRelations> {
+  async findOne(id: string, userStoreId: string | null): Promise<LoanWithRelations> {
+    const loan = await this.prisma.loan.findUnique({
+      where: { id },
+      include: {
+        user: true,
+        vehicle: true,
+        payments: true,
+      },
+    });
+    if (!loan) throw new NotFoundException('Loan not found');
+    
+    // Validate store access
+    this.validateStoreAccess(loan, userStoreId);
+    
+    return loan;
+  }
+
+  // Internal method for finding loans without store validation
+  private async findOneInternal(id: string): Promise<LoanWithRelations> {
     const loan = await this.prisma.loan.findUnique({
       where: { id },
       include: {
@@ -179,8 +201,8 @@ export class LoanService {
     return loan;
   }
 
-  async update(id: string, dto: UpdateLoanDto): Promise<Loan> {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateLoanDto, userStoreId: string | null): Promise<Loan> {
+    await this.findOne(id, userStoreId);
     
     // If startDate or endDate is being updated, recalculate endDate if needed
     let updateData: any = { ...dto };
@@ -220,7 +242,7 @@ export class LoanService {
    * This syncs the loan's expected installments with actual time elapsed
    */
   async recalculateInstallments(id: string): Promise<LoanWithRelations> {
-    const loan = await this.findOne(id);
+    const loan = await this.findOneInternal(id);
     
     const expectedInstallments = this.calculateExpectedInstallments(loan);
     const installmentsRemaining = loan.installments - loan.paidInstallments;
@@ -255,7 +277,7 @@ export class LoanService {
     startDate?: string, 
     endDate?: string
   ): Promise<LoanWithRelations> {
-    const loan = await this.findOne(id);
+    const loan = await this.findOneInternal(id);
     
     const newStartDate = startDate ? new Date(startDate) : new Date(loan.startDate);
     let newEndDate: Date;
@@ -294,8 +316,8 @@ export class LoanService {
     return this.recalculateInstallments(id);
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, userStoreId: string | null) {
+    await this.findOne(id, userStoreId);
     
     // Delete associated installments first
     await this.prisma.installment.deleteMany({
@@ -415,8 +437,8 @@ export class LoanService {
   /**
    * Get loan status with calculated expected installments
    */
-  async getLoanStatus(id: string): Promise<LoanStatus> {
-    const loan = await this.findOne(id);
+  async getLoanStatus(id: string, userStoreId: string | null): Promise<LoanStatus> {
+    const loan = await this.findOne(id, userStoreId);
     
     const expectedInstallments = this.calculateExpectedInstallments(loan);
     const installmentsPaid = loan.paidInstallments;
@@ -440,8 +462,8 @@ export class LoanService {
   /**
    * Get all loans with their calculated status
    */
-  async findAllWithStatus(): Promise<LoanStatus[]> {
-    const loans = await this.findAll();
+  async findAllWithStatus(userStoreId: string | null): Promise<LoanStatus[]> {
+    const loans = await this.findAll(userStoreId);
     
     return loans.map(loan => {
       const expectedInstallments = this.calculateExpectedInstallments(loan);

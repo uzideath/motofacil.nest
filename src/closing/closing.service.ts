@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common"
 import type { CashRegister, Expense, Installment, Loan, Vehicle, Prisma, User, Owners, Provider } from "generated/prisma"
 import { PrismaService } from "src/prisma.service"
+import { BaseStoreService } from "src/lib/base-store.service"
 import type {
   CreateCashRegisterDto,
   FilterCashRegisterDto,
@@ -40,11 +41,14 @@ type InstallmentWithLoan = Installment & {
 }
 
 @Injectable()
-export class ClosingService {
-  constructor(private readonly prisma: PrismaService) { }
+export class ClosingService extends BaseStoreService {
+  constructor(protected readonly prisma: PrismaService) {
+    super(prisma);
+  }
 
   async create(
     dto: CreateCashRegisterDto,
+    userStoreId: string | null,
   ): Promise<CashRegister & { payments: Installment[]; expense: Expense[] }> {
     const {
       cashInRegister,
@@ -58,14 +62,20 @@ export class ClosingService {
       closingDate,
     } = dto;
 
+    // Get the store ID to use for creation (either user's store or explicitly provided)
+    const storeId = this.getStoreIdForCreate(userStoreId, dto.storeId);
+
     // Normalize to just the date part (YYYY-MM-DD) for comparison
     const normalizeDate = (date: Date): string => {
       return date.toISOString().split('T')[0];
     };
 
-    // Fetch and validate installments
+    // Fetch and validate installments with store filtering
     const installments = await this.prisma.installment.findMany({
-      where: { id: { in: installmentIds } },
+      where: { 
+        id: { in: installmentIds },
+        ...this.storeFilter(userStoreId),
+      },
     });
     
     if (installments.length !== installmentIds.length) {
@@ -78,10 +88,13 @@ export class ClosingService {
     // Normalize to midnight UTC to avoid timezone issues
     targetClosingDate.setUTCHours(0, 0, 0, 0);
 
-    // Validate expenses if provided
+    // Validate expenses if provided with store filtering
     if (expenseIds.length) {
       const expenses = await this.prisma.expense.findMany({
-        where: { id: { in: expenseIds } },
+        where: { 
+          id: { in: expenseIds },
+          ...this.storeFilter(userStoreId),
+        },
       });
       
       if (expenses.length !== expenseIds.length) {
@@ -89,8 +102,12 @@ export class ClosingService {
       }
     }
 
-    const provider = await this.prisma.provider.findUnique({
-      where: { id: providerId },
+    // Validate provider with store filtering
+    const provider = await this.prisma.provider.findFirst({
+      where: { 
+        id: providerId,
+        ...this.storeFilter(userStoreId),
+      },
     });
     if (!provider) {
       throw new NotFoundException('Proveedor no encontrado');
@@ -103,7 +120,7 @@ export class ClosingService {
         cashFromTransfers,
         cashFromCards,
         notes,
-        store: { connect: { id: dto.storeId! } },
+        store: { connect: { id: storeId } },
         provider: { connect: { id: providerId } }, 
         createdBy: createdById ? { connect: { id: createdById } } : undefined,
         payments: {
@@ -121,7 +138,7 @@ export class ClosingService {
   }
 
 
-  async findAll(filter: FilterCashRegisterDto): Promise<CashRegisterWithRelations[]> {
+  async findAll(filter: FilterCashRegisterDto, userStoreId: string | null): Promise<CashRegisterWithRelations[]> {
     let dateRange: { gte: Date; lte: Date } | undefined
 
     if (filter.date) {
@@ -135,6 +152,7 @@ export class ClosingService {
     return this.prisma.cashRegister.findMany({
       where: {
         ...(dateRange && { date: dateRange }),
+        ...this.storeFilter(userStoreId),
       },
       include: {
         payments: {
@@ -173,9 +191,12 @@ export class ClosingService {
     }) as Promise<CashRegisterWithRelations[]>
   }
 
-  async findOne(id: string): Promise<FindOneCashRegisterResponseDto> {
-    const cierre = await this.prisma.cashRegister.findUnique({
-      where: { id },
+  async findOne(id: string, userStoreId: string | null): Promise<FindOneCashRegisterResponseDto> {
+    const cierre = await this.prisma.cashRegister.findFirst({
+      where: { 
+        id,
+        ...this.storeFilter(userStoreId),
+      },
       include: {
         payments: {
           include: {
@@ -221,6 +242,9 @@ export class ClosingService {
     if (!cierre) {
       throw new NotFoundException("Cierre no encontrado")
     }
+
+    // Validate store access
+    await this.validateStoreAccess(cierre, userStoreId);
 
     return {
       id: cierre.id,
@@ -282,12 +306,13 @@ export class ClosingService {
     }
   }
 
-  async getUnassignedPayments(filter: FilterInstallmentsDto): Promise<{
+  async getUnassignedPayments(filter: FilterInstallmentsDto, userStoreId: string | null): Promise<{
     installments: InstallmentWithLoan[]
     expenses: Expense[]
   }> {
     const whereInstallments: Prisma.InstallmentWhereInput = {
       cashRegisterId: null,
+      ...this.storeFilter(userStoreId),
     }
 
     if (filter.paymentMethod) {
@@ -354,6 +379,7 @@ export class ClosingService {
 
     const whereExpenses: Prisma.ExpenseWhereInput = {
       cashRegisterId: null,
+      ...this.storeFilter(userStoreId),
     }
 
     // If specificDate is provided, filter expenses by exact date too
@@ -395,7 +421,7 @@ export class ClosingService {
     return { installments, expenses }
   }
 
-  async summary(dto: GetResumenDto) {
+  async summary(dto: GetResumenDto, userStoreId: string | null) {
     const baseDate = dto.date ? new Date(dto.date) : new Date()
 
     const { startUtc: todayStart, endUtc: todayEnd } = getColombiaDayRange(baseDate)
@@ -408,6 +434,7 @@ export class ClosingService {
             gte: todayStart,
             lte: todayEnd,
           },
+          ...this.storeFilter(userStoreId),
         },
         include: {
           loan: {
@@ -431,6 +458,7 @@ export class ClosingService {
             gte: yesterdayStart,
             lte: yesterdayEnd,
           },
+          ...this.storeFilter(userStoreId),
         },
         include: {
           loan: {
@@ -446,6 +474,7 @@ export class ClosingService {
             gte: todayStart,
             lte: todayEnd,
           },
+          ...this.storeFilter(userStoreId),
         },
         include: {
           createdBy: {
@@ -514,9 +543,12 @@ export class ClosingService {
     }
   }
 
-  async printClosing(id: string): Promise<Buffer> {
-    const closing = await this.prisma.cashRegister.findUnique({
-      where: { id },
+  async printClosing(id: string, userStoreId: string | null): Promise<Buffer> {
+    const closing = await this.prisma.cashRegister.findFirst({
+      where: { 
+        id,
+        ...this.storeFilter(userStoreId),
+      },
       include: {
         provider: {
           select: { id: true, name: true },
@@ -544,6 +576,9 @@ export class ClosingService {
     if (!closing) {
       throw new NotFoundException(`Closing with ID ${id} not found`);
     }
+
+    // Validate store access
+    await this.validateStoreAccess(closing, userStoreId);
 
     /* Totales -------------------------------------------------------------- */
     const totalPayments = closing.payments.reduce(

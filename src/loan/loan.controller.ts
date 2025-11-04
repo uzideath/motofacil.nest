@@ -7,52 +7,67 @@ import {
   Param,
   Delete,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { LoanService } from './loan.service';
 import { CreateLoanDto, UpdateLoanDto, UpdateLoanDatesDto } from './loan.dto';
 import { LogAction, ActionType } from '../lib/decorators/log-action.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt.guard';
+import { StoreAccessGuard } from '../auth/guards/store-access.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserStoreId } from '../auth/decorators/store.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from 'generated/prisma';
 
 @Controller('loans')
+@UseGuards(JwtAuthGuard, StoreAccessGuard, RolesGuard)
 export class LoanController {
   constructor(private readonly loanService: LoanService) { }
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.CREATE, 'Loan')
   create(@Body() dto: CreateLoanDto) {
     return this.loanService.create(dto);
   }
 
   @Get()
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.QUERY, 'Loan')
-  findAll() {
-    return this.loanService.findAll();
+  findAll(@UserStoreId() userStoreId: string | null) {
+    return this.loanService.findAll(userStoreId);
   }
 
   @Get('with-status')
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.QUERY, 'Loan', 'Query loans with status')
-  findAllWithStatus() {
-    return this.loanService.findAllWithStatus();
+  findAllWithStatus(@UserStoreId() userStoreId: string | null) {
+    return this.loanService.findAllWithStatus(userStoreId);
   }
 
   @Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.QUERY, 'Loan')
-  findOne(@Param('id') id: string) {
-    return this.loanService.findOne(id);
+  findOne(@Param('id') id: string, @UserStoreId() userStoreId: string | null) {
+    return this.loanService.findOne(id, userStoreId);
   }
 
   @Get(':id/status')
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.QUERY, 'Loan', 'Get loan status')
-  getLoanStatus(@Param('id') id: string) {
-    return this.loanService.getLoanStatus(id);
+  getLoanStatus(@Param('id') id: string, @UserStoreId() userStoreId: string | null) {
+    return this.loanService.getLoanStatus(id, userStoreId);
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.UPDATE, 'Loan')
-  update(@Param('id') id: string, @Body() dto: UpdateLoanDto) {
-    return this.loanService.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateLoanDto, @UserStoreId() userStoreId: string | null) {
+    return this.loanService.update(id, dto, userStoreId);
   }
 
   @Put(':id/recalculate')
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.CUSTOM, 'Loan', 'Recalculate installments')
   async recalculateInstallments(@Param('id') id: string) {
     return this.loanService.recalculateInstallments(id);
@@ -76,6 +91,7 @@ export class LoanController {
 
 
   @Post(':id/unarchive')
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.RESTORE, 'Loan')
   async unarchiveLoan(@Param('id') id: string): Promise<{ ok: boolean }> {
     await this.loanService.unarchive(id);
@@ -83,8 +99,9 @@ export class LoanController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN)
   @LogAction(ActionType.DELETE, 'Loan')
-  remove(@Param('id') id: string) {
-    return this.loanService.remove(id);
+  remove(@Param('id') id: string, @UserStoreId() userStoreId: string | null) {
+    return this.loanService.remove(id, userStoreId);
   }
 }

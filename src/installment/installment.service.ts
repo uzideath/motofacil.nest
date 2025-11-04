@@ -9,10 +9,13 @@ import { LoanStatus, Prisma } from 'generated/prisma';
 import { toColombiaMidnightUtc, toColombiaEndOfDayUtc, toColombiaUtc } from 'src/lib/dates';
 import { addDays, subHours } from 'date-fns';
 import { zonedTimeToUtc } from 'date-fns-tz';
+import { BaseStoreService } from 'src/lib/base-store.service';
 
 @Injectable()
-export class InstallmentService {
-  constructor(private readonly prisma: PrismaService) { }
+export class InstallmentService extends BaseStoreService {
+  constructor(protected readonly prisma: PrismaService) {
+    super(prisma);
+  }
 
   async create(dto: CreateInstallmentDto) {
     const loan = await this.prisma.loan.findUnique({
@@ -76,7 +79,7 @@ export class InstallmentService {
     return installment;
   }
 
-  async findAll(filters: FindInstallmentFiltersDto) {
+  async findAll(filters: FindInstallmentFiltersDto, userStoreId: string | null) {
     const { 
       startDate, 
       endDate, 
@@ -92,7 +95,9 @@ export class InstallmentService {
       limit = 50 
     } = filters;
     
-    const where: Prisma.InstallmentWhereInput = {};
+    const where: Prisma.InstallmentWhereInput = {
+      ...this.storeFilter(userStoreId),
+    };
 
     // Date filters
     if (startDate || endDate) {
@@ -225,7 +230,7 @@ export class InstallmentService {
   }
 
 
-  async findOne(id: string) {
+  async findOne(id: string, userStoreId: string | null) {
     const record = await this.prisma.installment.findUnique({
       where: { id },
       include: {
@@ -240,11 +245,15 @@ export class InstallmentService {
     });
 
     if (!record) throw new NotFoundException('Installment not found');
+    
+    // Validate store access
+    this.validateStoreAccess(record, userStoreId);
+    
     return record;
   }
 
 
-  async update(id: string, dto: UpdateInstallmentDto) {
+  async update(id: string, dto: UpdateInstallmentDto, userStoreId: string | null) {
     console.log('📅 Received update DTO:', {
       id,
       paymentDate: dto.paymentDate,
@@ -252,7 +261,7 @@ export class InstallmentService {
       fullDto: dto
     });
 
-    await this.findOne(id);
+    await this.findOne(id, userStoreId);
 
     const { loanId, createdById, paymentDate, latePaymentDate, ...rest } = dto;
 
@@ -289,8 +298,8 @@ export class InstallmentService {
 
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, userStoreId: string | null) {
+    await this.findOne(id, userStoreId);
 
     return this.prisma.installment.delete({
       where: { id },

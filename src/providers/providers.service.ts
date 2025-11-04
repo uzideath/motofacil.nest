@@ -3,10 +3,13 @@ import { CreateProviderDto } from './dto/create-provider.dto';
 import { UpdateProviderDto } from './dto/update-provider.dto';
 import { PrismaService } from 'src/prisma.service';
 import { ProviderStats, ProviderDetailsResponse } from './dto/provider-stats.dto';
+import { BaseStoreService } from 'src/lib/base-store.service';
 
 @Injectable()
-export class ProvidersService {
-  constructor(private readonly prismaService: PrismaService) { }
+export class ProvidersService extends BaseStoreService {
+  constructor(protected readonly prismaService: PrismaService) {
+    super(prismaService);
+  }
 
   /**
    * Creates a new provider.
@@ -23,9 +26,11 @@ export class ProvidersService {
 
   /**
    * Returns all providers.
+   * @param userStoreId - The store ID of the authenticated user (null for ADMIN)
    */
-  async findAll() {
+  async findAll(userStoreId: string | null) {
     return this.prismaService.provider.findMany({
+      where: this.storeFilter(userStoreId),
       include: {
         vehicles: true,
         cashRegisters: {
@@ -45,8 +50,9 @@ export class ProvidersService {
   /**
    * Returns a single provider by ID.
    * @param id - The ID of the provider to retrieve.
+   * @param userStoreId - The store ID of the authenticated user (null for ADMIN)
    */
-  async findOne(id: string) {
+  async findOne(id: string, userStoreId: string | null) {
     const provider = await this.prismaService.provider.findUnique({
       where: { id },
       include: {
@@ -59,6 +65,9 @@ export class ProvidersService {
       throw new NotFoundException(`Provider with ID ${id} not found`);
     }
 
+    // Validate store access
+    this.validateStoreAccess(provider, userStoreId);
+
     return provider;
   }
 
@@ -66,8 +75,9 @@ export class ProvidersService {
    * Updates a provider by ID.
    * @param id - The ID of the provider to update.
    * @param updateProviderDto - The data transfer object with updated fields.
+   * @param userStoreId - The store ID of the authenticated user (null for ADMIN)
    */
-  async update(id: string, updateProviderDto: UpdateProviderDto) {
+  async update(id: string, updateProviderDto: UpdateProviderDto, userStoreId: string | null) {
     const exists = await this.prismaService.provider.findUnique({
       where: { id },
     });
@@ -75,6 +85,9 @@ export class ProvidersService {
     if (!exists) {
       throw new NotFoundException(`Provider with ID ${id} not found`);
     }
+
+    // Validate store access
+    this.validateStoreAccess(exists, userStoreId);
 
     return this.prismaService.provider.update({
       where: { id },
@@ -85,8 +98,9 @@ export class ProvidersService {
   /**
    * Deletes a provider by ID.
    * @param id - The ID of the provider to delete.
+   * @param userStoreId - The store ID of the authenticated user (null for ADMIN)
    */
-  async remove(id: string) {
+  async remove(id: string, userStoreId: string | null) {
     const exists = await this.prismaService.provider.findUnique({
       where: { id },
     });
@@ -95,6 +109,9 @@ export class ProvidersService {
       throw new NotFoundException(`Provider with ID ${id} not found`);
     }
 
+    // Validate store access
+    this.validateStoreAccess(exists, userStoreId);
+
     return this.prismaService.provider.delete({
       where: { id },
     });
@@ -102,9 +119,11 @@ export class ProvidersService {
 
   /**
    * Get comprehensive statistics for all providers
+   * @param userStoreId - The store ID of the authenticated user (null for ADMIN)
    */
-  async getProvidersStats(): Promise<ProviderStats[]> {
+  async getProvidersStats(userStoreId: string | null): Promise<ProviderStats[]> {
     const providers = await this.prismaService.provider.findMany({
+      where: this.storeFilter(userStoreId),
       include: {
         vehicles: {
           include: {
@@ -125,8 +144,9 @@ export class ProvidersService {
 
   /**
    * Get detailed information for a specific provider
+   * @param userStoreId - The store ID of the authenticated user (null for ADMIN)
    */
-  async getProviderDetails(id: string): Promise<ProviderDetailsResponse> {
+  async getProviderDetails(id: string, userStoreId: string | null): Promise<ProviderDetailsResponse> {
     const provider = await this.prismaService.provider.findUnique({
       where: { id },
       include: {
@@ -164,6 +184,9 @@ export class ProvidersService {
     if (!provider) {
       throw new NotFoundException(`Provider with ID ${id} not found`);
     }
+
+    // Validate store access
+    this.validateStoreAccess(provider, userStoreId);
 
     const stats = this.calculateProviderStats(provider);
 

@@ -9,12 +9,15 @@ import {
   toColombiaEndOfDayUtc,
   toColombiaMidnightUtc,
 } from 'src/lib/dates';
-import { Prisma } from 'generated/prisma';
+import { Prisma, Expense } from 'generated/prisma';
 import { addDays } from 'date-fns';
+import { BaseStoreService } from 'src/lib/base-store.service';
 
 @Injectable()
-export class ExpenseService {
-  constructor(private readonly prisma: PrismaService) { }
+export class ExpenseService extends BaseStoreService {
+  constructor(protected readonly prisma: PrismaService) {
+    super(prisma);
+  }
 
   async create(dto: CreateExpenseDto, storeId: string) {
     return await this.prisma.expense.create({
@@ -39,9 +42,11 @@ export class ExpenseService {
     });
   }
 
-  async findAll(filters: FindExpenseFiltersDto): Promise<Expense[]> {
+  async findAll(filters: FindExpenseFiltersDto, userStoreId: string | null): Promise<Expense[]> {
     const { startDate, endDate } = filters;
-    const where: Prisma.ExpenseWhereInput = {};
+    const where: Prisma.ExpenseWhereInput = {
+      ...this.storeFilter(userStoreId),
+    };
 
     if (startDate || endDate) {
       where.date = {};
@@ -76,9 +81,12 @@ export class ExpenseService {
     });
   }
 
-  async findByCashRegisterId(cashRegisterId: string) {
+  async findByCashRegisterId(cashRegisterId: string, userStoreId: string | null) {
     return this.prisma.expense.findMany({
-      where: { cashRegisterId },
+      where: { 
+        cashRegisterId,
+        ...this.storeFilter(userStoreId),
+      },
       orderBy: { date: 'desc' },
       include: {
         createdBy: {
@@ -97,9 +105,12 @@ export class ExpenseService {
     });
   }
 
-  async update(id: string, dto: CreateExpenseDto) {
+  async update(id: string, dto: CreateExpenseDto, userStoreId: string | null) {
     const expense = await this.prisma.expense.findUnique({ where: { id } });
     if (!expense) throw new NotFoundException('Expense not found');
+
+    // Validate store access
+    this.validateStoreAccess(expense, userStoreId);
 
     if (expense.cashRegisterId) {
       throw new Error(
@@ -129,12 +140,15 @@ export class ExpenseService {
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, userStoreId: string | null) {
     const expense = await this.prisma.expense.findUnique({ where: { id } });
 
     if (!expense) {
       throw new NotFoundException('Expense not found');
     }
+
+    // Validate store access
+    this.validateStoreAccess(expense, userStoreId);
 
     if (expense.cashRegisterId) {
       throw new ForbiddenException(
