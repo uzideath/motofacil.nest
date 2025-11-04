@@ -597,6 +597,109 @@ export class ReportsService {
     };
   }
 
+  // Vehicle Status Report
+  async getVehicleStatusReport(filters: ReportFilters) {
+    const where: any = {};
+
+    // Vehicle status filtering
+    if (filters.status && filters.status !== 'all') {
+      where.status = filters.status;
+    }
+
+    // Date filtering
+    if (filters.startDate || filters.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) where.createdAt.gte = new Date(filters.startDate);
+      if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
+    }
+
+    // Provider filtering
+    if (filters.provider && filters.provider !== 'all') {
+      where.providerId = filters.provider;
+    }
+
+    // Search filtering
+    if (filters.search) {
+      where.OR = [
+        { brand: { contains: filters.search, mode: 'insensitive' } },
+        { model: { contains: filters.search, mode: 'insensitive' } },
+        { plate: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    const vehicles = await this.prisma.vehicle.findMany({
+      where,
+      include: {
+        provider: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        loans: {
+          where: { archived: false },
+          include: {
+            user: { 
+              select: { 
+                id: true,
+                name: true,
+                phone: true,
+                identification: true,
+              } 
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    // Calculate summary statistics by status
+    const inCirculation = vehicles.filter((v) => v.status === 'IN_CIRCULATION').length;
+    const inWorkshop = vehicles.filter((v) => v.status === 'IN_WORKSHOP').length;
+    const seized = vehicles.filter((v) => v.status === 'SEIZED_BY_PROSECUTOR').length;
+    const total = vehicles.length;
+    const totalValue = vehicles.reduce((sum, v) => sum + Number(v.price || 0), 0);
+
+    // Format items for response
+    const items = vehicles.map((vehicle) => {
+      const currentLoan = vehicle.loans[0];
+      
+      return {
+        id: vehicle.id,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        plate: vehicle.plate,
+        color: vehicle.color,
+        cc: vehicle.cc,
+        engine: vehicle.engine,
+        chassis: vehicle.chassis,
+        price: Number(vehicle.price || 0),
+        vehicleStatus: vehicle.status,
+        providerId: vehicle.provider?.id,
+        providerName: vehicle.provider?.name || 'Sin proveedor',
+        loanStatus: currentLoan ? currentLoan.status : null,
+        clientId: currentLoan ? currentLoan.user.id : null,
+        clientName: currentLoan ? currentLoan.user.name : null,
+        clientPhone: currentLoan ? currentLoan.user.phone : null,
+        clientDocument: currentLoan ? currentLoan.user.identification : null,
+        contractNumber: currentLoan ? currentLoan.contractNumber : null,
+        createdAt: vehicle.createdAt,
+        updatedAt: vehicle.updatedAt,
+      };
+    });
+
+    return {
+      total,
+      inCirculation,
+      inWorkshop,
+      seized,
+      totalValue,
+      items,
+    };
+  }
+
   // Export functionality
   async exportReport(type: string, format: string, filters: ReportFilters) {
     // Get data based on type
@@ -675,6 +778,52 @@ export class ReportsService {
           new Date(item.purchaseDate).toLocaleDateString('es-CO'),
           item.status,
           item.clientName || 'N/A',
+        ]);
+        break;
+
+      case 'vehicle-status':
+        const vehicleStatusReport = await this.getVehicleStatusReport(filters);
+        data = vehicleStatusReport.items;
+        filename = `vehicle-status-report-${new Date().toISOString().split('T')[0]}`;
+        headers = [
+          'ID',
+          'Marca',
+          'Modelo',
+          'Placa',
+          'Color',
+          'CC',
+          'Motor',
+          'Chasis',
+          'Precio',
+          'Estado Vehículo',
+          'Proveedor',
+          'Estado Préstamo',
+          'Cliente',
+          'Teléfono',
+          'Documento',
+          'N° Contrato',
+          'Fecha Creación',
+          'Última Actualización',
+        ];
+        rows = data.map((item: any) => [
+          item.id,
+          item.brand,
+          item.model,
+          item.plate,
+          item.color || 'N/A',
+          item.cc || 'N/A',
+          item.engine || 'N/A',
+          item.chassis || 'N/A',
+          item.price,
+          item.vehicleStatus,
+          item.providerName,
+          item.loanStatus || 'Sin préstamo',
+          item.clientName || 'N/A',
+          item.clientPhone || 'N/A',
+          item.clientDocument || 'N/A',
+          item.contractNumber || 'N/A',
+          new Date(item.createdAt).toLocaleDateString('es-CO'),
+          new Date(item.updatedAt).toLocaleDateString('es-CO'),
         ]);
         break;
 
