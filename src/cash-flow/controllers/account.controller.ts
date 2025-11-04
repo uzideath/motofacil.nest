@@ -13,7 +13,7 @@ import {
 import { CashFlowAccountService } from '../services/account.service';
 import { CreateAccountDto, UpdateAccountDto, AccountQueryDto } from '../dto/account.dto';
 import { Roles } from '../../auth/decorators/roles.decorator';
-import { Role } from '../../../generated/prisma';
+import { UserRole } from '../../../generated/prisma';
 import { LogAction, ActionType } from '../../lib/decorators/log-action.decorator';
 
 @Controller('cash-flow/accounts')
@@ -22,28 +22,28 @@ export class CashFlowAccountController {
   constructor(private readonly accountService: CashFlowAccountService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.MODERATOR)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.CREATE, 'CashFlowAccount')
   create(@Body() dto: CreateAccountDto, @Req() req: any) {
     return this.accountService.create(dto, req.user?.userId);
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.MODERATOR, Role.USER)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE, UserRole.EMPLOYEE)
   @LogAction(ActionType.QUERY, 'CashFlowAccount')
   findAll(@Query() query: AccountQueryDto) {
     return this.accountService.findAll(query);
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.MODERATOR, Role.USER)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE, UserRole.EMPLOYEE)
   @LogAction(ActionType.QUERY, 'CashFlowAccount')
   findOne(@Param('id') id: string) {
     return this.accountService.findOne(id);
   }
 
   @Get(':id/balance')
-  @Roles(Role.ADMIN, Role.MODERATOR, Role.USER)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE, UserRole.EMPLOYEE)
   @LogAction(ActionType.QUERY, 'CashFlowAccount', 'Get account balance')
   getBalance(@Param('id') id: string, @Query('asOfDate') asOfDate?: string) {
     const date = asOfDate ? new Date(asOfDate) : undefined;
@@ -51,14 +51,14 @@ export class CashFlowAccountController {
   }
 
   @Put(':id')
-  @Roles(Role.ADMIN, Role.MODERATOR)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.UPDATE, 'CashFlowAccount')
   update(@Param('id') id: string, @Body() dto: UpdateAccountDto) {
     return this.accountService.update(id, dto);
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Roles(UserRole.ADMIN)
   @LogAction(ActionType.DELETE, 'CashFlowAccount')
   remove(@Param('id') id: string) {
     return this.accountService.remove(id);

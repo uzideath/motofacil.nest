@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsString, IsInt, IsNotEmpty } from 'class-validator';
+import { IsString, IsInt, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -39,6 +39,10 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   refPhone: string;
+
+  @IsOptional()
+  @IsUUID()
+  storeId?: string;
 }
 
 export class UpdateUserDto extends PartialType(CreateUserDto) { }

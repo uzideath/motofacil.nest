@@ -16,7 +16,7 @@ import { addDays } from 'date-fns';
 export class ExpenseService {
   constructor(private readonly prisma: PrismaService) { }
 
-  async create(dto: CreateExpenseDto) {
+  async create(dto: CreateExpenseDto, storeId: string) {
     return await this.prisma.expense.create({
       data: {
         amount: dto.amount,
@@ -27,6 +27,7 @@ export class ExpenseService {
         reference: dto.reference,
         description: dto.description,
         attachmentUrl: dto.attachmentUrl,
+        store: { connect: { id: storeId } },
         cashRegister: dto.cashRegisterId
           ? { connect: { id: dto.cashRegisterId } }
           : undefined,

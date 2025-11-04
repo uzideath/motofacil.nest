@@ -6,8 +6,14 @@ import { CreateUserDto, UpdateUserDto } from './user.dto';
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateUserDto) {
-    return this.prisma.user.create({ data: dto });
+  create(dto: CreateUserDto, storeId: string) {
+    const { storeId: _, ...data } = dto;
+    return this.prisma.user.create({ 
+      data: {
+        ...data,
+        store: { connect: { id: storeId } },
+      } 
+    });
   }
 
   findAll() {

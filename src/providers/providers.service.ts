@@ -12,9 +12,12 @@ export class ProvidersService {
    * Creates a new provider.
    * @param createProviderDto - The data transfer object containing provider details.
    */
-  async create(createProviderDto: CreateProviderDto) {
+  async create(createProviderDto: CreateProviderDto, storeId: string) {
     return this.prismaService.provider.create({
-      data: createProviderDto,
+      data: {
+        name: createProviderDto.name,
+        store: { connect: { id: storeId } },
+      },
     });
   }
 

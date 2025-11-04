@@ -1,11 +1,9 @@
-import { Role } from 'generated/prisma';
+import { UserRole } from 'generated/prisma';
 import {
   IsString,
   IsNotEmpty,
   IsOptional,
   IsEnum,
-  ArrayNotEmpty,
-  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -33,11 +31,12 @@ class RegisterDto {
   password!: string;
 
   @IsOptional()
-  @IsArray()
-  @ArrayNotEmpty()
-  @IsEnum(Role, { each: true })
-  @Type(() => String)
-  roles?: Role[];
+  @IsEnum(UserRole)
+  role?: UserRole;
+
+  @IsOptional()
+  @IsString()
+  storeId?: string;
 }
 
 export { LoginDto, RegisterDto };

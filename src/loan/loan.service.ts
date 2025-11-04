@@ -107,8 +107,9 @@ export class LoanService {
     return this.prisma.loan.create({
       data: {
         contractNumber,
-        userId: dto.userId,
-        vehicleId: dto.vehicleId,
+        store: { connect: { id: dto.storeId! } },
+        user: { connect: { id: dto.userId } },
+        vehicle: { connect: { id: dto.vehicleId } },
         totalAmount: dto.totalAmount,
         downPayment: dto.downPayment,
         installments: dto.installments,

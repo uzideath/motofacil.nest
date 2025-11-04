@@ -5,14 +5,17 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { Role } from 'generated/prisma';
+import { UserRole } from 'generated/prisma';
 import { PrismaService } from 'src/prisma.service';
 import { ConfigService } from '@nestjs/config';
 
 export interface JwtPayload {
   sub: string;
   username: string;
-  roles: string[];
+  role: UserRole; // Changed from roles array to single role
+  storeId: string | null; // null for ADMIN, storeId for EMPLOYEE
+  storeName?: string; // Optional: for display purposes
+  storeCode?: string; // Optional: for display purposes
 }
 
 @Injectable()
@@ -38,10 +41,22 @@ export class AuthService {
     const user = await this.validateUser(username, password);
     if (!user) throw new UnauthorizedException('Credenciales inválidas');
 
+    // Fetch store information if user is an EMPLOYEE
+    let store: { id: string; name: string; code: string; nit: string; city: string } | null = null;
+    if (user.storeId) {
+      store = await this.prisma.store.findUnique({
+        where: { id: user.storeId },
+        select: { id: true, name: true, code: true, nit: true, city: true },
+      });
+    }
+
     const payload: JwtPayload = {
       sub: user.id,
       username: user.username,
-      roles: user.roles as string[],
+      role: user.role,
+      storeId: user.storeId,
+      storeName: store?.name,
+      storeCode: store?.code,
     };
 
     const access_token = await this.jwt.signAsync(payload, {
@@ -67,18 +82,22 @@ export class AuthService {
     return {
       access_token,
       refresh_token,
-      user,
+      user: {
+        ...user,
+        store,
+      },
     };
   }
 
-  async register(name: string, username: string, password: string, roles: Role[] = ['USER']) {
+  async register(name: string, username: string, password: string, role: UserRole = UserRole.EMPLOYEE, storeId?: string) {
     const passwordHash = await bcrypt.hash(password, 10);
     return this.prisma.owners.create({
       data: {
         name,
         username,
         passwordHash,
-        roles,
+        role,
+        storeId: storeId || null,
         status: 'ACTIVE',
       },
     });
@@ -112,7 +131,10 @@ export class AuthService {
     const newPayload: JwtPayload = {
       sub: payload.sub,
       username: payload.username,
-      roles: payload.roles,
+      role: payload.role,
+      storeId: payload.storeId,
+      storeName: payload.storeName,
+      storeCode: payload.storeCode,
     };
 
 

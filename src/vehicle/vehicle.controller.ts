@@ -19,7 +19,12 @@ export class VehicleController {
   @Post()
   @LogAction(ActionType.CREATE, 'Vehicle')
   create(@Body() dto: CreateVehicleDto) {
-    return this.service.create(dto);
+    // TODO: Get storeId from authenticated user context via @UserStoreId() decorator
+    // For now, require it in the DTO
+    if (!dto.storeId) {
+      throw new Error('storeId is required');
+    }
+    return this.service.create(dto, dto.storeId);
   }
 
   @Get()

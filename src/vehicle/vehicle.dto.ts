@@ -49,6 +49,10 @@ export class CreateVehicleDto {
   cc?: number;
 
   @IsOptional()
+  @IsUUID()
+  storeId?: string;
+
+  @IsOptional()
   @IsNumber()
   gps?: number;
 }

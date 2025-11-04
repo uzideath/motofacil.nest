@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { CreateOwnerDto, UpdateOwnerDto } from './dto';
-import { Owners } from 'generated/prisma';
+import { Owners, UserRole } from 'generated/prisma';
 import { PermissionsMap, DEFAULT_PERMISSIONS } from '../permissions/permissions.types';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class OwnersService {
         id: true,
         name: true,
         username: true,
-        roles: true,
+        role: true,
         status: true,
         permissions: true,
         createdAt: true,
@@ -29,16 +29,17 @@ export class OwnersService {
     const passwordHash = await bcrypt.hash(data.password, 10);
 
     // Get default permissions based on role
-    const defaultPermissions = data.roles && data.roles.length > 0
-      ? DEFAULT_PERMISSIONS[data.roles[0] as 'ADMIN' | 'MODERATOR' | 'USER'] || {}
-      : DEFAULT_PERMISSIONS.USER;
+    const defaultPermissions = data.role
+      ? DEFAULT_PERMISSIONS[data.role]
+      : DEFAULT_PERMISSIONS[UserRole.EMPLOYEE];
 
     return this.prisma.owners.create({
       data: {
         name: data.name,
         username: data.username,
         passwordHash,
-        roles: (data.roles || ['USER']) as any,
+        role: data.role || UserRole.EMPLOYEE,
+        storeId: data.storeId || null,
         permissions: data.permissions || defaultPermissions as any,
         status: data.status || 'ACTIVE',
       },
@@ -58,7 +59,7 @@ export class OwnersService {
         id: true,
         name: true,
         username: true,
-        roles: true,
+        role: true,
         permissions: true,
         status: true,
         createdAt: true,
@@ -83,23 +84,19 @@ export class OwnersService {
       name: data.name,
       username: data.username,
       status: data.status,
-      roles: data.roles,
+      role: data.role,
     };
 
     if (data.password) {
       updatedData.passwordHash = await bcrypt.hash(data.password, 10);
     }
 
-    // If roles are being updated, optionally update permissions to match the new role
-    if (data.roles && data.roles.length > 0) {
-      const primaryRole = data.roles[0] as 'ADMIN' | 'MODERATOR' | 'USER';
-      // Only update permissions if they don't exist or if explicitly requested
-      if (!existing.permissions || data.updatePermissions) {
-        updatedData.permissions = DEFAULT_PERMISSIONS[primaryRole];
-      }
+    // If role is being updated, update permissions to match the new role
+    if (data.role) {
+      updatedData.permissions = DEFAULT_PERMISSIONS[data.role];
     }
 
-    // If permissions are provided directly
+    // If permissions are provided directly, they override the role defaults
     if (data.permissions) {
       updatedData.permissions = data.permissions;
     }
@@ -128,8 +125,8 @@ export class OwnersService {
     if (!owner) throw new NotFoundException('Owner no encontrado');
 
     // If owner is ADMIN, return full permissions
-    if (owner.roles.includes('ADMIN')) {
-      return DEFAULT_PERMISSIONS.ADMIN;
+    if (owner.role === UserRole.ADMIN) {
+      return DEFAULT_PERMISSIONS[UserRole.ADMIN];
     }
 
     return (owner.permissions as PermissionsMap) || {};

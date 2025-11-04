@@ -103,6 +103,7 @@ export class ClosingService {
         cashFromTransfers,
         cashFromCards,
         notes,
+        store: { connect: { id: dto.storeId! } },
         provider: { connect: { id: providerId } }, 
         createdBy: createdById ? { connect: { id: createdById } } : undefined,
         payments: {

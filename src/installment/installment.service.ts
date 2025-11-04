@@ -36,7 +36,8 @@ export class InstallmentService {
 
     const installment = await this.prisma.installment.create({
       data: {
-        loanId: dto.loanId,
+        store: { connect: { id: dto.storeId! } },
+        loan: { connect: { id: dto.loanId } },
         amount: dto.amount,
         gps: dto.gps,
         paymentDate: dto.paymentDate ? toColombiaUtc(dto.paymentDate) : toColombiaUtc(new Date()), // Actual payment date from form, or now if not provided
@@ -47,7 +48,7 @@ export class InstallmentService {
         attachmentUrl: dto.attachmentUrl,
         createdAt: toColombiaUtc(new Date()),
         updatedAt: toColombiaUtc(new Date()),
-        createdById: dto.createdById,
+        createdBy: dto.createdById ? { connect: { id: dto.createdById } } : undefined,
       },
     });
 

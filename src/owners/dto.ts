@@ -1,6 +1,7 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsString, IsOptional, IsArray, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsEnum } from 'class-validator';
 import { PermissionsMap } from '../permissions/permissions.types';
+import { UserRole } from 'generated/prisma';
 
 export class CreateOwnerDto {
     @IsString()
@@ -13,9 +14,12 @@ export class CreateOwnerDto {
     password: string;
 
     @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    roles?: string[];
+    @IsEnum(UserRole)
+    role?: UserRole;
+
+    @IsOptional()
+    @IsString()
+    storeId?: string;
 
     @IsOptional()
     permissions?: PermissionsMap;
@@ -25,8 +29,4 @@ export class CreateOwnerDto {
     status?: string;
 }
 
-export class UpdateOwnerDto extends PartialType(CreateOwnerDto) {
-    @IsOptional()
-    @IsBoolean()
-    updatePermissions?: boolean; // Flag to update permissions when roles change
-}
+export class UpdateOwnerDto extends PartialType(CreateOwnerDto) {}

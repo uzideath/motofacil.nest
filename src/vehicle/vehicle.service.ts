@@ -7,8 +7,15 @@ import { Prisma } from 'generated/prisma';
 export class VehicleService {
   constructor(private readonly prisma: PrismaService) { }
 
-  create(dto: CreateVehicleDto) {
-    return this.prisma.vehicle.create({ data: dto });
+  create(dto: CreateVehicleDto, storeId: string) {
+    const { storeId: _, providerId, ...data } = dto;
+    return this.prisma.vehicle.create({ 
+      data: {
+        ...data,
+        store: { connect: { id: storeId } },
+        provider: { connect: { id: providerId } },
+      } 
+    });
   }
 
   async findAll(filters: FindVehicleFiltersDto = {}) {

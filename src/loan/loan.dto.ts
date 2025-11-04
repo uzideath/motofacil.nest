@@ -72,6 +72,10 @@ export class CreateLoanDto {
   @IsDateString()
   @IsOptional()
   endDate?: string;
+
+  @IsOptional()
+  @IsUUID()
+  storeId?: string;
 }
 
 export class UpdateLoanDto extends PartialType(CreateLoanDto) { }

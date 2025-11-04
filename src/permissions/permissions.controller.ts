@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
+import { UserRole } from 'generated/prisma';
 import {
   GrantPermissionDto,
   RevokePermissionDto,
@@ -30,7 +31,7 @@ export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
   @Get()
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @LogAction(ActionType.QUERY, 'Permission', 'Get all available permissions')
   async getAllPermissions() {
     return {
@@ -39,7 +40,7 @@ export class PermissionsController {
   }
 
   @Get('grouped')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @LogAction(ActionType.QUERY, 'Permission', 'Get permissions grouped by resource')
   async getPermissionsGrouped() {
     return {
@@ -48,9 +49,9 @@ export class PermissionsController {
   }
 
   @Get('defaults/:role')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @LogAction(ActionType.QUERY, 'Permission', 'Get default permissions for role')
-  async getDefaultPermissions(@Param('role') role: 'ADMIN' | 'MODERATOR' | 'USER') {
+  async getDefaultPermissions(@Param('role') role: UserRole) {
     return {
       role,
       permissions: this.permissionsService.getDefaultPermissionsForRole(role),
@@ -58,14 +59,14 @@ export class PermissionsController {
   }
 
   @Get('owner/:ownerId')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @LogAction(ActionType.QUERY, 'Permission', 'Get owner permissions')
   async getOwnerPermissions(@Param('ownerId') ownerId: string) {
     return this.permissionsService.getOwnerPermissions(ownerId);
   }
 
   @Post('owner/:ownerId/set')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @LogAction(ActionType.UPDATE, 'Permission', 'Set owner permissions')
   async setOwnerPermissions(
     @Param('ownerId') ownerId: string,
@@ -133,14 +134,14 @@ export class PermissionsController {
   }
 
   @Delete('owner/:ownerId/clear')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @LogAction(ActionType.DELETE, 'Permission', 'Clear owner permissions')
   async clearOwnerPermissions(@Param('ownerId') ownerId: string) {
     return this.permissionsService.clearOwnerPermissions(ownerId);
   }
 
   @Post('owner/:ownerId/check')
-  @Roles('ADMIN', 'USER', 'MODERATOR')
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.QUERY, 'Permission', 'Check owner permission')
   async checkPermission(
     @Param('ownerId') ownerId: string,
@@ -160,7 +161,7 @@ export class PermissionsController {
   }
 
   @Post('owner/:ownerId/check-any')
-  @Roles('ADMIN', 'USER', 'MODERATOR')
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.QUERY, 'Permission', 'Check if owner has any permission')
   async checkAnyPermission(
     @Param('ownerId') ownerId: string,
@@ -178,7 +179,7 @@ export class PermissionsController {
   }
 
   @Post('owner/:ownerId/check-all')
-  @Roles('ADMIN', 'USER', 'MODERATOR')
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.QUERY, 'Permission', 'Check if owner has all permissions')
   async checkAllPermissions(
     @Param('ownerId') ownerId: string,

@@ -1,5 +1,7 @@
 // Permission system types and constants
 
+import { UserRole } from 'generated/prisma';
+
 export enum Resource {
   CLOSING = 'CLOSING',
   INSTALLMENT = 'INSTALLMENT',
@@ -36,8 +38,8 @@ export type PermissionsMap = {
 };
 
 // Default permission sets for common roles
-export const DEFAULT_PERMISSIONS = {
-  ADMIN: {
+export const DEFAULT_PERMISSIONS: Record<UserRole, PermissionsMap> = {
+  [UserRole.ADMIN]: {
     [Resource.CLOSING]: [Action.VIEW, Action.CREATE, Action.EDIT, Action.DELETE, Action.APPROVE, Action.EXPORT],
     [Resource.INSTALLMENT]: [Action.VIEW, Action.CREATE, Action.EDIT, Action.DELETE, Action.EXPORT],
     [Resource.VEHICLE]: [Action.VIEW, Action.CREATE, Action.EDIT, Action.DELETE],
@@ -53,7 +55,8 @@ export const DEFAULT_PERMISSIONS = {
     [Resource.RECEIPT]: [Action.VIEW, Action.CREATE, Action.EXPORT],
   } as PermissionsMap,
   
-  MODERATOR: {
+  // EMPLOYEE permissions (formerly MODERATOR + USER combined)
+  [UserRole.EMPLOYEE]: {
     [Resource.CLOSING]: [Action.VIEW, Action.CREATE],
     [Resource.INSTALLMENT]: [Action.VIEW, Action.CREATE, Action.EDIT],
     [Resource.VEHICLE]: [Action.VIEW],
@@ -61,23 +64,11 @@ export const DEFAULT_PERMISSIONS = {
     [Resource.LOAN]: [Action.VIEW, Action.CREATE, Action.EDIT],
     [Resource.EXPENSE]: [Action.VIEW, Action.CREATE, Action.EDIT],
     [Resource.PROVIDER]: [Action.VIEW],
-    [Resource.CASH_FLOW]: [Action.VIEW],
+    [Resource.CASH_FLOW]: [Action.VIEW, Action.CREATE],
     [Resource.REPORT]: [Action.VIEW],
     [Resource.DASHBOARD]: [Action.VIEW],
     [Resource.CONTRACT]: [Action.VIEW],
     [Resource.RECEIPT]: [Action.VIEW, Action.CREATE],
-  } as PermissionsMap,
-  
-  USER: {
-    [Resource.CLOSING]: [Action.VIEW],
-    [Resource.INSTALLMENT]: [Action.VIEW, Action.CREATE],
-    [Resource.VEHICLE]: [Action.VIEW],
-    [Resource.USER]: [Action.VIEW],
-    [Resource.LOAN]: [Action.VIEW],
-    [Resource.EXPENSE]: [Action.VIEW],
-    [Resource.DASHBOARD]: [Action.VIEW],
-    [Resource.REPORT]: [Action.VIEW],
-    [Resource.RECEIPT]: [Action.VIEW],
   } as PermissionsMap,
 };
 

@@ -1,5 +1,6 @@
 import { IsString, IsArray, IsEnum, IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { UserRole } from 'generated/prisma';
 import { Resource, Action, PermissionsMap } from '../permissions.types';
 
 export class GrantPermissionDto {
@@ -42,8 +43,8 @@ export class SetOwnerPermissionsDto {
 }
 
 export class ApplyRolePermissionsDto {
-  @IsEnum(['ADMIN', 'MODERATOR', 'USER'])
-  role: 'ADMIN' | 'MODERATOR' | 'USER';
+  @IsEnum(UserRole)
+  role: UserRole;
 }
 
 export class CheckPermissionDto {

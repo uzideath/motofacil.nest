@@ -19,6 +19,7 @@ import { CurrentUser } from './decorators/user';
 import { CurrentRole } from './decorators/role';
 import { IsOwner } from './decorators/owner';
 import { LogAction, ActionType } from '../lib/decorators/log-action.decorator';
+import { UserRole } from 'generated/prisma';
 
 @Controller('auth')
 export class AuthController {
@@ -28,7 +29,7 @@ export class AuthController {
   @Post('register')
   @LogAction(ActionType.CREATE, 'User', 'User registration')
   register(@Body() dto: RegisterDto) {
-    return this.auth.register(dto.name, dto.username, dto.password, dto.roles);
+    return this.auth.register(dto.name, dto.username, dto.password, dto.role, dto.storeId);
   }
 
   @Public()
@@ -39,7 +40,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('USER', 'ADMIN')
+  @Roles(UserRole.EMPLOYEE, UserRole.ADMIN)
   @Post('me')
   @LogAction(ActionType.QUERY, 'User', 'Get user profile')
   profile(@Request() req: Req) {

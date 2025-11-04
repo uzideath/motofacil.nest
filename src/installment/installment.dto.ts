@@ -48,6 +48,10 @@ export class CreateInstallmentDto {
   @IsUUID()
   @IsOptional()
   createdById?: string;
+
+  @IsOptional()
+  @IsUUID()
+  storeId?: string;
 }
 
 export class FindInstallmentFiltersDto {

@@ -42,6 +42,10 @@ export class CreateCashRegisterDto {
   @IsOptional()
   @IsDateString()
   closingDate?: string // The date when the closing is created
+
+  @IsOptional()
+  @IsUUID()
+  storeId?: string
 }
 
 

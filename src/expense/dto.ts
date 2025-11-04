@@ -48,6 +48,10 @@ export class CreateExpenseDto {
   cashRegisterId?: string;
 
   @IsUUID()
+  @IsOptional()
+  storeId?: string;
+
+  @IsUUID()
   createdById: string;
 }
 

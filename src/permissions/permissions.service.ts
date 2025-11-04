@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { UserRole } from 'generated/prisma';
 import {
   Resource,
   Action,
@@ -36,7 +37,7 @@ export class PermissionsService {
   /**
    * Get default permissions for a role
    */
-  getDefaultPermissionsForRole(role: 'ADMIN' | 'MODERATOR' | 'USER'): PermissionsMap {
+  getDefaultPermissionsForRole(role: UserRole): PermissionsMap {
     return DEFAULT_PERMISSIONS[role] || {};
   }
 
@@ -50,7 +51,7 @@ export class PermissionsService {
         id: true,
         name: true,
         username: true,
-        roles: true,
+        role: true,
         permissions: true,
       },
     });
@@ -60,15 +61,15 @@ export class PermissionsService {
     }
 
     // If owner is ADMIN, they have all permissions
-    if (owner.roles.includes('ADMIN')) {
+    if (owner.role === UserRole.ADMIN) {
       return {
         owner: {
           id: owner.id,
           name: owner.name,
           username: owner.username,
-          roles: owner.roles,
+          role: owner.role,
         },
-        permissions: DEFAULT_PERMISSIONS.ADMIN,
+        permissions: DEFAULT_PERMISSIONS[UserRole.ADMIN],
         isAdmin: true,
       };
     }
@@ -81,7 +82,7 @@ export class PermissionsService {
         id: owner.id,
         name: owner.name,
         username: owner.username,
-        roles: owner.roles,
+        role: owner.role,
       },
       permissions,
       isAdmin: false,
@@ -119,7 +120,7 @@ export class PermissionsService {
         id: true,
         name: true,
         username: true,
-        roles: true,
+        role: true,
         permissions: true,
       },
     });
@@ -130,7 +131,7 @@ export class PermissionsService {
         id: updated.id,
         name: updated.name,
         username: updated.username,
-        roles: updated.roles,
+        role: updated.role,
       },
       permissions: updated.permissions,
       updatedBy,
@@ -280,7 +281,7 @@ export class PermissionsService {
   ): Promise<boolean> {
     const owner = await this.prisma.owners.findUnique({
       where: { id: ownerId },
-      select: { roles: true, permissions: true },
+      select: { role: true, permissions: true },
     });
 
     if (!owner) {
@@ -288,7 +289,7 @@ export class PermissionsService {
     }
 
     // ADMIN role has all permissions
-    if (owner.roles.includes('ADMIN')) {
+    if (owner.role === UserRole.ADMIN) {
       return true;
     }
 
@@ -330,7 +331,7 @@ export class PermissionsService {
   /**
    * Apply default permissions based on role
    */
-  async applyRolePermissions(ownerId: string, role: 'ADMIN' | 'MODERATOR' | 'USER') {
+  async applyRolePermissions(ownerId: string, role: UserRole) {
     const owner = await this.prisma.owners.findUnique({
       where: { id: ownerId },
     });
