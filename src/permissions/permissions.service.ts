@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
-import { UserRole } from 'generated/prisma';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   Resource,
   Action,
@@ -9,6 +8,7 @@ import {
   getAllPermissions,
   PermissionCheck,
 } from './permissions.types';
+import { UserRole } from 'src/prisma/generated/client';
 
 @Injectable()
 export class PermissionsService {

@@ -8,14 +8,7 @@ import {
   FindOneCashRegisterResponseDto,
   PrintClosingDto,
 } from './dto';
-import {
-  CashRegister,
-  Installment,
-  Expense,
-  PaymentMethod,
-  ExpenseCategory,
-  UserRole,
-} from 'generated/prisma';
+
 import { Response } from 'express';
 import { LogAction, ActionType } from '../lib/decorators/log-action.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
@@ -23,6 +16,7 @@ import { StoreAccessGuard } from '../auth/guards/store-access.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserStoreId } from '../auth/decorators/store.decorator';
+import { CashRegister, UserRole } from 'src/prisma/generated/client';
 
 @Controller('closing')
 @UseGuards(JwtAuthGuard, StoreAccessGuard, RolesGuard)

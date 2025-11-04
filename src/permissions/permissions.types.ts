@@ -1,6 +1,5 @@
-// Permission system types and constants
+import { UserRole } from "src/prisma/generated/client";
 
-import { UserRole } from 'generated/prisma';
 
 export enum Resource {
   CLOSING = 'CLOSING',

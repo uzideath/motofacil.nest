@@ -4,6 +4,12 @@
   "assets": ["**/*.html"],
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "../generated/**/*",
+        "outDir": "dist"
+      }
+    ]
   }
 }

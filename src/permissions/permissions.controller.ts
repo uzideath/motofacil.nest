@@ -8,7 +8,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
-import { UserRole } from 'generated/prisma';
 import {
   GrantPermissionDto,
   RevokePermissionDto,
@@ -24,6 +23,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { LogAction, ActionType } from '../lib/decorators/log-action.decorator';
 import { CurrentUser } from '../auth/decorators/user';
 import { JwtPayload } from '../auth/auth.service';
+import { UserRole } from 'src/prisma/generated/client';
 
 @Controller('permissions')
 @UseGuards(JwtAuthGuard, RolesGuard)

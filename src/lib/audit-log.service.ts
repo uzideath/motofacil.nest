@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
-import { AuditAction, UserRole } from 'generated/prisma';
+import { AuditAction, UserRole } from 'src/prisma/generated/client';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 export interface AuditLogData {
   storeId: string | null;

@@ -1,7 +1,7 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { IsString, IsOptional, IsEnum } from 'class-validator';
 import { PermissionsMap } from '../permissions/permissions.types';
-import { UserRole } from 'generated/prisma';
+import { UserRole } from 'src/prisma/generated/client';
 
 export class CreateOwnerDto {
     @IsString()

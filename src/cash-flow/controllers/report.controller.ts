@@ -2,8 +2,8 @@ import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { CashFlowReportService } from '../services/report.service';
 import { CashFlowStatementDto, ForecastDto } from '../dto/report.dto';
 import { Roles } from '../../auth/decorators/roles.decorator';
-import { UserRole } from '../../../generated/prisma';
 import { LogAction, ActionType } from '../../lib/decorators/log-action.decorator';
+import { UserRole } from 'src/prisma/generated/client';
 
 @Controller('cash-flow/reports')
 @UseGuards()

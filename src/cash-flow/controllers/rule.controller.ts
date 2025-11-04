@@ -12,8 +12,8 @@ import {
 import { CashFlowRuleService } from '../services/rule.service';
 import { CreateRuleDto, UpdateRuleDto, DryRunRuleDto } from '../dto/rule.dto';
 import { Roles } from '../../auth/decorators/roles.decorator';
-import { UserRole } from '../../../generated/prisma';
 import { LogAction, ActionType } from '../../lib/decorators/log-action.decorator';
+import { UserRole } from 'src/prisma/generated/client';
 
 @Controller('cash-flow/rules')
 @UseGuards()

@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateVehicleDto, UpdateVehicleDto, FindVehicleFiltersDto } from './vehicle.dto';
-import { Prisma } from 'generated/prisma';
 import { BaseStoreService } from 'src/lib/base-store.service';
+import { Prisma } from 'src/prisma/generated/client';
 
 @Injectable()
 export class VehicleService extends BaseStoreService {

@@ -19,7 +19,7 @@ import { CurrentUser } from './decorators/user';
 import { CurrentRole } from './decorators/role';
 import { IsOwner } from './decorators/owner';
 import { LogAction, ActionType } from '../lib/decorators/log-action.decorator';
-import { UserRole } from 'generated/prisma';
+import { UserRole } from 'src/prisma/generated/client';
 
 @Controller('auth')
 export class AuthController {

@@ -13,8 +13,9 @@ import {
 import { CashFlowAccountService } from '../services/account.service';
 import { CreateAccountDto, UpdateAccountDto, AccountQueryDto } from '../dto/account.dto';
 import { Roles } from '../../auth/decorators/roles.decorator';
-import { UserRole } from '../../../generated/prisma';
+
 import { LogAction, ActionType } from '../../lib/decorators/log-action.decorator';
+import { UserRole } from 'src/prisma/generated/client';
 
 @Controller('cash-flow/accounts')
 @UseGuards()

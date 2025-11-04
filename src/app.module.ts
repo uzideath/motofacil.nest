@@ -21,7 +21,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ProvidersModule } from './providers/providers.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { PrismaModule } from './prisma.module';
+import { PrismaModule } from './prisma/prisma.module';
 import { CashFlowModule } from './cash-flow/cash-flow.module';
 import { ReportsModule } from './reports/reports.module';
 import { LoggerModule } from './lib/logger/logger.module';

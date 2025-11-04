@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserRole } from 'generated/prisma';
+import { UserRole } from 'src/prisma/generated/client';
 
 export const SKIP_STORE_CHECK_KEY = 'skipStoreCheck';
 

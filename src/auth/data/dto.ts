@@ -1,4 +1,4 @@
-import { UserRole } from 'generated/prisma';
+
 import {
   IsString,
   IsNotEmpty,
@@ -6,6 +6,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { UserRole } from 'src/prisma/generated/client';
 
 class LoginDto {
   @IsString()

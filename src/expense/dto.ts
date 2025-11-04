@@ -8,7 +8,7 @@ import {
   IsArray,
   IsDateString,
 } from 'class-validator';
-import { ExpenseCategory, PaymentMethod } from 'generated/prisma';
+import { ExpenseCategory, PaymentMethod } from 'src/prisma/generated/client';
 
 export class CreateExpenseDto {
   @IsNumber()

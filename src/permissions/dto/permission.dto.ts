@@ -1,7 +1,7 @@
 import { IsString, IsArray, IsEnum, IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { UserRole } from 'generated/prisma';
 import { Resource, Action, PermissionsMap } from '../permissions.types';
+import { UserRole } from 'src/prisma/generated/client';
 
 export class GrantPermissionDto {
   @IsEnum(Resource)

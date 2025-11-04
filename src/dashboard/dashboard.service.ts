@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
-import { LoanStatus } from 'generated/prisma';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, addDays } from 'date-fns';
+import { LoanStatus } from 'src/prisma/generated/client';
 
 @Injectable()
 export class DashboardService {

@@ -17,7 +17,7 @@ import { StoreAccessGuard } from '../auth/guards/store-access.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserStoreId } from '../auth/decorators/store.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from 'generated/prisma';
+import { UserRole } from 'src/prisma/generated/client';
 
 @Controller('loans')
 @UseGuards(JwtAuthGuard, StoreAccessGuard, RolesGuard)

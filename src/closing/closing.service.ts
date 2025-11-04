@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common"
-import type { CashRegister, Expense, Installment, Loan, Vehicle, Prisma, User, Owners, Provider } from "generated/prisma"
-import { PrismaService } from "src/prisma.service"
+import { PrismaService } from "src/prisma/prisma.service"
 import { BaseStoreService } from "src/lib/base-store.service"
 import type {
   CreateCashRegisterDto,
@@ -15,6 +14,17 @@ import * as puppeteer from "puppeteer"
 import { templateHtml } from "./template"
 import { format, utcToZonedTime } from "date-fns-tz"
 import { es } from "date-fns/locale"
+import type { 
+  CashRegister, 
+  Loan, 
+  Owners, 
+  Provider, 
+  User, 
+  Vehicle, 
+  Installment, 
+  Expense, 
+  Prisma 
+} from "src/prisma/generated/client"
 
 type CashRegisterWithRelations = CashRegister & {
   payments: (Installment & {

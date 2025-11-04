@@ -1,6 +1,6 @@
 import { Type } from "class-transformer"
 import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator"
-import { ExpenseCategory, PaymentMethod } from "generated/prisma"
+import { ExpenseCategory, PaymentMethod } from "src/prisma/generated/client"
 
 export class OwnerDto {
   @IsUUID()

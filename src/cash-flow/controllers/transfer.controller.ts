@@ -12,8 +12,8 @@ import {
 import { CashFlowTransferService } from '../services/transfer.service';
 import { CreateTransferDto } from '../dto/transfer.dto';
 import { Roles } from '../../auth/decorators/roles.decorator';
-import { UserRole } from '../../../generated/prisma';
 import { LogAction, ActionType } from '../../lib/decorators/log-action.decorator';
+import { UserRole } from 'src/prisma/generated/client';
 
 @Controller('cash-flow/transfers')
 @UseGuards()

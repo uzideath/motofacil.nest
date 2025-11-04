@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { CreateOwnerDto, UpdateOwnerDto } from './dto';
-import { Owners, UserRole } from 'generated/prisma';
 import { PermissionsMap, DEFAULT_PERMISSIONS } from '../permissions/permissions.types';
+import { Owners, UserRole } from 'src/prisma/generated/client';
 
 @Injectable()
 export class OwnersService {

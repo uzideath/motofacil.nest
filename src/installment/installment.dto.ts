@@ -9,8 +9,9 @@ import {
   IsEnum,
   Min,
 } from 'class-validator';
-import { PaymentMethod, VehicleType } from 'generated/prisma';
 import { Type } from 'class-transformer';
+import { PaymentMethod } from 'src/prisma/generated/client';
+import { VehicleType } from 'src/vehicle/vehicle.dto';
 
 export class CreateInstallmentDto {
   @IsUUID()

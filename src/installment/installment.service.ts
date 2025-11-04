@@ -3,13 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateInstallmentDto, FindInstallmentFiltersDto, UpdateInstallmentDto } from './installment.dto';
-import { LoanStatus, Prisma } from 'generated/prisma';
 import { toColombiaMidnightUtc, toColombiaEndOfDayUtc, toColombiaUtc } from 'src/lib/dates';
-import { addDays, subHours } from 'date-fns';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { addDays } from 'date-fns';
 import { BaseStoreService } from 'src/lib/base-store.service';
+import { LoanStatus, Prisma } from 'src/prisma/generated/client';
 
 @Injectable()
 export class InstallmentService extends BaseStoreService {

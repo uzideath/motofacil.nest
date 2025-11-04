@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreateLoanDto,
   InterestType,
@@ -7,8 +7,8 @@ import {
   UpdateLoanDto,
 } from './loan.dto';
 import { addDays, addWeeks, addMonths, differenceInDays, differenceInWeeks, differenceInMonths } from 'date-fns';
-import { Loan, User, Vehicle, Installment } from '../../generated/prisma';
 import { BaseStoreService } from 'src/lib/base-store.service';
+import { Loan, User, Vehicle } from 'src/prisma/generated/client';
 
 type LoanWithRelations = Loan & {
   user: User;
