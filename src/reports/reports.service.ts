@@ -479,6 +479,7 @@ export class ReportsService {
   }
 
   // Helper method to calculate business days (excluding Sundays)
+  // Returns the non-inclusive difference in business days between two dates
   private calculateBusinessDays(startDate: Date, endDate: Date): number {
     let count = 0;
     const currentDate = new Date(startDate);
@@ -496,7 +497,9 @@ export class ReportsService {
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
-    return count;
+    // Subtract 1 to convert from inclusive count to non-inclusive difference
+    // This matches the frontend logic: if start and end are the same day, difference should be 0
+    return Math.max(0, count - 1);
   }
 
   // Helper method to get payment frequency in days
