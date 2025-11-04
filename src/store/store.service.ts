@@ -127,7 +127,7 @@ export class StoreService {
     const [vehicleCount, userCount, employeeCount] = await Promise.all([
       this.prisma.vehicle.count({ where: { storeId: id } }),
       this.prisma.user.count({ where: { storeId: id } }),
-      this.prisma.owners.count({ where: { storeId: id } }),
+      this.prisma.employee.count({ where: { storeId: id } }),
     ]);
 
     if (vehicleCount > 0 || userCount > 0 || employeeCount > 0) {
@@ -330,7 +330,7 @@ export class StoreService {
     adminId: string,
   ): Promise<void> {
     // Validate employee exists
-    const employee = await this.prisma.owners.findUnique({
+    const employee = await this.prisma.employee.findUnique({
       where: { id: employeeId },
       include: { store: true },
     });
@@ -352,7 +352,7 @@ export class StoreService {
     }
 
     // Update employee
-    await this.prisma.owners.update({
+    await this.prisma.employee.update({
       where: { id: employeeId },
       data: {
         storeId: newStoreId,
@@ -361,5 +361,78 @@ export class StoreService {
     });
 
     console.log(`Employee ${employeeId} reassigned to store ${newStoreId} by admin ${adminId}. Reason: ${reason}`);
+  }
+
+  /**
+   * Get WhatsApp configuration for a store
+   */
+  async getWhatsAppConfig(storeId: string) {
+    const store = await this.findOne(storeId);
+    
+    return {
+      whatsappEnabled: store.whatsappEnabled,
+      whatsappApiUrl: store.whatsappApiUrl,
+      whatsappInstanceId: store.whatsappInstanceId,
+      // Don't expose the full API key, only show if it exists
+      hasApiKey: !!store.whatsappApiKey,
+      isConfigured: !!(
+        store.whatsappApiUrl &&
+        store.whatsappInstanceId &&
+        store.whatsappApiKey
+      ),
+    };
+  }
+
+  /**
+   * Update WhatsApp configuration for a store
+   */
+  async updateWhatsAppConfig(
+    storeId: string,
+    config: {
+      whatsappEnabled: boolean;
+      whatsappApiUrl?: string;
+      whatsappInstanceId?: string;
+      whatsappApiKey?: string;
+    },
+  ) {
+    // Validate store exists
+    await this.findOne(storeId);
+
+    // If enabling WhatsApp, validate all required fields are provided
+    if (config.whatsappEnabled) {
+      const missingFields: string[] = [];
+      
+      if (!config.whatsappApiUrl) missingFields.push('whatsappApiUrl');
+      if (!config.whatsappInstanceId) missingFields.push('whatsappInstanceId');
+      if (!config.whatsappApiKey) missingFields.push('whatsappApiKey');
+
+      if (missingFields.length > 0) {
+        throw new BadRequestException(
+          `Cannot enable WhatsApp without required fields: ${missingFields.join(', ')}`,
+        );
+      }
+    }
+
+    const updatedStore = await this.prisma.store.update({
+      where: { id: storeId },
+      data: {
+        whatsappEnabled: config.whatsappEnabled,
+        whatsappApiUrl: config.whatsappApiUrl,
+        whatsappInstanceId: config.whatsappInstanceId,
+        whatsappApiKey: config.whatsappApiKey,
+      },
+    });
+
+    return {
+      whatsappEnabled: updatedStore.whatsappEnabled,
+      whatsappApiUrl: updatedStore.whatsappApiUrl,
+      whatsappInstanceId: updatedStore.whatsappInstanceId,
+      hasApiKey: !!updatedStore.whatsappApiKey,
+      isConfigured: !!(
+        updatedStore.whatsappApiUrl &&
+        updatedStore.whatsappInstanceId &&
+        updatedStore.whatsappApiKey
+      ),
+    };
   }
 }

@@ -27,7 +27,7 @@ export class AuthService {
   ) { }
 
   async validateUser(username: string, pass: string) {
-    const user = await this.prisma.owners.findUnique({ where: { username } });
+    const user = await this.prisma.employee.findUnique({ where: { username } });
     if (!user) return null;
 
     const match = await bcrypt.compare(pass, user.passwordHash);
@@ -71,7 +71,7 @@ export class AuthService {
 
     const hashedRT = await bcrypt.hash(refresh_token, 10);
 
-    await this.prisma.owners.update({
+    await this.prisma.employee.update({
       where: { id: user.id },
       data: {
         lastAccess: new Date(),
@@ -91,7 +91,7 @@ export class AuthService {
 
   async register(name: string, username: string, password: string, role: UserRole = UserRole.EMPLOYEE, storeId?: string) {
     const passwordHash = await bcrypt.hash(password, 10);
-    return this.prisma.owners.create({
+    return this.prisma.employee.create({
       data: {
         name,
         username,
@@ -114,7 +114,7 @@ export class AuthService {
       throw new ForbiddenException('Refresh token inválido o expirado');
     }
 
-    const user = await this.prisma.owners.findUnique({
+    const user = await this.prisma.employee.findUnique({
       where: { id: payload.sub },
     });
 
@@ -151,7 +151,7 @@ export class AuthService {
 
     const hashedNewRefreshToken = await bcrypt.hash(newRefreshToken, 10);
 
-    await this.prisma.owners.update({
+    await this.prisma.employee.update({
       where: { id: payload.sub },
       data: { refreshToken: hashedNewRefreshToken },
     });
@@ -164,7 +164,7 @@ export class AuthService {
 
 
   async logout(userId: string) {
-    return this.prisma.owners.update({
+    return this.prisma.employee.update({
       where: { id: userId },
       data: { refreshToken: null },
     });

@@ -1,6 +1,6 @@
 
 import * as bcrypt from 'bcrypt';
-import { PrismaClient, StoreStatus, UserRole } from 'src/prisma/generated/client';
+import { PrismaClient, StoreStatus, UserRole } from '../src/prisma/generated/client';
 
 const prisma = new PrismaClient();
 
@@ -66,7 +66,7 @@ async function main() {
 
   const adminPasswordHash = await bcrypt.hash('Admin123!', 10);
 
-  const admin = await prisma.owners.upsert({
+  const admin = await prisma.employee.upsert({
     where: { username: 'admin' },
     update: {},
     create: {
@@ -91,7 +91,7 @@ async function main() {
 
   const employeePasswordHash = await bcrypt.hash('Employee123!', 10);
 
-  const employee1 = await prisma.owners.upsert({
+  const employee1 = await prisma.employee.upsert({
     where: { username: 'emp.bogota' },
     update: {},
     create: {
@@ -106,7 +106,7 @@ async function main() {
   });
   console.log(`  ✅ Created employee: ${employee1.name} → ${store1.name}`);
 
-  const employee2 = await prisma.owners.upsert({
+  const employee2 = await prisma.employee.upsert({
     where: { username: 'emp.medellin' },
     update: {},
     create: {
@@ -121,7 +121,7 @@ async function main() {
   });
   console.log(`  ✅ Created employee: ${employee2.name} → ${store2.name}`);
 
-  const employee3 = await prisma.owners.upsert({
+  const employee3 = await prisma.employee.upsert({
     where: { username: 'emp.cali' },
     update: {},
     create: {

@@ -115,6 +115,7 @@ export class ReceiptService {
   }
 
   async sendReceiptViaWhatsapp(
+    storeId: string,
     phoneNumber: string,
     dto: CreateReceiptDto,
     caption?: string,
@@ -126,7 +127,7 @@ export class ReceiptService {
       const fileName = `Recibo_${this.generateReceiptNumber(dto.receiptNumber)}.pdf`
       const base64 = pdfBuffer.toString("base64")
 
-      return await this.whatsappService.sendMediaBase64({
+      return await this.whatsappService.sendMediaBase64(storeId, {
         number: phoneNumber,
         mediatype: "document",
         mimetype: "application/pdf",

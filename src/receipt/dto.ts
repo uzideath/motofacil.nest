@@ -68,4 +68,8 @@ export class SendReceiptDto extends CreateReceiptDto {
   @IsOptional()
   @IsString()
   caption?: string
+
+  @IsNotEmpty()
+  @IsString()
+  storeId: string
 }

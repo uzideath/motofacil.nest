@@ -45,7 +45,7 @@ export class PermissionsService {
    * Get owner's permissions
    */
   async getOwnerPermissions(ownerId: string) {
-    const owner = await this.prisma.owners.findUnique({
+    const owner = await this.prisma.employee.findUnique({
       where: { id: ownerId },
       select: {
         id: true,
@@ -98,7 +98,7 @@ export class PermissionsService {
     updatedBy: string,
   ) {
     // Verify owner exists
-    const owner = await this.prisma.owners.findUnique({
+    const owner = await this.prisma.employee.findUnique({
       where: { id: ownerId },
     });
 
@@ -110,7 +110,7 @@ export class PermissionsService {
     this.validatePermissions(permissions);
 
     // Update owner's permissions
-    const updated = await this.prisma.owners.update({
+    const updated = await this.prisma.employee.update({
       where: { id: ownerId },
       data: {
         permissions: permissions as any,
@@ -147,7 +147,7 @@ export class PermissionsService {
     action: Action,
     grantedBy: string,
   ) {
-    const owner = await this.prisma.owners.findUnique({
+    const owner = await this.prisma.employee.findUnique({
       where: { id: ownerId },
       select: { id: true, name: true, permissions: true },
     });
@@ -167,7 +167,7 @@ export class PermissionsService {
       currentPermissions[resource]!.push(action);
     }
 
-    await this.prisma.owners.update({
+    await this.prisma.employee.update({
       where: { id: ownerId },
       data: {
         permissions: currentPermissions as any,
@@ -192,7 +192,7 @@ export class PermissionsService {
     resource: Resource,
     action: Action,
   ) {
-    const owner = await this.prisma.owners.findUnique({
+    const owner = await this.prisma.employee.findUnique({
       where: { id: ownerId },
       select: { id: true, name: true, permissions: true },
     });
@@ -215,7 +215,7 @@ export class PermissionsService {
       }
     }
 
-    await this.prisma.owners.update({
+    await this.prisma.employee.update({
       where: { id: ownerId },
       data: {
         permissions: currentPermissions as any,
@@ -240,7 +240,7 @@ export class PermissionsService {
     actions: Action[],
     grantedBy: string,
   ) {
-    const owner = await this.prisma.owners.findUnique({
+    const owner = await this.prisma.employee.findUnique({
       where: { id: ownerId },
       select: { id: true, name: true, permissions: true },
     });
@@ -254,7 +254,7 @@ export class PermissionsService {
     // Set the permissions for this resource
     currentPermissions[resource] = actions;
 
-    await this.prisma.owners.update({
+    await this.prisma.employee.update({
       where: { id: ownerId },
       data: {
         permissions: currentPermissions as any,
@@ -279,7 +279,7 @@ export class PermissionsService {
     resource: Resource,
     action: Action,
   ): Promise<boolean> {
-    const owner = await this.prisma.owners.findUnique({
+    const owner = await this.prisma.employee.findUnique({
       where: { id: ownerId },
       select: { role: true, permissions: true },
     });
@@ -332,7 +332,7 @@ export class PermissionsService {
    * Apply default permissions based on role
    */
   async applyRolePermissions(ownerId: string, role: UserRole) {
-    const owner = await this.prisma.owners.findUnique({
+    const owner = await this.prisma.employee.findUnique({
       where: { id: ownerId },
     });
 
@@ -342,7 +342,7 @@ export class PermissionsService {
 
     const defaultPermissions = this.getDefaultPermissionsForRole(role);
 
-    await this.prisma.owners.update({
+    await this.prisma.employee.update({
       where: { id: ownerId },
       data: {
         permissions: defaultPermissions as any,
@@ -390,7 +390,7 @@ export class PermissionsService {
    * Clear all permissions for an owner
    */
   async clearOwnerPermissions(ownerId: string) {
-    const owner = await this.prisma.owners.findUnique({
+    const owner = await this.prisma.employee.findUnique({
       where: { id: ownerId },
     });
 
@@ -398,7 +398,7 @@ export class PermissionsService {
       throw new NotFoundException(`Owner with ID ${ownerId} not found`);
     }
 
-    await this.prisma.owners.update({
+    await this.prisma.employee.update({
       where: { id: ownerId },
       data: {
         permissions: {},

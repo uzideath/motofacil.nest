@@ -1,9 +1,9 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsEmail } from 'class-validator';
 import { PermissionsMap } from '../permissions/permissions.types';
 import { UserRole } from 'src/prisma/generated/client';
 
-export class CreateOwnerDto {
+export class CreateEmployeeDto {
     @IsString()
     name: string;
 
@@ -12,6 +12,14 @@ export class CreateOwnerDto {
 
     @IsString()
     password: string;
+
+    @IsOptional()
+    @IsString()
+    phone?: string;
+
+    @IsOptional()
+    @IsEmail()
+    email?: string;
 
     @IsOptional()
     @IsEnum(UserRole)
@@ -29,4 +37,8 @@ export class CreateOwnerDto {
     status?: string;
 }
 
-export class UpdateOwnerDto extends PartialType(CreateOwnerDto) {}
+export class UpdateEmployeeDto extends PartialType(CreateEmployeeDto) {
+    @IsOptional()
+    @IsString()
+    password?: string; // Make password optional for updates
+}

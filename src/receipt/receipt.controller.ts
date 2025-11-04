@@ -29,9 +29,10 @@ export class ReceiptController {
   @LogAction(ActionType.CUSTOM, 'Receipt', 'Send receipt via WhatsApp')
   async sendViaWhatsapp(@Body() dto: SendReceiptDto) {
     try {
-      const { phoneNumber, caption, ...receiptData } = dto;
+      const { phoneNumber, caption, storeId, ...receiptData } = dto;
 
       const result = await this.receiptService.sendReceiptViaWhatsapp(
+        storeId,
         phoneNumber,
         receiptData,
         caption

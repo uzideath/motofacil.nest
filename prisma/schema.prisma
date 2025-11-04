@@ -21,11 +21,18 @@ model Store {
   city        String
   phone       String?
   status      StoreStatus @default(ACTIVE)
+  
+  // WhatsApp Integration (Evolution API per store)
+  whatsappEnabled     Boolean @default(false)
+  whatsappApiUrl      String? // Evolution API base URL for this store
+  whatsappInstanceId  String? // Evolution API instance ID for this store
+  whatsappApiKey      String? // Evolution API key for this store
+  
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   // Relations - All core entities belong to a store
-  owners        Owners[]
+  employees     Employee[]
   providers     Provider[]
   vehicles      Vehicle[]
   loans         Loan[]
@@ -43,11 +50,12 @@ model Store {
 // CORE MODELS
 // ═══════════════════════════════════════════════════════════════════════════
 
-model Owners {
+model Employee {
   id           String     @id @default(uuid())
   name         String
   username     String     @unique
   email        String?    @unique
+  phone        String?
   passwordHash String
   role         UserRole   @default(EMPLOYEE) // Changed from roles array to single role
   
@@ -71,6 +79,7 @@ model Owners {
   @@index([storeId])
   @@index([role])
   @@index([status])
+  @@map("owners") // Map to existing table to preserve data
 }
 
 model Provider {
@@ -215,7 +224,7 @@ model Installment {
   updatedAt       DateTime      @updatedAt
 
   // Relaciones
-  createdBy      Owners?       @relation(fields: [createdById], references: [id])
+  createdBy      Employee?     @relation(fields: [createdById], references: [id])
   cashRegister   CashRegister? @relation("CashRegisterPayments", fields: [cashRegisterId], references: [id])
   cashRegisterId String?
 
@@ -245,7 +254,7 @@ model CashRegister {
   payments    Installment[] @relation("CashRegisterPayments")
   expense     Expense[]
   createdById String?
-  createdBy   Owners?       @relation(fields: [createdById], references: [id])
+  createdBy   Employee?     @relation(fields: [createdById], references: [id])
 
   @@index([storeId])
   @@index([storeId, date])
@@ -272,7 +281,7 @@ model Expense {
   cashRegister   CashRegister?   @relation(fields: [cashRegisterId], references: [id])
   cashRegisterId String?
   createdById    String?
-  createdBy      Owners?         @relation(fields: [createdById], references: [id])
+  createdBy      Employee?       @relation(fields: [createdById], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -292,7 +301,7 @@ model AuditLog {
   store       Store?      @relation(fields: [storeId], references: [id])
   storeId     String?
   
-  actor       Owners      @relation(fields: [actorId], references: [id])
+  actor       Employee    @relation(fields: [actorId], references: [id])
   actorId     String
   actorRole   UserRole
   

@@ -1,6 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common"
+import { Injectable, Logger, NotFoundException, BadRequestException } from "@nestjs/common"
 import { HttpService } from "@nestjs/axios"
 import { ConfigService } from "@nestjs/config"
+import { PrismaService } from "src/prisma/prisma.service"
 import { firstValueFrom } from "rxjs"
 import * as fs from "fs"
 import * as path from "path"
@@ -9,35 +10,83 @@ import type { AxiosResponse } from "axios"
 
 type SendResult = { success: boolean; messageId?: string; error?: string; raw?: any }
 
+interface StoreWhatsAppConfig {
+    apiUrl: string
+    instanceId: string
+    apiKey: string
+}
+
 @Injectable()
 export class WhatsappService {
     private readonly logger = new Logger(WhatsappService.name)
-    private readonly baseUrl: string
-    private readonly instanceId: string
-    private readonly apiKey: string
 
-    constructor(private readonly http: HttpService, private readonly config: ConfigService) {
-        this.baseUrl = process.env.EVOLUTION_API_URL || this.config.get<string>("EVOLUTION_API_URL")!
-        this.instanceId = this.config.getOrThrow<string>("EVOLUTION_API_INSTANCE")
-        this.apiKey = this.config.getOrThrow<string>("EVOLUTION_API_KEY")
+    constructor(
+        private readonly http: HttpService,
+        private readonly config: ConfigService,
+        private readonly prisma: PrismaService,
+    ) {}
+
+    /**
+     * Get WhatsApp configuration for a specific store
+     */
+    private async getStoreConfig(storeId: string): Promise<StoreWhatsAppConfig> {
+        const store = await this.prisma.store.findUnique({
+            where: { id: storeId },
+            select: {
+                id: true,
+                name: true,
+                whatsappEnabled: true,
+                whatsappApiUrl: true,
+                whatsappInstanceId: true,
+                whatsappApiKey: true,
+            },
+        })
+
+        if (!store) {
+            throw new NotFoundException(`Store with ID ${storeId} not found`)
+        }
+
+        if (!store.whatsappEnabled) {
+            throw new BadRequestException(`WhatsApp is not enabled for store ${store.name}`)
+        }
+
+        if (!store.whatsappApiUrl || !store.whatsappInstanceId || !store.whatsappApiKey) {
+            throw new BadRequestException(
+                `WhatsApp configuration incomplete for store ${store.name}. ` +
+                `Please configure API URL, Instance ID, and API Key.`
+            )
+        }
+
+        return {
+            apiUrl: store.whatsappApiUrl,
+            instanceId: store.whatsappInstanceId,
+            apiKey: store.whatsappApiKey,
+        }
     }
 
-    async getStatus() {
-        // We don't maintain a WebSocket session anymore; assume API is reachable
+    /**
+     * Get status for a specific store's WhatsApp instance
+     */
+    async getStatus(storeId: string) {
+        const config = await this.getStoreConfig(storeId)
+        
         return {
             isReady: true,
             info: {
                 provider: "evolution-api",
-                instance: this.instanceId,
-                baseUrl: this.baseUrl,
+                instance: config.instanceId,
+                baseUrl: config.apiUrl,
+                storeId,
             },
         }
     }
 
     // Messaging
-    async sendMessage(dto: SendMessageDto): Promise<SendResult> {
+    async sendMessage(storeId: string, dto: SendMessageDto): Promise<SendResult> {
         try {
-            const url = `${this.baseUrl}/message/sendText/${this.instanceId}`
+            const config = await this.getStoreConfig(storeId)
+            const url = `${config.apiUrl}/message/sendText/${config.instanceId}`
+            
             // Backward compatibility: accept legacy { phoneNumber, message }
             const numberRaw: string | undefined = (dto as any)?.number ?? (dto as any)?.phoneNumber
             const textRaw: string | undefined = (dto as any)?.text ?? (dto as any)?.message
@@ -56,26 +105,27 @@ export class WhatsappService {
             }
 
             const { data } = await firstValueFrom<AxiosResponse<any>>(
-                this.http.post<any>(url, payload, { headers: this.headers() })
+                this.http.post<any>(url, payload, { headers: this.headers(config.apiKey) })
             )
 
             return { success: true, messageId: this.extractMessageId(data), raw: data }
         } catch (error: any) {
             if (error?.response?.status === 404) {
                 this.logger.error(
-                    `404 Not Found calling Evolution API sendText. ` +
-                    `URL="${this.baseUrl}/message/sendText/${this.instanceId}" ` +
-                    `Check EVOLUTION_API_URL, EVOLUTION_API_BASE_PATH, and EVOLUTION_API_INSTANCE.`
+                    `404 Not Found calling Evolution API sendText for store ${storeId}. ` +
+                    `Check WhatsApp configuration for this store.`
                 )
             }
             const msg = error?.response?.data?.message || error?.message || "Unknown error"
-            this.logger.error(`Failed to send text: ${msg}`)
+            this.logger.error(`Failed to send text for store ${storeId}: ${msg}`)
             return { success: false, error: msg }
         }
     }
 
-    async sendAttachment(phoneNumber: string, filePath: string, caption?: string): Promise<SendResult> {
+    async sendAttachment(storeId: string, phoneNumber: string, filePath: string, caption?: string): Promise<SendResult> {
         try {
+            const config = await this.getStoreConfig(storeId)
+            
             if (!fs.existsSync(filePath)) {
                 throw new Error(`File not found: ${filePath}`)
             }
@@ -84,7 +134,7 @@ export class WhatsappService {
             const media = fs.readFileSync(filePath, { encoding: "base64" })
             const mediaType = this.guessMediaTypeFromExt(fileName)
 
-            const url = `${this.baseUrl}/message/sendMedia/${this.instanceId}`
+            const url = `${config.apiUrl}/message/sendMedia/${config.instanceId}`
             const mediaMessage: any = {
                 mediatype: mediaType,
                 media,
@@ -102,18 +152,19 @@ export class WhatsappService {
             }
 
             const { data } = await firstValueFrom<AxiosResponse<any>>(
-                this.http.post<any>(url, payload, { headers: this.headers() })
+                this.http.post<any>(url, payload, { headers: this.headers(config.apiKey) })
             )
             return { success: true, messageId: this.extractMessageId(data), raw: data }
         } catch (error: any) {
             const resp = error?.response?.data
             const msg = (resp && (resp.message || JSON.stringify(resp))) || error?.message || "Unknown error"
-            this.logger.error(`Failed to send media: ${msg}`)
+            this.logger.error(`Failed to send media for store ${storeId}: ${msg}`)
             return { success: false, error: msg }
         }
     }
 
     async sendRemoteAttachment(
+        storeId: string,
         phoneNumber: string,
         urlOrFile: string,
         filename: string,
@@ -121,6 +172,8 @@ export class WhatsappService {
         caption?: string,
     ): Promise<SendResult> {
         try {
+            const config = await this.getStoreConfig(storeId)
+            
             // Download the file and convert to base64
             const fileResp = await firstValueFrom<AxiosResponse<ArrayBuffer>>(
                 this.http.get<ArrayBuffer>(urlOrFile, { responseType: "arraybuffer" as any })
@@ -128,7 +181,7 @@ export class WhatsappService {
             const base64 = Buffer.from(fileResp.data).toString("base64")
             const mediaType = this.mediaTypeFromMime(mimeType)
 
-            const url = `${this.baseUrl}/message/sendMedia/${this.instanceId}`
+            const url = `${config.apiUrl}/message/sendMedia/${config.instanceId}`
             const mediaMessage: any = {
                 mediatype: mediaType,
                 media: base64,
@@ -147,21 +200,22 @@ export class WhatsappService {
             }
 
             const { data } = await firstValueFrom<AxiosResponse<any>>(
-                this.http.post<any>(url, payload, { headers: this.headers() })
+                this.http.post<any>(url, payload, { headers: this.headers(config.apiKey) })
             )
             return { success: true, messageId: this.extractMessageId(data), raw: data }
         } catch (error: any) {
             const resp = error?.response?.data
             const msg = (resp && (resp.message || JSON.stringify(resp))) || error?.message || "Unknown error"
-            this.logger.error(`Failed to send remote media: ${msg}`)
+            this.logger.error(`Failed to send remote media for store ${storeId}: ${msg}`)
             return { success: false, error: msg }
         }
     }
 
-    async sendMediaBase64(dto: SendBase64MediaDto): Promise<SendResult> {
+    async sendMediaBase64(storeId: string, dto: SendBase64MediaDto): Promise<SendResult> {
         try {
+            const config = await this.getStoreConfig(storeId)
             const mediaType = this.mediaTypeFromMime(dto.mimetype || "") || (dto.mediatype as any)
-            const url = `${this.baseUrl}/message/sendMedia/${this.instanceId}`
+            const url = `${config.apiUrl}/message/sendMedia/${config.instanceId}`
             const payload: any = {
                 number: this.normalizeNumber(dto.number),
                 mediatype: mediaType,
@@ -177,20 +231,20 @@ export class WhatsappService {
             }
 
             const { data } = await firstValueFrom<AxiosResponse<any>>(
-                this.http.post<any>(url, payload, { headers: this.headers() })
+                this.http.post<any>(url, payload, { headers: this.headers(config.apiKey) })
             )
             return { success: true, messageId: this.extractMessageId(data), raw: data }
         } catch (error: any) {
             const resp = error?.response?.data
             const msg = (resp && (resp.message || JSON.stringify(resp))) || error?.message || "Unknown error"
-            this.logger.error(`Failed to send base64 media: ${msg}`)
+            this.logger.error(`Failed to send base64 media for store ${storeId}: ${msg}`)
             return { success: false, error: msg }
         }
     }
 
     // Helpers
-    private headers() {
-        return { apikey: this.apiKey, "Content-Type": "application/json" }
+    private headers(apiKey: string) {
+        return { apikey: apiKey, "Content-Type": "application/json" }
     }
 
     private normalizeNumber(phone: string): string {

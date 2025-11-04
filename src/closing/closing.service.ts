@@ -17,7 +17,7 @@ import { es } from "date-fns/locale"
 import type { 
   CashRegister, 
   Loan, 
-  Owners, 
+  Employee, 
   Provider, 
   User, 
   Vehicle, 
@@ -32,12 +32,12 @@ type CashRegisterWithRelations = CashRegister & {
       user: Pick<User, "id" | "name">
       vehicle: Pick<Vehicle, "id" | "plate">
     }
-    createdBy: Pick<Owners, "id" | "username" | "name"> | null
+    createdBy: Pick<Employee, "id" | "username" | "name"> | null
   })[]
   expense: (Expense & {
-    createdBy: Pick<Owners, "id" | "username" | "name"> | null
+    createdBy: Pick<Employee, "id" | "username" | "name"> | null
   })[]
-  createdBy: Pick<Owners, "id" | "username" | "name"> | null
+  createdBy: Pick<Employee, "id" | "username" | "name"> | null
   provider: Pick<Provider, "id" | "name">
 }
 
@@ -669,7 +669,7 @@ export class ClosingService extends BaseStoreService {
     notes: string | null;
     createdAt: Date;
     updatedAt: Date;
-    createdBy: Pick<Owners, "id" | "username"> | null;
+    createdBy: Pick<Employee, "id" | "username"> | null;
     payments: CashRegisterWithRelations['payments'];
     expense: CashRegisterWithRelations['expense'];
     totalPayments: number;

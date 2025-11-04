@@ -146,4 +146,30 @@ export class StoreController {
     );
     return { message: 'Employee reassigned successfully' };
   }
+
+  /**
+   * Get store WhatsApp configuration
+   * GET /stores/:id/whatsapp-config
+   */
+  @Get(':id/whatsapp-config')
+  getWhatsAppConfig(@Param('id') id: string) {
+    return this.storeService.getWhatsAppConfig(id);
+  }
+
+  /**
+   * Update store WhatsApp configuration
+   * PATCH /stores/:id/whatsapp-config
+   */
+  @Patch(':id/whatsapp-config')
+  updateWhatsAppConfig(
+    @Param('id') id: string,
+    @Body() config: {
+      whatsappEnabled: boolean;
+      whatsappApiUrl?: string;
+      whatsappInstanceId?: string;
+      whatsappApiKey?: string;
+    },
+  ) {
+    return this.storeService.updateWhatsAppConfig(id, config);
+  }
 }

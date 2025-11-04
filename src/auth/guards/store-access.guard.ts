@@ -39,8 +39,20 @@ export class StoreAccessGuard implements CanActivate {
 
     // ADMIN has access to all stores
     if (user.role === UserRole.ADMIN) {
-      request.userStoreId = null; // null means access to all stores
-      request.isAdmin = true;
+      // Check if admin is viewing a specific store (from header or query)
+      const selectedStoreId = request.headers['x-store-id'] || request.query.storeId;
+      
+      if (selectedStoreId) {
+        // Admin is viewing as a specific store
+        request.userStoreId = selectedStoreId;
+        request.isAdmin = true;
+        request.isAdminViewingAsStore = true;
+      } else {
+        // Admin viewing all stores
+        request.userStoreId = null; // null means access to all stores
+        request.isAdmin = true;
+        request.isAdminViewingAsStore = false;
+      }
       return true;
     }
 

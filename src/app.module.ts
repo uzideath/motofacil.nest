@@ -10,7 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
-import { OwnersModule } from './owners/owners.module';
+import { EmployeeModule } from './employee/employee.module';
 import { ClosingModule } from './closing/closing.module';
 import { ExpenseModule } from './expense/expense.module';
 import { ReceiptModule } from './receipt/receipt.module';
@@ -46,7 +46,7 @@ import { StoreModule } from './store/store.module';
     InstallmentModule,
     VehicleModule,
     AuthModule,
-    OwnersModule,
+    EmployeeModule,
     ClosingModule,
     ExpenseModule,
     ReceiptModule,
