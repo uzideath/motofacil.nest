@@ -41,6 +41,7 @@ export class ReceiptService {
     console.log("paymentDate en DTO:", dto.paymentDate);
     console.log("isLate:", dto.isLate);
     console.log("latePaymentDate:", dto.latePaymentDate);
+    console.log("storeId received:", dto.storeId);
     
     // Fetch store information if storeId is provided
     let storeName = "MotoFácil";
@@ -56,10 +57,15 @@ export class ReceiptService {
         if (store) {
           storeName = store.name;
           storeNit = store.nit;
+          console.log("Store found:", { name: storeName, nit: storeNit });
+        } else {
+          console.log("Store not found for ID:", dto.storeId);
         }
       } catch (error) {
         console.error("Error fetching store information:", error);
       }
+    } else {
+      console.log("No storeId provided in DTO");
     }
     
     // Determine the correct date to show:

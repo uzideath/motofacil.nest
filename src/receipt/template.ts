@@ -107,7 +107,7 @@ export const templateHtml = `
 <body>
   <div class="receipt">
     <div class="header">
-      <img class="logo" src="https://i.imgur.com/vxqGDAf.png" alt="Logo">
+      <img class="logo" src="https://i.imgur.com/i1CS4S9.png" alt="Logo">
       <div class="title">{{storeName}}</div>
       <div class="info">NIT: {{storeNit}}</div>
       <div class="title">RECIBO DE PAGO</div>
