@@ -37,6 +37,7 @@ export class WhatsappService {
                 name: true,
                 whatsappEnabled: true,
                 whatsappInstanceId: true,
+                whatsappApiKey: true,
             },
         })
 
@@ -48,28 +49,27 @@ export class WhatsappService {
             throw new BadRequestException(`WhatsApp is not enabled for store ${store.name}`)
         }
 
-        if (!store.whatsappInstanceId) {
+        if (!store.whatsappInstanceId || !store.whatsappApiKey) {
             throw new BadRequestException(
-                `WhatsApp Instance ID not configured for store ${store.name}. ` +
-                `Please configure the Instance ID.`
+                `WhatsApp configuration incomplete for store ${store.name}. ` +
+                `Please configure Instance ID and API Key.`
             )
         }
 
-        // Get API URL and Key from environment variables
+        // Get API URL from environment variable (shared across all stores)
         const apiUrl = this.config.get<string>("EVOLUTION_API_URL")
-        const apiKey = this.config.get<string>("EVOLUTION_API_KEY")
 
-        if (!apiUrl || !apiKey) {
+        if (!apiUrl) {
             throw new BadRequestException(
-                `WhatsApp API configuration missing. ` +
-                `Please configure EVOLUTION_API_URL and EVOLUTION_API_KEY in environment variables.`
+                `WhatsApp API URL not configured. ` +
+                `Please configure EVOLUTION_API_URL in environment variables.`
             )
         }
 
         return {
             apiUrl,
             instanceId: store.whatsappInstanceId,
-            apiKey,
+            apiKey: store.whatsappApiKey,
         }
     }
 
