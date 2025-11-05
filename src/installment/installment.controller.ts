@@ -27,8 +27,8 @@ export class InstallmentController {
   @Post()
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.CREATE, 'Installment')
-  create(@Body() dto: CreateInstallmentDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateInstallmentDto, @UserStoreId() userStoreId: string | null) {
+    return this.service.create(dto, userStoreId);
   }
 
   @Get()

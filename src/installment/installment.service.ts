@@ -16,7 +16,14 @@ export class InstallmentService extends BaseStoreService {
     super(prisma);
   }
 
-  async create(dto: CreateInstallmentDto) {
+  async create(dto: CreateInstallmentDto, userStoreId: string | null) {
+    // If storeId is not in DTO, use the authenticated user's storeId
+    const storeId = dto.storeId || userStoreId;
+    
+    if (!storeId) {
+      throw new BadRequestException('Store ID is required to create an installment');
+    }
+
     const loan = await this.prisma.loan.findUnique({
       where: { id: dto.loanId },
     });
@@ -38,7 +45,7 @@ export class InstallmentService extends BaseStoreService {
 
     const installment = await this.prisma.installment.create({
       data: {
-        store: { connect: { id: dto.storeId! } },
+        store: { connect: { id: storeId } },
         loan: { connect: { id: dto.loanId } },
         amount: dto.amount,
         gps: dto.gps,

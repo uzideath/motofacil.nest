@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreateLoanDto,
@@ -54,7 +54,13 @@ export class LoanService extends BaseStoreService {
     return currentDate;
   }
 
-  async create(dto: CreateLoanDto) {
+  async create(dto: CreateLoanDto, userStoreId: string | null) {
+    // If storeId is not in DTO, use the authenticated user's storeId
+    const storeId = dto.storeId || userStoreId;
+    
+    if (!storeId) {
+      throw new BadRequestException('Store ID is required to create a loan');
+    }
 
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
@@ -110,7 +116,7 @@ export class LoanService extends BaseStoreService {
     return this.prisma.loan.create({
       data: {
         contractNumber,
-        store: { connect: { id: dto.storeId! } },
+        store: { connect: { id: storeId } },
         user: { connect: { id: dto.userId } },
         vehicle: { connect: { id: dto.vehicleId } },
         totalAmount: dto.totalAmount,

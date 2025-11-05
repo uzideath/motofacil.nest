@@ -27,8 +27,8 @@ export class LoanController {
   @Post()
   @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
   @LogAction(ActionType.CREATE, 'Loan')
-  create(@Body() dto: CreateLoanDto) {
-    return this.loanService.create(dto);
+  create(@Body() dto: CreateLoanDto, @UserStoreId() userStoreId: string | null) {
+    return this.loanService.create(dto, userStoreId);
   }
 
   @Get()
