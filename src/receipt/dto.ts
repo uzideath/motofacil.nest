@@ -39,6 +39,10 @@ export class CreateReceiptDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsString()
+  @IsOptional()
+  storeId?: string;
 }
 
 export class SendReceiptWhatsappDto {

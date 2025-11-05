@@ -3,12 +3,16 @@ import * as puppeteer from "puppeteer"
 import type { CreateReceiptDto } from "./dto"
 import { templateHtml } from "./template"
 import { WhatsappService } from "../whatsapp/whatsapp.service"
+import { PrismaService } from "../prisma/prisma.service"
 import { format, utcToZonedTime } from "date-fns-tz"
 import { es } from "date-fns/locale"
 
 @Injectable()
 export class ReceiptService {
-  constructor(private readonly whatsappService: WhatsappService) { }
+  constructor(
+    private readonly whatsappService: WhatsappService,
+    private readonly prisma: PrismaService
+  ) { }
 
   async generateReceipt(dto: any): Promise<Buffer> {
     const browser = await puppeteer.launch({
@@ -17,7 +21,7 @@ export class ReceiptService {
     })
 
     const page = await browser.newPage()
-    const html = this.fillTemplate(dto)
+    const html = await this.fillTemplate(dto)
 
     await page.setContent(html, { waitUntil: "networkidle0" })
 
@@ -33,10 +37,30 @@ export class ReceiptService {
     return Buffer.from(pdfBuffer)
   }
 
-  private fillTemplate(dto: CreateReceiptDto): string {
+  private async fillTemplate(dto: CreateReceiptDto): Promise<string> {
     console.log("paymentDate en DTO:", dto.paymentDate);
     console.log("isLate:", dto.isLate);
     console.log("latePaymentDate:", dto.latePaymentDate);
+    
+    // Fetch store information if storeId is provided
+    let storeName = "MotoFácil";
+    let storeNit = "";
+    
+    if (dto.storeId) {
+      try {
+        const store = await this.prisma.store.findUnique({
+          where: { id: dto.storeId },
+          select: { name: true, nit: true }
+        });
+        
+        if (store) {
+          storeName = store.name;
+          storeNit = store.nit;
+        }
+      } catch (error) {
+        console.error("Error fetching store information:", error);
+      }
+    }
     
     // Determine the correct date to show:
     // - For late payments: use latePaymentDate (original due date)
@@ -47,6 +71,8 @@ export class ReceiptService {
 
     const data = {
       ...dto,
+      storeName,
+      storeNit,
       formattedAmount: this.formatCurrency(dto.amount),
       formattedGps: this.formatCurrency(dto.gps || 0),
       formattedTotal: this.formatCurrency((dto.amount || 0) + (dto.gps || 0)),
@@ -59,6 +85,8 @@ export class ReceiptService {
     };
 
     return templateHtml
+      .replace(/{{storeName}}/g, data.storeName)
+      .replace(/{{storeNit}}/g, data.storeNit)
       .replace(/{{name}}/g, data.name)
       .replace(/{{identification}}/g, data.identification)
       .replace(/{{concept}}/g, data.concept)
