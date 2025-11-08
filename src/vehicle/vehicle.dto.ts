@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsNumber, IsString, IsUUID, IsOptional, IsEnum, Min } from 'class-validator';
+import { IsNumber, IsString, IsUUID, IsOptional, IsEnum, Min, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum VehicleType {
@@ -55,6 +55,14 @@ export class CreateVehicleDto {
   @IsOptional()
   @IsNumber()
   gps?: number;
+
+  @IsOptional()
+  @IsDateString()
+  soatDueDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  technomechDueDate?: string;
 }
 
 export class FindVehicleFiltersDto {
