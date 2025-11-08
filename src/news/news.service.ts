@@ -41,11 +41,40 @@ export class NewsService {
 
     // Auto-calculate installments if enabled
     let installmentsToSubtract = dto.installmentsToSubtract || 0;
-    if (dto.autoCalculateInstallments && dto.daysUnavailable) {
-      installmentsToSubtract = await this.calculateInstallmentsToSubtract(
-        dto.loanId!,
+    let amountToSubtract = 0;
+    
+    if (dto.autoCalculateInstallments && dto.daysUnavailable && dto.loanId) {
+      const result = await this.calculateInstallmentsAndAmount(
+        dto.loanId,
         dto.daysUnavailable,
       );
+      installmentsToSubtract = result.installments;
+      amountToSubtract = result.amount;
+
+      // Update the loan's total amount by subtracting the calculated amount
+      const loan = await this.prisma.loan.findUnique({
+        where: { id: dto.loanId },
+        select: { 
+          totalAmount: true, 
+          debtRemaining: true,
+          remainingInstallments: true,
+        },
+      });
+
+      if (loan) {
+        const newTotalAmount = loan.totalAmount - amountToSubtract;
+        const newDebtRemaining = loan.debtRemaining - amountToSubtract;
+        const newRemainingInstallments = Math.max(0, loan.remainingInstallments - installmentsToSubtract);
+        
+        await this.prisma.loan.update({
+          where: { id: dto.loanId },
+          data: { 
+            totalAmount: newTotalAmount,
+            debtRemaining: newDebtRemaining,
+            remainingInstallments: newRemainingInstallments,
+          },
+        });
+      }
     }
 
     // Create the news
@@ -62,9 +91,15 @@ export class NewsService {
         autoCalculateInstallments: dto.autoCalculateInstallments ?? false,
         daysUnavailable: dto.daysUnavailable,
         installmentsToSubtract,
-        storeId: dto.storeId,
-        loanId: dto.loanId,
-        createdById,
+        store: {
+          connect: { id: dto.storeId },
+        },
+        loan: dto.loanId ? {
+          connect: { id: dto.loanId },
+        } : undefined,
+        createdBy: {
+          connect: { id: createdById },
+        },
       },
       include: {
         loan: {
@@ -82,48 +117,63 @@ export class NewsService {
   }
 
   /**
-   * Calculate how many installments should be subtracted based on days unavailable
-   * Logic: Each day unavailable = 1 installment (for daily payment frequency)
-   * This can be adjusted based on the loan's payment frequency
+   * Calculate how many installments and amount should be subtracted based on days unavailable
+   * Returns both the number of installments and the total amount to subtract from the loan
    */
-  private async calculateInstallmentsToSubtract(
+  private async calculateInstallmentsAndAmount(
     loanId: string,
     daysUnavailable: number,
-  ): Promise<number> {
+  ): Promise<{ installments: number; amount: number }> {
     const loan = await this.prisma.loan.findUnique({
       where: { id: loanId },
-      select: { paymentFrequency: true },
+      select: { 
+        paymentFrequency: true,
+        installmentPaymentAmmount: true,
+        gpsInstallmentPayment: true,
+      },
     });
 
     if (!loan) {
       throw new NotFoundException('Loan not found');
     }
 
+    // Calculate daily cost (installment + GPS fee)
+    const dailyCost = loan.installmentPaymentAmmount + loan.gpsInstallmentPayment;
+
     // Calculate based on payment frequency
     let installmentsToSubtract = 0;
+    let amountToSubtract = 0;
 
     switch (loan.paymentFrequency) {
       case 'DAILY':
         // For daily payments: 1 day = 1 installment
         installmentsToSubtract = daysUnavailable;
+        amountToSubtract = dailyCost * daysUnavailable;
         break;
       case 'WEEKLY':
         // For weekly payments: 7 days = 1 installment
         installmentsToSubtract = Math.floor(daysUnavailable / 7);
+        amountToSubtract = dailyCost * daysUnavailable;
         break;
       case 'BIWEEKLY':
         // For biweekly payments: 14 days = 1 installment
         installmentsToSubtract = Math.floor(daysUnavailable / 14);
+        amountToSubtract = dailyCost * daysUnavailable;
         break;
       case 'MONTHLY':
         // For monthly payments: 30 days = 1 installment
         installmentsToSubtract = Math.floor(daysUnavailable / 30);
+        amountToSubtract = dailyCost * daysUnavailable;
         break;
       default:
         installmentsToSubtract = daysUnavailable;
+        amountToSubtract = dailyCost * daysUnavailable;
     }
 
-    return installmentsToSubtract;
+    return {
+      installments: installmentsToSubtract,
+      amount: amountToSubtract,
+    };
   }
 
   /**
@@ -271,17 +321,84 @@ export class NewsService {
       throw new NotFoundException('News not found');
     }
 
-    // Recalculate installments if days unavailable changed
+    // Recalculate installments and amount if days unavailable changed
     let installmentsToSubtract = dto.installmentsToSubtract;
+    let amountToSubtract = 0;
+    
     if (
       dto.autoCalculateInstallments &&
       dto.daysUnavailable &&
       existingNews.loanId
     ) {
-      installmentsToSubtract = await this.calculateInstallmentsToSubtract(
+      const result = await this.calculateInstallmentsAndAmount(
         existingNews.loanId,
         dto.daysUnavailable,
       );
+      installmentsToSubtract = result.installments;
+      amountToSubtract = result.amount;
+
+      // If this is an update and the days changed, we need to adjust the loan
+      // First, reverse the old amount (if it existed)
+      if (existingNews.daysUnavailable && existingNews.autoCalculateInstallments) {
+        const oldResult = await this.calculateInstallmentsAndAmount(
+          existingNews.loanId,
+          existingNews.daysUnavailable,
+        );
+        
+        // Add back the old amount
+        const loan = await this.prisma.loan.findUnique({
+          where: { id: existingNews.loanId },
+          select: { 
+            totalAmount: true, 
+            debtRemaining: true,
+            remainingInstallments: true,
+          },
+        });
+
+        if (loan) {
+          // Add back old amount and subtract new amount
+          const netAmountChange = amountToSubtract - oldResult.amount;
+          const netInstallmentsChange = installmentsToSubtract - oldResult.installments;
+          
+          const newTotalAmount = loan.totalAmount - netAmountChange;
+          const newDebtRemaining = loan.debtRemaining - netAmountChange;
+          const newRemainingInstallments = Math.max(0, loan.remainingInstallments - netInstallmentsChange);
+          
+          await this.prisma.loan.update({
+            where: { id: existingNews.loanId },
+            data: { 
+              totalAmount: newTotalAmount,
+              debtRemaining: newDebtRemaining,
+              remainingInstallments: newRemainingInstallments,
+            },
+          });
+        }
+      } else {
+        // This is a new auto-calculation, just subtract the amount
+        const loan = await this.prisma.loan.findUnique({
+          where: { id: existingNews.loanId },
+          select: { 
+            totalAmount: true, 
+            debtRemaining: true,
+            remainingInstallments: true,
+          },
+        });
+
+        if (loan) {
+          const newTotalAmount = loan.totalAmount - amountToSubtract;
+          const newDebtRemaining = loan.debtRemaining - amountToSubtract;
+          const newRemainingInstallments = Math.max(0, loan.remainingInstallments - installmentsToSubtract);
+          
+          await this.prisma.loan.update({
+            where: { id: existingNews.loanId },
+            data: { 
+              totalAmount: newTotalAmount,
+              debtRemaining: newDebtRemaining,
+              remainingInstallments: newRemainingInstallments,
+            },
+          });
+        }
+      }
     }
 
     const updateData: {
@@ -326,6 +443,7 @@ export class NewsService {
 
   /**
    * Delete a news item
+   * If the news had auto-calculated amounts, restore them to the loan
    */
   async remove(id: string) {
     const news = await this.prisma.news.findUnique({
@@ -334,6 +452,39 @@ export class NewsService {
 
     if (!news) {
       throw new NotFoundException('News not found');
+    }
+
+    // If this news had auto-calculated amounts, restore them to the loan
+    if (news.loanId && news.autoCalculateInstallments && news.daysUnavailable) {
+      const result = await this.calculateInstallmentsAndAmount(
+        news.loanId,
+        news.daysUnavailable,
+      );
+
+      const loan = await this.prisma.loan.findUnique({
+        where: { id: news.loanId },
+        select: { 
+          totalAmount: true, 
+          debtRemaining: true,
+          remainingInstallments: true,
+        },
+      });
+
+      if (loan) {
+        // Add back the amount that was subtracted
+        const newTotalAmount = loan.totalAmount + result.amount;
+        const newDebtRemaining = loan.debtRemaining + result.amount;
+        const newRemainingInstallments = loan.remainingInstallments + result.installments;
+        
+        await this.prisma.loan.update({
+          where: { id: news.loanId },
+          data: { 
+            totalAmount: newTotalAmount,
+            debtRemaining: newDebtRemaining,
+            remainingInstallments: newRemainingInstallments,
+          },
+        });
+      }
     }
 
     return this.prisma.news.delete({

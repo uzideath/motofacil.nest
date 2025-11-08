@@ -21,7 +21,7 @@ export class NewsController {
 
   @Post()
   create(@Body() createNewsDto: CreateNewsDto, @Request() req: any) {
-    return this.newsService.create(createNewsDto, req.user.userId);
+    return this.newsService.create(createNewsDto, req.user.sub);
   }
 
   @Get()
