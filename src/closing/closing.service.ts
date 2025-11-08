@@ -30,6 +30,7 @@ export class ClosingService {
       installmentIds,
       expenseIds = [],
       createdById,
+      date,
     } = dto;
 
     const installments = await this.prisma.installment.findMany({
@@ -55,12 +56,16 @@ export class ClosingService {
       throw new NotFoundException('Proveedor no encontrado');
     }
 
+    // Use provided date or default to today (Colombia timezone)
+    const closingDate = date ? new Date(date) : new Date()
+
     return this.prisma.cashRegister.create({
       data: {
         cashInRegister,
         cashFromTransfers,
         cashFromCards,
         notes,
+        date: closingDate,
         provider: { connect: { id: providerId } }, 
         createdBy: createdById ? { connect: { id: createdById } } : undefined,
         payments: {

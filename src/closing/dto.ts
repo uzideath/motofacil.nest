@@ -38,6 +38,10 @@ export class CreateCashRegisterDto {
 
   @IsUUID()
   createdById: string
+
+  @IsOptional()
+  @IsDateString()
+  date?: string
 }
 
 
