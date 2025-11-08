@@ -43,6 +43,26 @@ export class CreateReceiptDto {
   @IsString()
   @IsOptional()
   storeId?: string;
+
+  @IsNumber()
+  @IsOptional()
+  paidInstallments?: number;
+
+  @IsNumber()
+  @IsOptional()
+  remainingInstallments?: number;
+
+  @IsNumber()
+  @IsOptional()
+  totalInstallments?: number;
+
+  @IsNumber()
+  @IsOptional()
+  daysSinceLastPayment?: number;
+
+  @IsDateString()
+  @IsOptional()
+  lastPaymentDate?: string;
 }
 
 export class SendReceiptWhatsappDto {

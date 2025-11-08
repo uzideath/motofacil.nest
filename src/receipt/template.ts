@@ -141,6 +141,13 @@ export const templateHtml = `
 
     <div class="total">TOTAL: {{formattedTotal}}</div>
 
+    <div class="section" style="margin-top: 10px; padding: 8px; background-color: #f5f5f5; border-radius: 4px;">
+      <div class="label" style="font-size: 16px; margin-bottom: 4px;">Estado de Cuotas:</div>
+      <div style="font-size: 17px; margin-bottom: 6px;">{{paymentStatus}}</div>
+      <div style="font-size: 17px; font-weight: bold; margin-top: 6px;">{{paymentDaysStatus}}</div>
+      <div style="font-size: 16px; margin-top: 4px; color: #666;">Días desde última cuota: {{daysSinceLastPayment}}</div>
+    </div>
+
     <div class="notes">
       <div class="label">Notas:</div>
       <div>{{notes}}</div>

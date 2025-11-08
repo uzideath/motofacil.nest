@@ -75,6 +75,29 @@ export class ReceiptService {
       ? new Date(dto.latePaymentDate)
       : new Date(dto.paymentDate);
 
+    // Calculate days since last payment (excluding Sundays)
+    const daysSinceLastPayment = dto.lastPaymentDate 
+      ? this.calculateDaysSinceLastPayment(dto.lastPaymentDate)
+      : (dto.daysSinceLastPayment ?? null);
+
+    // Format payment status information
+    let paymentStatus = "";
+    if (dto.remainingInstallments !== undefined && dto.paidInstallments !== undefined) {
+      paymentStatus = `Cuotas pagadas: ${dto.paidInstallments} de ${dto.totalInstallments || (dto.paidInstallments + dto.remainingInstallments)} | Cuotas pendientes: ${dto.remainingInstallments}`;
+    }
+
+    // Add days since last payment status
+    let paymentDaysStatus = "";
+    if (daysSinceLastPayment !== null) {
+      if (daysSinceLastPayment === 0) {
+        paymentDaysStatus = "Estado: Al día";
+      } else if (daysSinceLastPayment === 1) {
+        paymentDaysStatus = "Estado: Vence hoy";
+      } else {
+        paymentDaysStatus = `Estado: ${daysSinceLastPayment} días atrasado`;
+      }
+    }
+
     const data = {
       ...dto,
       storeName,
@@ -87,7 +110,10 @@ export class ReceiptService {
       concept: dto.concept || "Servicio de transporte",
       formattedPaymentDate: this.formatDateOnly(displayDate), // Show closing date (latePaymentDate for late, paymentDate for on-time)
       formattedGeneratedDate: this.formatDate(new Date()), // Generated date (with time)
-      notes: dto.notes || "Sin observaciones adicionales." 
+      notes: dto.notes || "Sin observaciones adicionales.",
+      paymentStatus, // Add payment status string
+      paymentDaysStatus, // Add days since last payment status
+      daysSinceLastPayment: daysSinceLastPayment ?? 0, // Raw days count
     };
 
     return templateHtml
@@ -103,7 +129,10 @@ export class ReceiptService {
       .replace(/{{receiptNumber}}/g, data.receiptNumber)
       .replace(/{{paymentDate}}/g, data.formattedPaymentDate)
       .replace(/{{generatedDate}}/g, data.formattedGeneratedDate)
-      .replace(/{{notes}}/g, data.notes) 
+      .replace(/{{notes}}/g, data.notes)
+      .replace(/{{paymentStatus}}/g, data.paymentStatus)
+      .replace(/{{paymentDaysStatus}}/g, data.paymentDaysStatus)
+      .replace(/{{daysSinceLastPayment}}/g, String(data.daysSinceLastPayment)) 
   }
 
   private formatCurrency(value: number): string {
@@ -140,7 +169,37 @@ export class ReceiptService {
     return format(localDate, "dd 'de' MMMM 'de' yyyy", { locale: es })
   }
 
-
+  private calculateDaysSinceLastPayment(lastPaymentDate: string | Date): number {
+    const timeZone = "America/Bogota"
+    
+    // Convert last payment date to Colombian timezone
+    const lastPayment = typeof lastPaymentDate === "string" 
+      ? new Date(lastPaymentDate) 
+      : lastPaymentDate
+    const start = utcToZonedTime(lastPayment, timeZone)
+    
+    // Get current date in Colombian timezone
+    const now = new Date()
+    const end = utcToZonedTime(now, timeZone)
+    
+    // Normalize to start of day for both dates
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate())
+    
+    let count = 0
+    const cursor = new Date(startDay)
+    
+    while (cursor <= endDay) {
+      // getDay(): 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      if (cursor.getDay() !== 0) {
+        count++
+      }
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    
+    // Convert inclusive day count into a non-inclusive difference
+    return Math.max(0, count - 1)
+  }
 
   private generateReceiptNumber(uuid: string): string {
     const cleanId = uuid.replace(/-/g, "")
