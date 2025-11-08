@@ -1,12 +1,13 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { RolesGuard } from './guards/roles.guard';
-import { PrismaService } from 'src/prisma.service';
+import { PermissionsGuard } from './guards/permissions.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
   imports: [
@@ -20,9 +21,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         signOptions: { expiresIn: config.get('JWT_ACCESS_EXPIRES_IN') || '15m' },
       }),
     }),
+    forwardRef(() => PermissionsModule),
   ],
   controllers: [AuthController],
-  providers: [PrismaService, AuthService, JwtStrategy, RolesGuard],
-  exports: [AuthService, JwtModule, JwtStrategy],
+  providers: [AuthService, JwtStrategy, RolesGuard, PermissionsGuard],
+  exports: [AuthService, JwtModule, JwtStrategy, PermissionsGuard],
 })
 export class AuthModule { }

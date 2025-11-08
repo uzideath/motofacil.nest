@@ -6,7 +6,7 @@ export class SendAttachmentDto {
     @Matches(/^\+?[0-9]{10,15}$/, {
         message: "Phone number must be between 10 and 15 digits, optionally starting with +",
     })
-    phoneNumber: string
+    number: string
 
     @IsOptional()
     @IsString()
@@ -19,11 +19,11 @@ export class SendMessageDto {
     @Matches(/^\+?[0-9]{10,15}$/, {
         message: "Phone number must be between 10 and 15 digits, optionally starting with +",
     })
-    phoneNumber: string
+    number: string
 
     @IsNotEmpty()
     @IsString()
-    message: string
+    text: string
 }
 
 export class SendRemoteAttachmentDto {
@@ -32,7 +32,7 @@ export class SendRemoteAttachmentDto {
     @Matches(/^\+?[0-9]{10,15}$/, {
         message: "Phone number must be between 10 and 15 digits, optionally starting with +",
     })
-    phoneNumber: string
+    number: string
 
     @IsNotEmpty()
     @IsUrl()
@@ -49,4 +49,34 @@ export class SendRemoteAttachmentDto {
     @IsOptional()
     @IsString()
     caption?: string
+}
+
+export class SendBase64MediaDto {
+    @IsNotEmpty()
+    @IsString()
+    @Matches(/^\+?[0-9]{10,15}$/, {
+        message: "Phone number must be between 10 and 15 digits, optionally starting with +",
+    })
+    number: string
+
+    // Evolution expects mediaMessage.mediaType; we accept 'mediatype' in payload and map it
+    @IsNotEmpty()
+    @IsString()
+    mediatype: string // image | video | document | audio
+
+    @IsOptional()
+    @IsString()
+    mimetype?: string
+
+    @IsOptional()
+    @IsString()
+    caption?: string
+
+    @IsNotEmpty()
+    @IsString()
+    media: string // pure base64 without data URI prefix
+
+    @IsOptional()
+    @IsString()
+    fileName?: string // required for document
 }

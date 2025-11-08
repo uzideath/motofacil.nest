@@ -4,10 +4,10 @@ import { AppService } from './app.service';
 import { LoanModule } from './loan/loan.module';
 import { UserModule } from './user/user.module';
 import { InstallmentModule } from './installment/installment.module';
-import { MotorcycleModule } from './motorcycle/motorcycle.module';
+import { VehicleModule } from './vehicle/vehicle.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { OwnersModule } from './owners/owners.module';
@@ -20,6 +20,14 @@ import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ProvidersModule } from './providers/providers.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { PrismaModule } from './prisma.module';
+import { CashFlowModule } from './cash-flow/cash-flow.module';
+import { ReportsModule } from './reports/reports.module';
+import { LoggerModule } from './lib/logger/logger.module';
+import { LoggingInterceptor } from './lib/interceptors/logging.interceptor';
+import { ActionLoggingInterceptor } from './lib/interceptors/action-logging.interceptor';
+import { PermissionsModule } from './permissions/permissions.module';
 
 @Module({
   imports: [
@@ -27,10 +35,14 @@ import { ProvidersModule } from './providers/providers.module';
       isGlobal: true,
     }),
     ScheduleModule.forRoot(),
+    LoggerModule,
+    PrismaModule,
+    AuthModule,
+    PermissionsModule,
     UserModule,
     LoanModule,
     InstallmentModule,
-    MotorcycleModule,
+    VehicleModule,
     AuthModule,
     OwnersModule,
     ClosingModule,
@@ -43,12 +55,17 @@ import { ProvidersModule } from './providers/providers.module';
       serveRoot: "/uploads",
     }),
     ProvidersModule,
+    DashboardModule,
+    CashFlowModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ActionLoggingInterceptor },
   ],
 })
 export class AppModule { }

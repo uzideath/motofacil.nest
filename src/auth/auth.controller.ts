@@ -18,6 +18,7 @@ import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/user';
 import { CurrentRole } from './decorators/role';
 import { IsOwner } from './decorators/owner';
+import { LogAction, ActionType } from '../lib/decorators/log-action.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -25,12 +26,14 @@ export class AuthController {
 
 
   @Post('register')
+  @LogAction(ActionType.CREATE, 'User', 'User registration')
   register(@Body() dto: RegisterDto) {
     return this.auth.register(dto.name, dto.username, dto.password, dto.roles);
   }
 
   @Public()
   @Post('login')
+  @LogAction(ActionType.CUSTOM, 'Auth', 'User login')
   login(@Body() { username, password }: LoginDto) {
     return this.auth.login(username, password);
   }
@@ -38,12 +41,14 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('USER', 'ADMIN')
   @Post('me')
+  @LogAction(ActionType.QUERY, 'User', 'Get user profile')
   profile(@Request() req: Req) {
     return req.user;
   }
 
   @Public()
   @Post('refresh')
+  @LogAction(ActionType.CUSTOM, 'Auth', 'Refresh token')
   async refresh(@Body() body: { refresh_token: string }) {
     if (!body.refresh_token) {
       throw new ForbiddenException('Refresh token requerido');
@@ -53,6 +58,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
+  @LogAction(ActionType.CUSTOM, 'Auth', 'User logout')
   logout(@CurrentUser() user: JwtPayload) {
     return this.auth.logout(user.sub);
   }
@@ -60,12 +66,14 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Post('admin-action')
+  @LogAction(ActionType.CUSTOM, 'Auth', 'Admin action')
   adminAction() {
     return { ok: true, msg: 'You’re an admin!' };
   }
 
   @Post('test-role')
   @UseGuards(JwtAuthGuard)
+  @LogAction(ActionType.QUERY, 'User', 'Test user role')
   testRole(@CurrentRole() role: string) {
     return { role };
   }
@@ -73,6 +81,7 @@ export class AuthController {
   @Get('profile/:id')
   @UseGuards(JwtAuthGuard)
   @IsOwner('id')
+  @LogAction(ActionType.QUERY, 'User', 'Get user profile by ID')
   getProfile(@Param('id') id: string) {
     return { msg: `Accediendo al perfil del owner ${id}` };
   }

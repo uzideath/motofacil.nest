@@ -41,7 +41,7 @@ export class CreateCashRegisterDto {
 
   @IsOptional()
   @IsDateString()
-  date?: string
+  closingDate?: string // The date when the closing is created
 }
 
 
@@ -79,6 +79,10 @@ export class FilterInstallmentsDto {
   @IsOptional()
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod
+
+  @IsOptional()
+  @IsDateString()
+  specificDate?: string // Filter payments for a specific date (YYYY-MM-DD)
 }
 
 export class FindOneCashRegisterResponseDto {
@@ -129,7 +133,7 @@ export class UserDto {
   name: string
 }
 
-export class MotorcycleDto {
+export class VehicleDto {
   @IsUUID()
   id: string
 
@@ -143,8 +147,8 @@ export class LoanDto {
   user: UserDto
 
   @ValidateNested()
-  @Type(() => MotorcycleDto)
-  motorcycle: MotorcycleDto
+  @Type(() => VehicleDto)
+  vehicle: VehicleDto
 }
 
 export class CashRegisterInstallmentDto {
