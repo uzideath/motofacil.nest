@@ -58,10 +58,17 @@ export class ClosingService {
       closingDate,
     } = dto;
 
-    // Normalize to just the date part (YYYY-MM-DD) for comparison
-    const normalizeDate = (date: Date): string => {
+    // Use provided closing date or default to today
+    // Normalize to midnight UTC to avoid timezone issues
+    const targetClosingDate = closingDate ? new Date(closingDate) : new Date();
+    targetClosingDate.setUTCHours(0, 0, 0, 0);
+
+    // Helper function to normalize dates to just the date part (YYYY-MM-DD)
+    const normalizeDateString = (date: Date): string => {
       return date.toISOString().split('T')[0];
     };
+
+    const targetDateString = normalizeDateString(targetClosingDate);
 
     // Fetch and validate installments
     const installments = await this.prisma.installment.findMany({
@@ -72,11 +79,27 @@ export class ClosingService {
       throw new NotFoundException('Algunos pagos no fueron encontrados');
     }
 
-    // Use the provided closing date or current date
-    const targetClosingDate = closingDate ? new Date(closingDate) : new Date();
-    
-    // Normalize to midnight UTC to avoid timezone issues
-    targetClosingDate.setUTCHours(0, 0, 0, 0);
+    // Validate that all installments belong to the closing date
+    const invalidInstallments = installments.filter(installment => {
+      const paymentDateString = normalizeDateString(installment.paymentDate);
+      const matches = paymentDateString === targetDateString;
+      
+      if (!matches) {
+        console.log(`❌ Installment ${installment.id} date mismatch:`, {
+          paymentDate: paymentDateString,
+          targetDate: targetDateString,
+        });
+      }
+      
+      return !matches;
+    });
+
+    if (invalidInstallments.length > 0) {
+      const formattedTargetDate = format(targetClosingDate, "dd 'de' MMMM 'de' yyyy", { locale: es });
+      throw new BadRequestException(
+        `Los siguientes pagos no corresponden a la fecha del cierre (${formattedTargetDate}): ${invalidInstallments.map(i => i.id).join(', ')}`
+      );
+    }
 
     // Validate expenses if provided
     if (expenseIds.length) {
@@ -87,6 +110,28 @@ export class ClosingService {
       if (expenses.length !== expenseIds.length) {
         throw new NotFoundException('Algunos egresos no fueron encontrados');
       }
+
+      // Validate that all expenses belong to the closing date
+      const invalidExpenses = expenses.filter(expense => {
+        const expenseDateString = normalizeDateString(expense.date);
+        const matches = expenseDateString === targetDateString;
+        
+        if (!matches) {
+          console.log(`❌ Expense ${expense.id} date mismatch:`, {
+            expenseDate: expenseDateString,
+            targetDate: targetDateString,
+          });
+        }
+        
+        return !matches;
+      });
+
+      if (invalidExpenses.length > 0) {
+        const formattedTargetDate = format(targetClosingDate, "dd 'de' MMMM 'de' yyyy", { locale: es });
+        throw new BadRequestException(
+          `Los siguientes egresos no corresponden a la fecha del cierre (${formattedTargetDate}): ${invalidExpenses.map(e => e.id).join(', ')}`
+        );
+      }
     }
 
     const provider = await this.prisma.provider.findUnique({
@@ -96,8 +141,9 @@ export class ClosingService {
       throw new NotFoundException('Proveedor no encontrado');
     }
 
-    // Use provided date or default to today (Colombia timezone)
-    const closingDate = date ? new Date(date) : new Date()
+    console.log('✅ Creating closing for date:', targetDateString);
+    console.log('   Installments:', installmentIds.length);
+    console.log('   Expenses:', expenseIds.length);
 
     return this.prisma.cashRegister.create({
       data: {
@@ -106,7 +152,6 @@ export class ClosingService {
         cashFromTransfers,
         cashFromCards,
         notes,
-        date: closingDate,
         provider: { connect: { id: providerId } }, 
         createdBy: createdById ? { connect: { id: createdById } } : undefined,
         payments: {
@@ -297,35 +342,8 @@ export class ClosingService {
       whereInstallments.paymentMethod = filter.paymentMethod
     }
 
-    // Default to today's date range if no dates are provided
+    // Date filtering logic
     if (filter.startDate || filter.endDate) {
-    // If specificDate is provided, filter by exact date (ignoring time)
-    if (filter.specificDate) {
-      const targetDate = new Date(filter.specificDate)
-      // Use UTC to avoid timezone issues
-      const startOfDay = new Date(Date.UTC(
-        targetDate.getUTCFullYear(),
-        targetDate.getUTCMonth(),
-        targetDate.getUTCDate(),
-        0, 0, 0, 0
-      ))
-      const endOfDay = new Date(Date.UTC(
-        targetDate.getUTCFullYear(),
-        targetDate.getUTCMonth(),
-        targetDate.getUTCDate(),
-        23, 59, 59, 999
-      ))
-
-      console.log('🔍 Backend - Filtering installments by date:')
-      console.log('   Input specificDate:', filter.specificDate)
-      console.log('   Parsed targetDate:', targetDate)
-      console.log('   Query range:', { startOfDay, endOfDay })
-
-      whereInstallments.paymentDate = {
-        gte: startOfDay,
-        lte: endOfDay,
-      }
-    } else if (filter.startDate || filter.endDate) {
       whereInstallments.paymentDate = {}
       if (filter.startDate) {
         whereInstallments.paymentDate.gte = new Date(filter.startDate)
@@ -370,28 +388,6 @@ export class ClosingService {
 
     // Apply the same date logic for expenses
     if (filter.startDate || filter.endDate) {
-    // If specificDate is provided, filter expenses by exact date too
-    if (filter.specificDate) {
-      const targetDate = new Date(filter.specificDate)
-      // Use UTC to avoid timezone issues
-      const startOfDay = new Date(Date.UTC(
-        targetDate.getUTCFullYear(),
-        targetDate.getUTCMonth(),
-        targetDate.getUTCDate(),
-        0, 0, 0, 0
-      ))
-      const endOfDay = new Date(Date.UTC(
-        targetDate.getUTCFullYear(),
-        targetDate.getUTCMonth(),
-        targetDate.getUTCDate(),
-        23, 59, 59, 999
-      ))
-
-      whereExpenses.date = {
-        gte: startOfDay,
-        lte: endOfDay,
-      }
-    } else if (filter.startDate || filter.endDate) {
       whereExpenses.date = {}
       if (filter.startDate) {
         whereExpenses.date.gte = new Date(filter.startDate)
