@@ -41,6 +41,7 @@ model Store {
   cashRegisters CashRegister[]
   expenses      Expense[]
   auditLogs     AuditLog[]
+  news          News[]
 
   @@index([status])
   @@index([code])
@@ -75,6 +76,7 @@ model Employee {
   installments  Installment[]
   cashRegisters CashRegister[]
   auditLogs     AuditLog[]
+  news          News[]
 
   @@index([storeId])
   @@index([role])
@@ -197,6 +199,7 @@ model Loan {
 
   // Relaciones
   payments Installment[]
+  news     News[]
 
   @@index([storeId])
   @@index([storeId, status])
@@ -601,4 +604,62 @@ enum ScheduleFrequency {
   MONTHLY
   QUARTERLY
   YEARLY
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEWS MODEL - Loan-specific and Store-wide announcements
+// ═══════════════════════════════════════════════════════════════════════════
+
+model News {
+  id          String       @id @default(uuid())
+  type        NewsType     // LOAN_SPECIFIC or STORE_WIDE
+  category    NewsCategory // WORKSHOP, MAINTENANCE, DAY_OFF, etc.
+  title       String
+  description String       @db.Text
+  notes       String?      @db.Text
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean      @default(true)
+  
+  // Auto-calculation fields (for workshop/maintenance scenarios)
+  autoCalculateInstallments Boolean @default(false)
+  daysUnavailable          Int?     // Number of days vehicle is unavailable
+  installmentsToSubtract   Int?     // Calculated or manually set installments to subtract
+  
+  // Relations
+  storeId     String
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  
+  loanId      String?      // Only for LOAN_SPECIFIC news
+  loan        Loan?        @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  
+  createdById String
+  createdBy   Employee     @relation(fields: [createdById], references: [id])
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  @@index([storeId])
+  @@index([loanId])
+  @@index([type])
+  @@index([category])
+  @@index([isActive])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+enum NewsType {
+  LOAN_SPECIFIC
+  STORE_WIDE
+}
+
+enum NewsCategory {
+  WORKSHOP
+  MAINTENANCE
+  ACCIDENT
+  THEFT
+  DAY_OFF
+  HOLIDAY
+  SYSTEM_MAINTENANCE
+  OTHER
 }

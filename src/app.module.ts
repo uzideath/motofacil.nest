@@ -30,6 +30,7 @@ import { ActionLoggingInterceptor } from './lib/interceptors/action-logging.inte
 import { PermissionsModule } from './permissions/permissions.module';
 import { StoreModule } from './store/store.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { NewsModule } from './news/news.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     CashFlowModule,
     ReportsModule,
     AnalyticsModule,
+    NewsModule,
   ],
   controllers: [AppController],
   providers: [
