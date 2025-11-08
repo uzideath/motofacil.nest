@@ -260,6 +260,7 @@ export class ClosingService {
       whereInstallments.paymentMethod = filter.paymentMethod
     }
 
+    // Default to today's date range if no dates are provided
     if (filter.startDate || filter.endDate) {
       whereInstallments.paymentDate = {}
       if (filter.startDate) {
@@ -267,6 +268,13 @@ export class ClosingService {
       }
       if (filter.endDate) {
         whereInstallments.paymentDate.lte = new Date(filter.endDate)
+      }
+    } else {
+      // Default to today's date range using Colombia timezone
+      const { startUtc, endUtc } = getColombiaDayRange(new Date())
+      whereInstallments.paymentDate = {
+        gte: startUtc,
+        lte: endUtc,
       }
     }
 
@@ -287,6 +295,7 @@ export class ClosingService {
       cashRegisterId: null,
     }
 
+    // Apply the same date logic for expenses
     if (filter.startDate || filter.endDate) {
       whereExpenses.date = {}
       if (filter.startDate) {
@@ -294,6 +303,13 @@ export class ClosingService {
       }
       if (filter.endDate) {
         whereExpenses.date.lte = new Date(filter.endDate)
+      }
+    } else {
+      // Default to today's date range using Colombia timezone
+      const { startUtc, endUtc } = getColombiaDayRange(new Date())
+      whereExpenses.date = {
+        gte: startUtc,
+        lte: endUtc,
       }
     }
 
