@@ -86,18 +86,39 @@ export class LoanService extends BaseStoreService {
     const paymentFrequency = dto.paymentFrequency ?? PaymentFrequency.DAILY;
 
     // Calculate endDate based on loanTermMonths or provided endDate
-    // If loanTermMonths is provided, calculate end date by adding months (no Sunday exclusion)
-    const endDate: Date = dto.endDate 
-      ? new Date(dto.endDate)
-      : dto.loanTermMonths
-        ? addMonths(startDate, dto.loanTermMonths)
-        : paymentFrequency === PaymentFrequency.DAILY
-          ? addMonths(startDate, Math.ceil(dto.installments / 30)) // Default: assume ~30 days per month
-          : paymentFrequency === PaymentFrequency.WEEKLY
-            ? addWeeks(startDate, dto.installments)
-            : paymentFrequency === PaymentFrequency.BIWEEKLY
-              ? addWeeks(startDate, dto.installments * 2)
-              : addMonths(startDate, dto.installments);
+    // Priority: 1) Provided endDate, 2) loanTermMonths, 3) Calculate from installments
+    let endDate: Date;
+    
+    if (dto.endDate) {
+      // Use provided end date
+      endDate = new Date(dto.endDate);
+    } else if (dto.loanTermMonths) {
+      // Calculate end date by adding months (includes all days, no Sunday exclusion)
+      endDate = addMonths(startDate, dto.loanTermMonths);
+    } else {
+      // Fallback: calculate from installments and frequency
+      switch (paymentFrequency) {
+        case PaymentFrequency.DAILY:
+          // For daily: each installment is 1 day (all 7 days of the week)
+          endDate = addDays(startDate, dto.installments);
+          break;
+        case PaymentFrequency.WEEKLY:
+          // For weekly: each installment is 1 week
+          endDate = addWeeks(startDate, dto.installments);
+          break;
+        case PaymentFrequency.BIWEEKLY:
+          // For biweekly: each installment is 2 weeks
+          endDate = addWeeks(startDate, dto.installments * 2);
+          break;
+        case PaymentFrequency.MONTHLY:
+          // For monthly: each installment is 1 month
+          endDate = addMonths(startDate, dto.installments);
+          break;
+        default:
+          // Default to monthly if unknown
+          endDate = addMonths(startDate, dto.installments);
+      }
+    }
 
     const totalLoans = await this.prisma.loan.count();
     const nextNumber = totalLoans + 1;
@@ -205,21 +226,36 @@ export class LoanService extends BaseStoreService {
     
     if (dto.startDate && !dto.endDate) {
       const startDate = new Date(dto.startDate);
-      const paymentFrequency = dto.paymentFrequency;
+      const paymentFrequency = dto.paymentFrequency ?? PaymentFrequency.DAILY;
       const installments = dto.installments;
       
-      // Calculate end date based on loanTermMonths or payment frequency
-      const endDate: Date = dto.loanTermMonths
-        ? addMonths(startDate, dto.loanTermMonths)
-        : paymentFrequency === PaymentFrequency.DAILY && installments
-          ? addMonths(startDate, Math.ceil(installments / 30))
-          : paymentFrequency === PaymentFrequency.WEEKLY && installments
-            ? addWeeks(startDate, installments)
-            : paymentFrequency === PaymentFrequency.BIWEEKLY && installments
-              ? addWeeks(startDate, installments * 2)
-              : installments
-                ? addMonths(startDate, installments)
-                : addMonths(startDate, 12); // Default to 12 months
+      // Calculate end date - same logic as create method
+      let endDate: Date;
+      
+      if (dto.loanTermMonths) {
+        // Calculate end date by adding months (includes all days, no Sunday exclusion)
+        endDate = addMonths(startDate, dto.loanTermMonths);
+      } else if (installments) {
+        // Calculate from installments and frequency
+        switch (paymentFrequency) {
+          case PaymentFrequency.DAILY:
+            endDate = addDays(startDate, installments);
+            break;
+          case PaymentFrequency.WEEKLY:
+            endDate = addWeeks(startDate, installments);
+            break;
+          case PaymentFrequency.BIWEEKLY:
+            endDate = addWeeks(startDate, installments * 2);
+            break;
+          case PaymentFrequency.MONTHLY:
+            endDate = addMonths(startDate, installments);
+            break;
+          default:
+            endDate = addMonths(startDate, 12); // Default to 12 months
+        }
+      } else {
+        endDate = addMonths(startDate, 12); // Default to 12 months
+      }
       
       updateData.endDate = endDate;
     } else if (dto.endDate) {
@@ -284,16 +320,25 @@ export class LoanService extends BaseStoreService {
     if (endDate) {
       newEndDate = new Date(endDate);
     } else {
-      // Recalculate end date based on new start date and payment frequency
+      // Recalculate end date based on new start date and payment frequency (includes all days)
       const paymentFrequency = loan.paymentFrequency as PaymentFrequency;
-      newEndDate =
-        paymentFrequency === PaymentFrequency.DAILY
-          ? addMonths(newStartDate, Math.ceil(loan.installments / 30))
-          : paymentFrequency === PaymentFrequency.WEEKLY
-            ? addWeeks(newStartDate, loan.installments)
-            : paymentFrequency === PaymentFrequency.BIWEEKLY
-              ? addWeeks(newStartDate, loan.installments * 2)
-              : addMonths(newStartDate, loan.installments);
+      
+      switch (paymentFrequency) {
+        case PaymentFrequency.DAILY:
+          newEndDate = addDays(newStartDate, loan.installments);
+          break;
+        case PaymentFrequency.WEEKLY:
+          newEndDate = addWeeks(newStartDate, loan.installments);
+          break;
+        case PaymentFrequency.BIWEEKLY:
+          newEndDate = addWeeks(newStartDate, loan.installments * 2);
+          break;
+        case PaymentFrequency.MONTHLY:
+          newEndDate = addMonths(newStartDate, loan.installments);
+          break;
+        default:
+          newEndDate = addMonths(newStartDate, loan.installments);
+      }
     }
     
     // Update the loan with new dates

@@ -1,10 +1,20 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNewsDto, UpdateNewsDto, QueryNewsDto, NewsType, NewsCategory } from './dto';
+import { differenceInDays } from 'date-fns';
 
 @Injectable()
 export class NewsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Calculate the number of days between start and end date (inclusive)
+   * Working days: Monday to Sunday (all 7 days, no exclusions)
+   */
+  private calculateDaysBetweenDates(startDate: Date, endDate: Date): number {
+    const days = differenceInDays(endDate, startDate) + 1; // +1 to include both start and end dates
+    return Math.max(0, days); // Ensure non-negative
+  }
 
   /**
    * Create a new news item
@@ -39,16 +49,24 @@ export class NewsService {
       }
     }
 
+    // Calculate days unavailable from date range if not explicitly provided
+    let daysUnavailable = dto.daysUnavailable;
+    if (!daysUnavailable && dto.startDate && dto.endDate) {
+      const startDate = new Date(dto.startDate);
+      const endDate = new Date(dto.endDate);
+      daysUnavailable = this.calculateDaysBetweenDates(startDate, endDate);
+    }
+
     // Auto-calculate installments if enabled
     let installmentsToSubtract = dto.installmentsToSubtract || 0;
     let affectedLoansCount = 0;
     
-    if (dto.autoCalculateInstallments && dto.daysUnavailable) {
+    if (dto.autoCalculateInstallments && daysUnavailable) {
       if (dto.type === NewsType.LOAN_SPECIFIC && dto.loanId) {
         // Handle single loan
         const result = await this.calculateInstallmentsAndAmount(
           dto.loanId,
-          dto.daysUnavailable,
+          daysUnavailable,
         );
         installmentsToSubtract = result.installments;
         const amountToSubtract = result.amount;
@@ -110,7 +128,7 @@ export class NewsService {
         for (const loan of loans) {
           const result = await this.calculateInstallmentsAndAmount(
             loan.id,
-            dto.daysUnavailable,
+            daysUnavailable,
           );
           
           const newTotalAmount = loan.totalAmount - result.amount;
@@ -128,8 +146,8 @@ export class NewsService {
         }
         
         affectedLoansCount = loans.length;
-        // For store-wide news, use average installments
-        installmentsToSubtract = dto.daysUnavailable; // Simplified for store-wide
+        // For store-wide news, use the calculated days unavailable
+        installmentsToSubtract = daysUnavailable; // Simplified for store-wide
       }
     }
 
@@ -145,7 +163,7 @@ export class NewsService {
         endDate: dto.endDate ? new Date(dto.endDate) : null,
         isActive: dto.isActive ?? true,
         autoCalculateInstallments: dto.autoCalculateInstallments ?? false,
-        daysUnavailable: dto.daysUnavailable,
+        daysUnavailable: daysUnavailable || dto.daysUnavailable,
         installmentsToSubtract,
         vehicleType: dto.vehicleType,
         store: {
@@ -176,6 +194,9 @@ export class NewsService {
   /**
    * Calculate how many installments and amount should be subtracted based on days unavailable
    * Returns both the number of installments and the total amount to subtract from the loan
+   * 
+   * Working days: Monday to Sunday (all 7 days of the week)
+   * The days unavailable directly translate to missed installments for daily frequency
    */
   private async calculateInstallmentsAndAmount(
     loanId: string,
@@ -194,37 +215,56 @@ export class NewsService {
       throw new NotFoundException('Loan not found');
     }
 
-    // Calculate daily cost (installment + GPS fee)
-    const dailyCost = loan.installmentPaymentAmmount + loan.gpsInstallmentPayment;
+    // Calculate installment cost per period
+    const installmentCost = loan.installmentPaymentAmmount;
+    const gpsCost = loan.gpsInstallmentPayment;
 
     // Calculate based on payment frequency
+    // Working days are Monday-Sunday (all 7 days), no exclusions
     let installmentsToSubtract = 0;
     let amountToSubtract = 0;
 
     switch (loan.paymentFrequency) {
       case 'DAILY':
-        // For daily payments: 1 day = 1 installment
+        // For daily payments: every day is a working day (Mon-Sun)
+        // 1 day unavailable = 1 installment missed
         installmentsToSubtract = daysUnavailable;
-        amountToSubtract = dailyCost * daysUnavailable;
+        amountToSubtract = (installmentCost + gpsCost) * daysUnavailable;
         break;
       case 'WEEKLY':
-        // For weekly payments: 7 days = 1 installment
+        // For weekly payments: 7 days = 1 installment period
         installmentsToSubtract = Math.floor(daysUnavailable / 7);
-        amountToSubtract = dailyCost * daysUnavailable;
+        // If there's a remainder, calculate fractional installment
+        const weeklyRemainder = daysUnavailable % 7;
+        if (weeklyRemainder > 0) {
+          installmentsToSubtract += weeklyRemainder / 7;
+        }
+        amountToSubtract = (installmentCost + gpsCost) * installmentsToSubtract;
         break;
       case 'BIWEEKLY':
-        // For biweekly payments: 14 days = 1 installment
+        // For biweekly payments: 14 days = 1 installment period
         installmentsToSubtract = Math.floor(daysUnavailable / 14);
-        amountToSubtract = dailyCost * daysUnavailable;
+        // If there's a remainder, calculate fractional installment
+        const biweeklyRemainder = daysUnavailable % 14;
+        if (biweeklyRemainder > 0) {
+          installmentsToSubtract += biweeklyRemainder / 14;
+        }
+        amountToSubtract = (installmentCost + gpsCost) * installmentsToSubtract;
         break;
       case 'MONTHLY':
-        // For monthly payments: 30 days = 1 installment
+        // For monthly payments: 30 days = 1 installment period
         installmentsToSubtract = Math.floor(daysUnavailable / 30);
-        amountToSubtract = dailyCost * daysUnavailable;
+        // If there's a remainder, calculate fractional installment
+        const monthlyRemainder = daysUnavailable % 30;
+        if (monthlyRemainder > 0) {
+          installmentsToSubtract += monthlyRemainder / 30;
+        }
+        amountToSubtract = (installmentCost + gpsCost) * installmentsToSubtract;
         break;
       default:
+        // Default to daily
         installmentsToSubtract = daysUnavailable;
-        amountToSubtract = dailyCost * daysUnavailable;
+        amountToSubtract = (installmentCost + gpsCost) * daysUnavailable;
     }
 
     return {
@@ -377,15 +417,23 @@ export class NewsService {
       throw new NotFoundException('News not found');
     }
 
+    // Calculate days unavailable from date range if not explicitly provided
+    let daysUnavailable = dto.daysUnavailable;
+    if (!daysUnavailable && dto.startDate && dto.endDate) {
+      const startDate = new Date(dto.startDate);
+      const endDate = new Date(dto.endDate);
+      daysUnavailable = this.calculateDaysBetweenDates(startDate, endDate);
+    }
+
     // Recalculate installments and amount if days unavailable changed
     let installmentsToSubtract = dto.installmentsToSubtract;
     
-    if (dto.autoCalculateInstallments && dto.daysUnavailable) {
+    if (dto.autoCalculateInstallments && daysUnavailable) {
       if (existingNews.type === NewsType.LOAN_SPECIFIC && existingNews.loanId) {
         // Handle single loan update
         const result = await this.calculateInstallmentsAndAmount(
           existingNews.loanId,
-          dto.daysUnavailable,
+          daysUnavailable,
         );
         installmentsToSubtract = result.installments;
         const amountToSubtract = result.amount;
@@ -469,7 +517,7 @@ export class NewsService {
         for (const loan of loans) {
           const result = await this.calculateInstallmentsAndAmount(
             loan.id,
-            dto.daysUnavailable,
+            daysUnavailable,
           );
           
           // Calculate net change if updating existing auto-calculated news
@@ -499,7 +547,7 @@ export class NewsService {
           });
         }
         
-        installmentsToSubtract = dto.daysUnavailable;
+        installmentsToSubtract = daysUnavailable;
       }
     }
 
@@ -510,6 +558,9 @@ export class NewsService {
     }
     if (dto.endDate) {
       updateData.endDate = new Date(dto.endDate);
+    }
+    if (daysUnavailable !== undefined) {
+      updateData.daysUnavailable = daysUnavailable;
     }
     if (installmentsToSubtract !== undefined) {
       updateData.installmentsToSubtract = installmentsToSubtract;
