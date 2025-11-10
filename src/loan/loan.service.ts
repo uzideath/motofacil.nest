@@ -33,25 +33,13 @@ export class LoanService extends BaseStoreService {
   }
 
   /**
-   * Add business days (Monday-Saturday, excluding Sundays) to a date
+   * Add calendar days to a date (Monday-Sunday, all 7 days)
    * @param startDate - The starting date
-   * @param daysToAdd - Number of business days to add
+   * @param daysToAdd - Number of days to add
    * @returns The calculated end date
    */
-  private addBusinessDays(startDate: Date, daysToAdd: number): Date {
-    let currentDate = new Date(startDate);
-    let addedDays = 0;
-
-    while (addedDays < daysToAdd) {
-      currentDate = addDays(currentDate, 1);
-      
-      // Check if it's not Sunday (0 = Sunday, 6 = Saturday)
-      if (currentDate.getDay() !== 0) {
-        addedDays++;
-      }
-    }
-
-    return currentDate;
+  private addCalendarDays(startDate: Date, daysToAdd: number): Date {
+    return addDays(startDate, daysToAdd);
   }
 
   async create(dto: CreateLoanDto, userStoreId: string | null) {
