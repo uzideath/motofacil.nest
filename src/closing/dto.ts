@@ -10,6 +10,48 @@ export class OwnerDto {
   username: string
 }
 
+export class CashDenominationDto {
+  @IsOptional()
+  @IsNumber()
+  bills_100000?: number
+
+  @IsOptional()
+  @IsNumber()
+  bills_50000?: number
+
+  @IsOptional()
+  @IsNumber()
+  bills_20000?: number
+
+  @IsOptional()
+  @IsNumber()
+  bills_10000?: number
+
+  @IsOptional()
+  @IsNumber()
+  bills_5000?: number
+
+  @IsOptional()
+  @IsNumber()
+  bills_2000?: number
+
+  @IsOptional()
+  @IsNumber()
+  bills_1000?: number
+
+  @IsOptional()
+  @IsNumber()
+  coins_500?: number
+
+  @IsOptional()
+  @IsNumber()
+  coins_200?: number
+
+  @IsOptional()
+  @IsNumber()
+  coins_100?: number
+}
+
 export class CreateCashRegisterDto {
   @IsNumber()
   cashInRegister: number
@@ -46,6 +88,15 @@ export class CreateCashRegisterDto {
   @IsOptional()
   @IsUUID()
   storeId?: string
+
+  @IsOptional()
+  @IsNumber()
+  cashCounted?: number
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CashDenominationDto)
+  denominationCounts?: CashDenominationDto
 }
 
 
@@ -89,6 +140,47 @@ export class FilterInstallmentsDto {
   specificDate?: string // Filter payments for a specific date (YYYY-MM-DD)
 }
 
+export class CashDenominationResponseDto {
+  @IsNumber()
+  bills_100000: number
+
+  @IsNumber()
+  bills_50000: number
+
+  @IsNumber()
+  bills_20000: number
+
+  @IsNumber()
+  bills_10000: number
+
+  @IsNumber()
+  bills_5000: number
+
+  @IsNumber()
+  bills_2000: number
+
+  @IsNumber()
+  bills_1000: number
+
+  @IsNumber()
+  coins_500: number
+
+  @IsNumber()
+  coins_200: number
+
+  @IsNumber()
+  coins_100: number
+
+  @IsNumber()
+  totalCounted: number
+
+  @IsNumber()
+  systemCash: number
+
+  @IsNumber()
+  difference: number
+}
+
 export class FindOneCashRegisterResponseDto {
   @IsUUID()
   id: string
@@ -127,6 +219,11 @@ export class FindOneCashRegisterResponseDto {
   @ValidateNested({ each: true })
   @Type(() => CashRegisterExpenseDto)
   expense: CashRegisterExpenseDto[]
+
+  @ValidateNested()
+  @Type(() => CashDenominationResponseDto)
+  @IsOptional()
+  denominationCount?: CashDenominationResponseDto
 }
 
 export class UserDto {

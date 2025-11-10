@@ -39,6 +39,21 @@ type CashRegisterWithRelations = CashRegister & {
   })[]
   createdBy: Pick<Employee, "id" | "username" | "name"> | null
   provider: Pick<Provider, "id" | "name">
+  denominationCount: {
+    bills_100000: number
+    bills_50000: number
+    bills_20000: number
+    bills_10000: number
+    bills_5000: number
+    bills_2000: number
+    bills_1000: number
+    coins_500: number
+    coins_200: number
+    coins_100: number
+    totalCounted: number
+    systemCash: number
+    difference: number
+  } | null
 }
 
 type InstallmentWithLoan = Installment & {
@@ -70,6 +85,8 @@ export class ClosingService extends BaseStoreService {
       expenseIds = [],
       createdById,
       closingDate,
+      cashCounted,
+      denominationCounts,
     } = dto;
 
     // Get the store ID to use for creation (either user's store or explicitly provided)
@@ -123,7 +140,7 @@ export class ClosingService extends BaseStoreService {
       throw new NotFoundException('Proveedor no encontrado');
     }
 
-    return this.prisma.cashRegister.create({
+    const cashRegister = await this.prisma.cashRegister.create({
       data: {
         date: targetClosingDate,
         cashInRegister,
@@ -145,6 +162,31 @@ export class ClosingService extends BaseStoreService {
         expense: true,
       },
     });
+
+    // Create cash denomination count record if provided
+    if (denominationCounts && cashCounted !== undefined) {
+      await this.prisma.cashDenominationCount.create({
+        data: {
+          cashRegisterId: cashRegister.id,
+          storeId,
+          totalCounted: cashCounted,
+          systemCash: cashInRegister,
+          difference: cashCounted - cashInRegister,
+          bills_100000: denominationCounts.bills_100000 || 0,
+          bills_50000: denominationCounts.bills_50000 || 0,
+          bills_20000: denominationCounts.bills_20000 || 0,
+          bills_10000: denominationCounts.bills_10000 || 0,
+          bills_5000: denominationCounts.bills_5000 || 0,
+          bills_2000: denominationCounts.bills_2000 || 0,
+          bills_1000: denominationCounts.bills_1000 || 0,
+          coins_500: denominationCounts.coins_500 || 0,
+          coins_200: denominationCounts.coins_200 || 0,
+          coins_100: denominationCounts.coins_100 || 0,
+        },
+      });
+    }
+
+    return cashRegister;
   }
 
 
@@ -195,7 +237,8 @@ export class ClosingService extends BaseStoreService {
             id: true,
             name: true,
           },
-        }
+        },
+        denominationCount: true,
       },
       orderBy: { date: "desc" },
     }) as Promise<CashRegisterWithRelations[]>
@@ -245,7 +288,8 @@ export class ClosingService extends BaseStoreService {
             id: true,
             name: true,
           },
-        }
+        },
+        denominationCount: true,
       },
     }) as CashRegisterWithRelations | null
 
@@ -313,6 +357,23 @@ export class ClosingService extends BaseStoreService {
           }
           : undefined,
       })),
+      denominationCount: cierre.denominationCount
+        ? {
+          bills_100000: cierre.denominationCount.bills_100000,
+          bills_50000: cierre.denominationCount.bills_50000,
+          bills_20000: cierre.denominationCount.bills_20000,
+          bills_10000: cierre.denominationCount.bills_10000,
+          bills_5000: cierre.denominationCount.bills_5000,
+          bills_2000: cierre.denominationCount.bills_2000,
+          bills_1000: cierre.denominationCount.bills_1000,
+          coins_500: cierre.denominationCount.coins_500,
+          coins_200: cierre.denominationCount.coins_200,
+          coins_100: cierre.denominationCount.coins_100,
+          totalCounted: cierre.denominationCount.totalCounted,
+          systemCash: cierre.denominationCount.systemCash,
+          difference: cierre.denominationCount.difference,
+        }
+        : undefined,
     }
   }
 
