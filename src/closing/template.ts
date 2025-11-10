@@ -160,6 +160,14 @@ export const templateHtml = `
       <div class="section-title">Resumen</div>
       <div class="summary-box">
         <div class="summary-item">
+          <span>Recaudo de Vehículos:</span>
+          <span>{{formattedTotalBasePayments}}</span>
+        </div>
+        <div class="summary-item">
+          <span>Recaudo de GPS:</span>
+          <span>{{formattedTotalGpsPayments}}</span>
+        </div>
+        <div class="summary-item">
           <span>Total Ingresos:</span>
           <span>{{formattedTotalPayments}}</span>
         </div>
@@ -193,7 +201,21 @@ export const templateHtml = `
     </div>
 
     <div class="section">
-      <div class="section-title">Métodos de Pago</div>
+      <div class="section-title">Recaudo de Vehículos por Método de Pago</div>
+      <div class="payment-methods">
+        {{basePaymentMethods}}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Recaudo de GPS por Método de Pago</div>
+      <div class="payment-methods">
+        {{gpsPaymentMethods}}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Total por Método de Pago (Vehículos + GPS)</div>
       <div class="payment-methods">
         {{paymentMethods}}
       </div>
@@ -215,7 +237,9 @@ export const templateHtml = `
             <th>Placa</th>
             <th>Fecha</th>
             <th>Método</th>
-            <th class="right">Monto</th>
+            <th class="right">Vehículo</th>
+            <th class="right">GPS</th>
+            <th class="right">Total</th>
           </tr>
         </thead>
         <tbody>

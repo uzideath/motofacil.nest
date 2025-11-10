@@ -652,14 +652,41 @@ export class ClosingService extends BaseStoreService {
     await this.validateStoreAccess(closing, userStoreId);
 
     /* Totales -------------------------------------------------------------- */
-    const totalPayments = closing.payments.reduce(
-      (acc, p) => acc + p.amount + (p.gps ?? 0),
+    // Calcular por separado base y GPS
+    const totalBasePayments = closing.payments.reduce(
+      (acc, p) => acc + p.amount,
       0,
     );
+    const totalGpsPayments = closing.payments.reduce(
+      (acc, p) => acc + (p.gps ?? 0),
+      0,
+    );
+    const totalPayments = totalBasePayments + totalGpsPayments;
     const totalExpenses = closing.expense.reduce((acc, e) => acc + e.amount, 0);
     const balance = totalPayments - totalExpenses;
 
     /* Agrupar -------------------------------------------------------------- */
+    // Agrupar pagos base por método
+    const basePaymentsByMethod = closing.payments.reduce<Record<string, number>>(
+      (acc, p) => {
+        acc[p.paymentMethod] = (acc[p.paymentMethod] ?? 0) + p.amount;
+        return acc;
+      },
+      {},
+    );
+
+    // Agrupar GPS por método
+    const gpsPaymentsByMethod = closing.payments.reduce<Record<string, number>>(
+      (acc, p) => {
+        if (p.gps && p.gps > 0) {
+          acc[p.paymentMethod] = (acc[p.paymentMethod] ?? 0) + p.gps;
+        }
+        return acc;
+      },
+      {},
+    );
+
+    // Total combinado por método (para compatibilidad con código existente)
     const paymentsByMethod = closing.payments.reduce<Record<string, number>>(
       (acc, p) => {
         acc[p.paymentMethod] = (acc[p.paymentMethod] ?? 0) + p.amount + (p.gps ?? 0);
@@ -691,9 +718,13 @@ export class ClosingService extends BaseStoreService {
       payments: closing.payments,
       expense: closing.expense,
       totalPayments,
+      totalBasePayments,
+      totalGpsPayments,
       totalExpenses,
       balance,
       paymentsByMethod,
+      basePaymentsByMethod,
+      gpsPaymentsByMethod,
       expensesByCategory,
     });
 
@@ -734,9 +765,13 @@ export class ClosingService extends BaseStoreService {
     payments: CashRegisterWithRelations['payments'];
     expense: CashRegisterWithRelations['expense'];
     totalPayments: number;
+    totalBasePayments: number;
+    totalGpsPayments: number;
     totalExpenses: number;
     balance: number;
     paymentsByMethod: Record<string, number>;
+    basePaymentsByMethod: Record<string, number>;
+    gpsPaymentsByMethod: Record<string, number>;
     expensesByCategory: Record<string, number>;
   }): string {
     const formattedData = {
@@ -744,6 +779,8 @@ export class ClosingService extends BaseStoreService {
       formattedDate: this.formatDateOnly(data.date), // Closing date (date only)
       formattedGeneratedDate: this.formatDate(data.createdAt), // When it was registered (with time)
       formattedTotalPayments: this.formatCurrency(data.totalPayments),
+      formattedTotalBasePayments: this.formatCurrency(data.totalBasePayments),
+      formattedTotalGpsPayments: this.formatCurrency(data.totalGpsPayments),
       formattedTotalExpenses: this.formatCurrency(data.totalExpenses),
       formattedBalance: this.formatCurrency(data.balance),
       provider: data.provider,
@@ -752,6 +789,8 @@ export class ClosingService extends BaseStoreService {
       formattedCashFromCards: this.formatCurrency(data.cashFromCards),
       createdBy: data.createdBy?.username || 'Sistema',
       paymentMethods: this.generatePaymentMethodsHtml(data.paymentsByMethod),
+      basePaymentMethods: this.generatePaymentMethodsHtml(data.basePaymentsByMethod),
+      gpsPaymentMethods: this.generatePaymentMethodsHtml(data.gpsPaymentsByMethod),
       expenseCategories: this.generateExpenseCategoriesHtml(data.expensesByCategory),
       paymentRows: this.generatePaymentRowsHtml(data.payments),
       expenseRows: this.generateExpenseRowsHtml(data.expense),
@@ -764,12 +803,16 @@ export class ClosingService extends BaseStoreService {
       .replace(/{{formattedGeneratedDate}}/g, formattedData.formattedGeneratedDate)
       .replace(/{{createdBy}}/g, formattedData.createdBy)
       .replace(/{{formattedTotalPayments}}/g, formattedData.formattedTotalPayments)
+      .replace(/{{formattedTotalBasePayments}}/g, formattedData.formattedTotalBasePayments)
+      .replace(/{{formattedTotalGpsPayments}}/g, formattedData.formattedTotalGpsPayments)
       .replace(/{{formattedTotalExpenses}}/g, formattedData.formattedTotalExpenses)
       .replace(/{{formattedBalance}}/g, formattedData.formattedBalance)
       .replace(/{{formattedCashInRegister}}/g, formattedData.formattedCashInRegister)
       .replace(/{{formattedCashFromTransfers}}/g, formattedData.formattedCashFromTransfers)
       .replace(/{{formattedCashFromCards}}/g, formattedData.formattedCashFromCards)
       .replace(/{{paymentMethods}}/g, formattedData.paymentMethods)
+      .replace(/{{basePaymentMethods}}/g, formattedData.basePaymentMethods)
+      .replace(/{{gpsPaymentMethods}}/g, formattedData.gpsPaymentMethods)
       .replace(/{{expenseCategories}}/g, formattedData.expenseCategories)
       .replace(/{{paymentRows}}/g, formattedData.paymentRows)
       .replace(/{{expenseRows}}/g, formattedData.expenseRows)
@@ -855,6 +898,8 @@ export class ClosingService extends BaseStoreService {
           <td>${payment.loan.vehicle.plate}</td>
           <td>${this.formatDateOnly(closingDate)}</td>
           <td>${this.getReadablePaymentMethod(payment.paymentMethod)}</td>
+          <td class="right">${this.formatCurrency(payment.amount)}</td>
+          <td class="right">${this.formatCurrency(payment.gps || 0)}</td>
           <td class="right">${this.formatCurrency(payment.amount + (payment.gps || 0))}</td>
         </tr>
       `
