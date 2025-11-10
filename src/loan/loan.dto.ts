@@ -42,6 +42,11 @@ export class CreateLoanDto {
   @Min(1)
   installments: number;
 
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  loanTermMonths?: number;
+
   @IsNumber()
   @Min(0)
   interestRate: number;

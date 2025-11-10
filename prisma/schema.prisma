@@ -181,8 +181,8 @@ model Loan {
   totalAmount               Float
   downPayment               Float
   installments              Int
-  paidInstallments          Int        @default(0)
-  remainingInstallments     Int
+  paidInstallments          Float      @default(0)
+  remainingInstallments     Float
   totalPaid                 Float      @default(0.0)
   debtRemaining             Float
   interestRate              Float

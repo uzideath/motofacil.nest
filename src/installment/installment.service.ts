@@ -61,13 +61,18 @@ export class InstallmentService extends BaseStoreService {
       },
     });
 
-    const updatedPaid = loan.paidInstallments + 1;
-    const updatedRemaining = loan.remainingInstallments - 1;
+    // Calculate fractional installments based on payment amount
+    // If customer pays 20,000 and installment is 25,000, this counts as 0.8 installments
+    const installmentAmount = loan.installmentPaymentAmmount || (loan.debtRemaining / loan.remainingInstallments);
+    const fractionalInstallmentsPaid = dto.amount / installmentAmount;
+    
+    const updatedPaid = loan.paidInstallments + fractionalInstallmentsPaid;
+    const updatedRemaining = Math.max(0, loan.installments - updatedPaid);
     const updatedTotalPaid = loan.totalPaid + dto.amount;
-    const updatedDebt = loan.debtRemaining - dto.amount;
+    const updatedDebt = Math.max(0, loan.debtRemaining - dto.amount);
 
     const newStatus =
-      updatedRemaining <= 0 && updatedDebt <= 0
+      updatedDebt <= 0 || updatedRemaining <= 0
         ? LoanStatus.COMPLETED
         : LoanStatus.ACTIVE;
 

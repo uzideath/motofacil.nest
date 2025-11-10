@@ -80,10 +80,28 @@ export class ReceiptService {
       ? this.calculateDaysSinceLastPayment(dto.lastPaymentDate)
       : (dto.daysSinceLastPayment ?? null);
 
-    // Format payment status information
+    // Format payment status information with fractional installments
     let paymentStatus = "";
     if (dto.remainingInstallments !== undefined && dto.paidInstallments !== undefined) {
-      paymentStatus = `Cuotas pagadas: ${dto.paidInstallments} de ${dto.totalInstallments || (dto.paidInstallments + dto.remainingInstallments)} | Cuotas pendientes: ${dto.remainingInstallments}`;
+      const totalInstallments = dto.totalInstallments || (dto.paidInstallments + dto.remainingInstallments);
+      const paidFormatted = dto.paidInstallments % 1 === 0 
+        ? dto.paidInstallments.toString() 
+        : dto.paidInstallments.toFixed(2);
+      const remainingFormatted = dto.remainingInstallments % 1 === 0 
+        ? dto.remainingInstallments.toString() 
+        : dto.remainingInstallments.toFixed(2);
+      const totalFormatted = totalInstallments % 1 === 0 
+        ? totalInstallments.toString() 
+        : totalInstallments.toFixed(2);
+      
+      paymentStatus = `Cuotas pagadas: ${paidFormatted} de ${totalFormatted} | Cuotas pendientes: ${remainingFormatted}`;
+      
+      // Add debt breakdown if there's a partial installment
+      if (dto.remainingInstallments < 1 && dto.remainingInstallments > 0) {
+        const installmentAmount = dto.amount / (1 - dto.remainingInstallments); // Estimate installment amount
+        const partialDebt = installmentAmount * dto.remainingInstallments;
+        paymentStatus += ` | Deuda parcial: ${this.formatCurrency(partialDebt)}`;
+      }
     }
 
     // Add days since last payment status

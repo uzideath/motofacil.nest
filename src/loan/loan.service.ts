@@ -97,17 +97,19 @@ export class LoanService extends BaseStoreService {
     const startDate = dto.startDate ? new Date(dto.startDate) : new Date();
     const paymentFrequency = dto.paymentFrequency ?? PaymentFrequency.DAILY;
 
-    // Calculate endDate: use provided endDate or calculate based on startDate
-    // Default to 540 business days (18 months, Monday-Saturday, excluding Sundays)
+    // Calculate endDate based on loanTermMonths or provided endDate
+    // If loanTermMonths is provided, calculate end date by adding months (no Sunday exclusion)
     const endDate: Date = dto.endDate 
       ? new Date(dto.endDate)
-      : paymentFrequency === PaymentFrequency.DAILY
-        ? this.addBusinessDays(startDate, 540) // 540 business days ahead (Mon-Sat)
-        : paymentFrequency === PaymentFrequency.WEEKLY
-          ? addWeeks(startDate, dto.installments)
-          : paymentFrequency === PaymentFrequency.BIWEEKLY
-            ? addWeeks(startDate, dto.installments * 2)
-            : addMonths(startDate, dto.installments);
+      : dto.loanTermMonths
+        ? addMonths(startDate, dto.loanTermMonths)
+        : paymentFrequency === PaymentFrequency.DAILY
+          ? addMonths(startDate, Math.ceil(dto.installments / 30)) // Default: assume ~30 days per month
+          : paymentFrequency === PaymentFrequency.WEEKLY
+            ? addWeeks(startDate, dto.installments)
+            : paymentFrequency === PaymentFrequency.BIWEEKLY
+              ? addWeeks(startDate, dto.installments * 2)
+              : addMonths(startDate, dto.installments);
 
     const totalLoans = await this.prisma.loan.count();
     const nextNumber = totalLoans + 1;
@@ -213,20 +215,23 @@ export class LoanService extends BaseStoreService {
     // If startDate or endDate is being updated, recalculate endDate if needed
     let updateData: any = { ...dto };
     
-    if (dto.startDate && !dto.endDate && dto.installments && dto.paymentFrequency) {
+    if (dto.startDate && !dto.endDate) {
       const startDate = new Date(dto.startDate);
       const paymentFrequency = dto.paymentFrequency;
       const installments = dto.installments;
       
-      // Default to 540 business days (Monday-Saturday) if payment frequency is DAILY
-      const endDate: Date =
-        paymentFrequency === PaymentFrequency.DAILY
-          ? this.addBusinessDays(startDate, 540) // 540 business days ahead (Mon-Sat)
-          : paymentFrequency === PaymentFrequency.WEEKLY
+      // Calculate end date based on loanTermMonths or payment frequency
+      const endDate: Date = dto.loanTermMonths
+        ? addMonths(startDate, dto.loanTermMonths)
+        : paymentFrequency === PaymentFrequency.DAILY && installments
+          ? addMonths(startDate, Math.ceil(installments / 30))
+          : paymentFrequency === PaymentFrequency.WEEKLY && installments
             ? addWeeks(startDate, installments)
-            : paymentFrequency === PaymentFrequency.BIWEEKLY
+            : paymentFrequency === PaymentFrequency.BIWEEKLY && installments
               ? addWeeks(startDate, installments * 2)
-              : addMonths(startDate, installments);
+              : installments
+                ? addMonths(startDate, installments)
+                : addMonths(startDate, 12); // Default to 12 months
       
       updateData.endDate = endDate;
     } else if (dto.endDate) {
@@ -251,7 +256,7 @@ export class LoanService extends BaseStoreService {
     const loan = await this.findOneInternal(id);
     
     const expectedInstallments = this.calculateExpectedInstallments(loan);
-    const installmentsRemaining = loan.installments - loan.paidInstallments;
+    const installmentsRemaining = Math.max(0, loan.installments - loan.paidInstallments);
     
     // Update the loan with recalculated values
     const updated = await this.prisma.loan.update({
@@ -291,12 +296,11 @@ export class LoanService extends BaseStoreService {
     if (endDate) {
       newEndDate = new Date(endDate);
     } else {
-      // Recalculate end date based on new start date
-      // Default to 540 business days (Monday-Saturday) if payment frequency is DAILY
+      // Recalculate end date based on new start date and payment frequency
       const paymentFrequency = loan.paymentFrequency as PaymentFrequency;
       newEndDate =
         paymentFrequency === PaymentFrequency.DAILY
-          ? this.addBusinessDays(newStartDate, 540) // 540 business days ahead (Mon-Sat)
+          ? addMonths(newStartDate, Math.ceil(loan.installments / 30))
           : paymentFrequency === PaymentFrequency.WEEKLY
             ? addWeeks(newStartDate, loan.installments)
             : paymentFrequency === PaymentFrequency.BIWEEKLY
