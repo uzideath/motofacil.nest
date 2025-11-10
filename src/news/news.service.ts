@@ -79,13 +79,22 @@ export class NewsService {
           affectedLoansCount = 1;
         }
       } else if (dto.type === NewsType.STORE_WIDE) {
-        // Handle all active loans in the store
+        // Handle all active loans in the store, optionally filtered by vehicle type
+        const whereClause: any = {
+          storeId: dto.storeId,
+          archived: false,
+          status: { in: ['ACTIVE', 'PENDING'] },
+        };
+
+        // If vehicleType is specified, filter by it
+        if (dto.vehicleType) {
+          whereClause.vehicle = {
+            vehicleType: dto.vehicleType,
+          };
+        }
+
         const loans = await this.prisma.loan.findMany({
-          where: {
-            storeId: dto.storeId,
-            archived: false,
-            status: { in: ['ACTIVE', 'PENDING'] },
-          },
+          where: whereClause,
           select: {
             id: true,
             totalAmount: true,
@@ -138,6 +147,7 @@ export class NewsService {
         autoCalculateInstallments: dto.autoCalculateInstallments ?? false,
         daysUnavailable: dto.daysUnavailable,
         installmentsToSubtract,
+        vehicleType: dto.vehicleType,
         store: {
           connect: { id: dto.storeId },
         },
@@ -231,13 +241,7 @@ export class NewsService {
     const limit = parseInt(query.limit || '50', 10);
     const skip = (page - 1) * limit;
 
-    const where: {
-      type?: NewsType;
-      category?: NewsCategory;
-      loanId?: string;
-      storeId?: string;
-      isActive?: boolean;
-    } = {};
+    const where: any = {};
 
     if (query.type) {
       where.type = query.type;
@@ -253,6 +257,10 @@ export class NewsService {
 
     if (query.storeId) {
       where.storeId = query.storeId;
+    }
+
+    if (query.vehicleType) {
+      where.vehicleType = query.vehicleType;
     }
 
     if (query.isActive !== undefined) {
@@ -495,19 +503,7 @@ export class NewsService {
       }
     }
 
-    const updateData: {
-      type?: NewsType;
-      category?: NewsCategory;
-      title?: string;
-      description?: string;
-      notes?: string;
-      startDate?: Date | string;
-      endDate?: Date | string;
-      isActive?: boolean;
-      autoCalculateInstallments?: boolean;
-      daysUnavailable?: number;
-      installmentsToSubtract?: number;
-    } = { ...dto };
+    const updateData: any = { ...dto };
     
     if (dto.startDate) {
       updateData.startDate = new Date(dto.startDate);

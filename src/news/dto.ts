@@ -16,6 +16,15 @@ export enum NewsCategory {
   OTHER = 'OTHER',
 }
 
+export enum VehicleType {
+  MOTORCYCLE = 'MOTORCYCLE',
+  CAR = 'CAR',
+  TRUCK = 'TRUCK',
+  VAN = 'VAN',
+  ATV = 'ATV',
+  OTHER = 'OTHER',
+}
+
 export class CreateNewsDto {
   @IsEnum(NewsType)
   @IsNotEmpty()
@@ -58,6 +67,12 @@ export class CreateNewsDto {
   @IsUUID()
   @IsNotEmpty()
   storeId: string;
+
+  // Vehicle type filter (for STORE_WIDE news)
+  // If not provided, the news affects all vehicle types
+  @IsEnum(VehicleType)
+  @IsOptional()
+  vehicleType?: VehicleType;
 
   // For automatic installment calculation
   @IsBoolean()
@@ -108,6 +123,10 @@ export class UpdateNewsDto {
   @IsOptional()
   isActive?: boolean;
 
+  @IsEnum(VehicleType)
+  @IsOptional()
+  vehicleType?: VehicleType;
+
   @IsBoolean()
   @IsOptional()
   autoCalculateInstallments?: boolean;
@@ -139,6 +158,10 @@ export class QueryNewsDto {
   @IsUUID()
   @IsOptional()
   storeId?: string;
+
+  @IsEnum(VehicleType)
+  @IsOptional()
+  vehicleType?: VehicleType;
 
   @IsBoolean()
   @IsOptional()

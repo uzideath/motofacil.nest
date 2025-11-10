@@ -33,12 +33,6 @@ export const templateHtml = `
       margin-bottom: 12px;
     }
 
-    .logo {
-      width: 120px;
-      height: auto;
-      margin: 0 auto 10px;
-    }
-
     .title {
       font-size: 20px;
       font-weight: bold;
@@ -107,7 +101,6 @@ export const templateHtml = `
 <body>
   <div class="receipt">
     <div class="header">
-      <img class="logo" src="https://i.imgur.com/i1CS4S9.png" alt="Logo">
       <div class="title">{{storeName}}</div>
       <div class="info">NIT: {{storeNit}}</div>
       <div class="title">RECIBO DE PAGO</div>
