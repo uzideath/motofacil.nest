@@ -41,6 +41,8 @@ export class ReceiptService {
     console.log("paymentDate en DTO:", dto.paymentDate);
     console.log("isLate:", dto.isLate);
     console.log("latePaymentDate:", dto.latePaymentDate);
+    console.log("isAdvance:", dto.isAdvance);
+    console.log("advancePaymentDate:", dto.advancePaymentDate);
     console.log("storeId received:", dto.storeId);
     
     // Fetch store information if storeId is provided
@@ -68,20 +70,41 @@ export class ReceiptService {
       console.log("No storeId provided in DTO");
     }
     
-    // Determine the correct date to show:
-    // - For late payments: use latePaymentDate (original due date)
-    // - For on-time payments: use paymentDate (actual payment date)
-    const displayDate = dto.isLate && dto.latePaymentDate 
-      ? new Date(dto.latePaymentDate)
-      : new Date(dto.paymentDate);
+    // Determine payment type and display date:
+    // 1. Late payment: show latePaymentDate (original due date) in red
+    // 2. Advance payment: show advancePaymentDate (future due date) in blue
+    // 3. On-time payment: show paymentDate (actual payment date) in normal color
+    let displayDate: Date;
+    let paymentType: 'late' | 'advance' | 'ontime';
+    
+    if (dto.isLate && dto.latePaymentDate) {
+      displayDate = new Date(dto.latePaymentDate);
+      paymentType = 'late';
+    } else if (dto.isAdvance && dto.advancePaymentDate) {
+      displayDate = new Date(dto.advancePaymentDate);
+      paymentType = 'advance';
+    } else {
+      displayDate = new Date(dto.paymentDate);
+      paymentType = 'ontime';
+    }
 
-    // Calculate days since last payment (excluding Sundays)
-    const daysSinceLastPayment = dto.lastPaymentDate 
-      ? this.calculateDaysSinceLastPayment(dto.lastPaymentDate)
-      : (dto.daysSinceLastPayment ?? null);
+    // Calculate days since last payment or days in advance
+    let daysSinceLastPayment: number | null = null;
+    let daysInAdvance: number | null = null;
+    
+    if (paymentType === 'advance' && dto.advancePaymentDate) {
+      // For advance payments, calculate how many days ahead this payment is
+      daysInAdvance = this.calculateDaysInAdvance(new Date(), new Date(dto.advancePaymentDate));
+    } else if (dto.lastPaymentDate) {
+      // For late/on-time payments, calculate days since last payment
+      daysSinceLastPayment = this.calculateDaysSinceLastPayment(dto.lastPaymentDate);
+    } else {
+      daysSinceLastPayment = dto.daysSinceLastPayment ?? null;
+    }
 
     // Format payment status information with fractional installments
     let paymentStatus = "";
+    let cuotasRestanteInfo = "";
     if (dto.remainingInstallments !== undefined && dto.paidInstallments !== undefined) {
       const totalInstallments = dto.totalInstallments || (dto.paidInstallments + dto.remainingInstallments);
       const paidFormatted = dto.paidInstallments % 1 === 0 
@@ -94,27 +117,49 @@ export class ReceiptService {
         ? totalInstallments.toString() 
         : totalInstallments.toFixed(2);
       
-      paymentStatus = `Cuotas pagadas: ${paidFormatted} de ${totalFormatted} | Cuotas pendientes: ${remainingFormatted}`;
+      paymentStatus = `Cuotas pagadas: ${paidFormatted} de ${totalFormatted}`;
+      cuotasRestanteInfo = `Cuotas pendientes: ${remainingFormatted}`;
       
       // Add debt breakdown if there's a partial installment
       if (dto.remainingInstallments < 1 && dto.remainingInstallments > 0) {
         const installmentAmount = dto.amount / (1 - dto.remainingInstallments); // Estimate installment amount
         const partialDebt = installmentAmount * dto.remainingInstallments;
-        paymentStatus += ` | Deuda parcial: ${this.formatCurrency(partialDebt)}`;
+        cuotasRestanteInfo += ` | Deuda parcial: ${this.formatCurrency(partialDebt)}`;
       }
     }
 
-    // Add days since last payment status
+    // Add payment status based on type
     let paymentDaysStatus = "";
-    if (daysSinceLastPayment !== null) {
+    let paymentTypeLabel = "";
+    let messageBottom = "";
+    
+    if (paymentType === 'late' && daysSinceLastPayment !== null) {
+      paymentTypeLabel = "PAGO ATRASADO";
       if (daysSinceLastPayment === 0) {
-        paymentDaysStatus = "Estado: Al día";
-      } else if (daysSinceLastPayment === 1) {
         paymentDaysStatus = "Estado: Vence hoy";
+      } else if (daysSinceLastPayment === 1) {
+        paymentDaysStatus = "Estado: 1 día atrasado";
       } else {
         paymentDaysStatus = `Estado: ${daysSinceLastPayment} días atrasado`;
       }
+      messageBottom = "Recuerda mantener tus pagos al día para evitar cargos adicionales.";
+    } else if (paymentType === 'advance' && daysInAdvance !== null) {
+      paymentTypeLabel = "PAGO ADELANTADO";
+      paymentDaysStatus = `Pago anticipado por ${daysInAdvance} día${daysInAdvance !== 1 ? 's' : ''}`;
+      messageBottom = "¡Felicidades! Estás adelantado en tus pagos. Continúa así para estar cada vez más cerca de tu meta.";
+    } else {
+      paymentTypeLabel = "PAGO AL DÍA";
+      paymentDaysStatus = "Estado: Al día";
+      messageBottom = "¡Excelente! Mantienes tus pagos al día. Sigue así para alcanzar tu meta.";
     }
+
+    // Translate payment method to Spanish
+    const paymentMethodLabels = {
+      'CASH': 'EFECTIVO',
+      'CARD': 'TARJETA',
+      'TRANSACTION': 'TRANSFERENCIA'
+    };
+    const paymentMethodLabel = paymentMethodLabels[dto.paymentMethod as keyof typeof paymentMethodLabels] || dto.paymentMethod || 'EFECTIVO';
 
     const data = {
       ...dto,
@@ -125,13 +170,21 @@ export class ReceiptService {
       formattedTotal: this.formatCurrency((dto.amount || 0) + (dto.gps || 0)),
       formattedDate: this.formatDate(dto.date),
       receiptNumber: this.generateReceiptNumber(dto.receiptNumber),
-      concept: dto.concept || "Servicio de transporte",
-      formattedPaymentDate: this.formatDateOnly(displayDate), // Show closing date (latePaymentDate for late, paymentDate for on-time)
-      formattedGeneratedDate: this.formatDate(new Date()), // Generated date (with time)
-      notes: dto.notes || "Sin observaciones adicionales.",
-      paymentStatus, // Add payment status string
-      paymentDaysStatus, // Add days since last payment status
-      daysSinceLastPayment: daysSinceLastPayment ?? 0, // Raw days count
+      concept: dto.contractCode || dto.concept || "N/A",
+      formattedPaymentDate: this.formatDateOnly(displayDate),
+      formattedGeneratedDate: this.formatDate(new Date()),
+      notes: dto.notes || "Administrador",
+      paymentMethod: paymentMethodLabel,
+      paymentStatus,
+      cuotasRestanteInfo,
+      paymentDaysStatus,
+      paymentTypeLabel,
+      messageBottom,
+      daysSinceLastPayment: daysSinceLastPayment ?? 0,
+      daysInAdvance: daysInAdvance ?? 0,
+      isLate: paymentType === 'late',
+      isAdvance: paymentType === 'advance',
+      isOnTime: paymentType === 'ontime',
     };
 
     return templateHtml
@@ -149,8 +202,16 @@ export class ReceiptService {
       .replace(/{{generatedDate}}/g, data.formattedGeneratedDate)
       .replace(/{{notes}}/g, data.notes)
       .replace(/{{paymentStatus}}/g, data.paymentStatus)
+      .replace(/{{cuotasRestanteInfo}}/g, data.cuotasRestanteInfo)
       .replace(/{{paymentDaysStatus}}/g, data.paymentDaysStatus)
-      .replace(/{{daysSinceLastPayment}}/g, String(data.daysSinceLastPayment)) 
+      .replace(/{{paymentTypeLabel}}/g, data.paymentTypeLabel)
+      .replace(/{{messageBottom}}/g, data.messageBottom)
+      .replace(/{{daysSinceLastPayment}}/g, String(data.daysSinceLastPayment))
+      .replace(/{{daysInAdvance}}/g, String(data.daysInAdvance))
+      .replace(/{{isLate}}/g, data.isLate ? 'true' : 'false')
+      .replace(/{{isAdvance}}/g, data.isAdvance ? 'true' : 'false')
+      .replace(/{{isOnTime}}/g, data.isOnTime ? 'true' : 'false')
+      .replace(/{{paymentMethod}}/g, data.paymentMethod) 
   }
 
   private formatCurrency(value: number): string {
@@ -217,6 +278,30 @@ export class ReceiptService {
     
     // Convert inclusive day count into a non-inclusive difference
     return Math.max(0, count - 1)
+  }
+
+  private calculateDaysInAdvance(fromDate: Date, toDate: Date): number {
+    const timeZone = "America/Bogota"
+    
+    // Convert both dates to Colombian timezone
+    const start = utcToZonedTime(fromDate, timeZone)
+    const end = utcToZonedTime(toDate, timeZone)
+    
+    // Normalize to start of day for both dates
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate())
+    
+    let count = 0
+    const cursor = new Date(startDay)
+    cursor.setDate(cursor.getDate() + 1) // Start from tomorrow
+    
+    while (cursor <= endDay) {
+      // Count all days (no Sunday exclusion as per new requirements)
+      count++
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    
+    return Math.max(0, count)
   }
 
   private generateReceiptNumber(uuid: string): string {

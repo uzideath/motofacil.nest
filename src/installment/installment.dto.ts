@@ -35,6 +35,14 @@ export class CreateInstallmentDto {
   latePaymentDate?: string;
 
   @IsOptional()
+  @IsBoolean()
+  isAdvance?: boolean;
+
+  @IsOptional()
+  @IsDateString()
+  advancePaymentDate?: string;
+
+  @IsOptional()
   @IsDateString()
   paymentDate?: string;
 
@@ -88,6 +96,11 @@ export class FindInstallmentFiltersDto {
   @IsBoolean()
   @Type(() => Boolean)
   isLate?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isAdvance?: boolean;
 
   @IsOptional()
   @IsNumber()

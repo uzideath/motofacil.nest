@@ -33,6 +33,14 @@ export class CreateReceiptDto {
   @IsOptional()
   latePaymentDate?: string;
 
+  @IsBoolean()
+  @IsOptional()
+  isAdvance?: boolean;
+
+  @IsDateString()
+  @IsOptional()
+  advancePaymentDate?: string;
+
   @IsString()
   receiptNumber: string;
 
@@ -63,6 +71,14 @@ export class CreateReceiptDto {
   @IsDateString()
   @IsOptional()
   lastPaymentDate?: string;
+
+  @IsString()
+  @IsOptional()
+  paymentMethod?: string;
+
+  @IsString()
+  @IsOptional()
+  contractCode?: string;
 }
 
 export class SendReceiptWhatsappDto {

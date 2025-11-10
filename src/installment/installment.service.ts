@@ -51,6 +51,8 @@ export class InstallmentService extends BaseStoreService {
         gps: dto.gps,
         paymentDate: dto.paymentDate ? toColombiaUtc(dto.paymentDate) : toColombiaUtc(new Date()), // Actual payment date from form, or now if not provided
         latePaymentDate: dto.latePaymentDate ? toColombiaUtc(dto.latePaymentDate) : null, // Original due date (if late)
+        isAdvance: dto.isAdvance ?? false,
+        advancePaymentDate: dto.advancePaymentDate ? toColombiaUtc(dto.advancePaymentDate) : null, // Future due date (if advance)
         notes: dto.notes,
         paymentMethod: dto.paymentMethod,
         isLate: dto.isLate ?? false,

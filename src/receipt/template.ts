@@ -116,46 +116,50 @@ export const templateHtml = `
     </div>
 
     <div class="section">
-      <div class="label">Cliente:</div>
-      <div>{{name}}</div>
-      <div>Placa #: <strong>{{identification}}</strong></div>
+      <div>PLACA: <strong>{{identification}}</strong></div>
+      <div><span class="label">FECHA:</span> {{paymentDate}}</div>
+      <div><span class="label">CLIENTE:</span> {{name}}</div>
+      <div><span class="label">COD CONTRATO:</span> {{concept}}</div>
+      <div><span class="label">MEDIO DE PAGO:</span> {{paymentMethod}}</div>
     </div>
 
-    <div class="section">
-      <div class="label">Detalle del Pago</div>
-      <table class="table">
-        <tr>
-          <td>{{concept}}</td>
-          <td class="right">{{formattedAmount}}</td>
-        </tr>
-        <tr>
-          <td>GPS</td>
-          <td class="right">{{formattedGps}}</td>
-        </tr>
-      </table>
-    </div>
+    <div class="section" style="margin-top: 12px; padding: 10px; background-color: #f8f9fa; border: 2px solid #dee2e6; border-radius: 6px;">
+      <div style="text-align: center; font-size: 19px; font-weight: bold; margin-bottom: 8px; padding: 6px; border-radius: 4px; background-color: #fff;">
+        ::{{paymentTypeLabel}}::
+      </div>
+      
+      <div style="border-top: 1px dashed #000; padding-top: 8px; margin-top: 8px;">
+        <div style="font-size: 17px; margin-bottom: 4px;">
+          <span class="label">VALOR PAGADO:</span>
+          <span style="float: right; font-weight: bold;">{{formattedAmount}}</span>
+        </div>
+        <div style="font-size: 17px; margin-bottom: 4px;">
+          <span class="label">VALOR GPS:</span>
+          <span style="float: right; font-weight: bold;">{{formattedGps}}</span>
+        </div>
+        <div style="font-size: 18px; margin-bottom: 8px; padding-top: 4px; border-top: 1px solid #000;">
+          <span class="label">TOTAL:</span>
+          <span style="float: right; font-weight: bold;">{{formattedTotal}}</span>
+        </div>
+      </div>
 
-    <div class="section">
-      <div><span class="label">Fecha de Pago:</span> {{paymentDate}}</div>
-    </div>
+      <div style="border-top: 1px dashed #000; padding-top: 8px; margin-top: 8px;">
+        <div style="font-size: 17px; margin-bottom: 4px;">{{paymentStatus}}</div>
+        <div style="font-size: 17px; font-weight: bold; margin-bottom: 4px;">{{cuotasRestanteInfo}}</div>
+      </div>
 
-    <div class="total">TOTAL: {{formattedTotal}}</div>
+      <div style="border-top: 1px dashed #000; padding-top: 8px; margin-top: 8px;">
+        <div style="font-size: 17px; font-weight: bold; margin-bottom: 4px;">{{paymentDaysStatus}}</div>
+      </div>
 
-    <div class="section" style="margin-top: 10px; padding: 8px; background-color: #f5f5f5; border-radius: 4px;">
-      <div class="label" style="font-size: 16px; margin-bottom: 4px;">Estado de Cuotas:</div>
-      <div style="font-size: 17px; margin-bottom: 6px;">{{paymentStatus}}</div>
-      <div style="font-size: 17px; font-weight: bold; margin-top: 6px;">{{paymentDaysStatus}}</div>
-      <div style="font-size: 16px; margin-top: 4px; color: #666;">Días desde última cuota: {{daysSinceLastPayment}}</div>
-    </div>
-
-    <div class="notes">
-      <div class="label">Notas:</div>
-      <div>{{notes}}</div>
+      <div style="margin-top: 10px; padding: 8px; background-color: #e9ecef; border-radius: 4px; text-align: center;">
+        <div style="font-size: 16px; line-height: 1.4;">{{messageBottom}}</div>
+      </div>
     </div>
 
     <div class="footer">
       <div class="thank-you">¡Gracias por su pago!</div>
-      <div>Este recibo es comprobante oficial.</div>
+      <div style="margin-top: 6px; font-size: 16px;">Usuario: {{notes}}</div>
     </div>
   </div>
 </body>

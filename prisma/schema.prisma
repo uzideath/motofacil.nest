@@ -209,26 +209,28 @@ model Loan {
 }
 
 model Installment {
-  id              String        @id @default(uuid())
+  id                  String        @id @default(uuid())
   
   // Store association
-  store           Store         @relation(fields: [storeId], references: [id])
-  storeId         String
+  store               Store         @relation(fields: [storeId], references: [id])
+  storeId             String
   
-  loan            Loan          @relation(fields: [loanId], references: [id])
-  loanId          String
-  paymentMethod   PaymentMethod
-  amount          Float
-  gps             Float
-  paymentDate     DateTime      @default(now())
-  isLate          Boolean       @default(false)
-  latePaymentDate DateTime?
-  notes           String?       @db.Text()
-  attachmentUrl   String?
-  createdById     String?
-  archived        Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  loan                Loan          @relation(fields: [loanId], references: [id])
+  loanId              String
+  paymentMethod       PaymentMethod
+  amount              Float
+  gps                 Float
+  paymentDate         DateTime      @default(now())
+  isLate              Boolean       @default(false)
+  latePaymentDate     DateTime?
+  isAdvance           Boolean       @default(false)
+  advancePaymentDate  DateTime?
+  notes               String?       @db.Text()
+  attachmentUrl       String?
+  createdById         String?
+  archived            Boolean       @default(false)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   // Relaciones
   createdBy      Employee?     @relation(fields: [createdById], references: [id])
