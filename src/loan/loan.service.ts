@@ -8,7 +8,7 @@ import {
 } from './loan.dto';
 import { addDays, addWeeks, addMonths, differenceInDays, differenceInWeeks, differenceInMonths } from 'date-fns';
 import { BaseStoreService } from 'src/lib/base-store.service';
-import { Loan, User, Vehicle } from 'src/prisma/generated/client';
+import { Loan, User, Vehicle, LoanStatus as PrismaLoanStatus } from 'src/prisma/generated/client';
 
 type LoanWithRelations = Loan & {
   user: User;
@@ -411,6 +411,20 @@ export class LoanService extends BaseStoreService {
           },
         },
       },
+    });
+  }
+
+  async updateStatus(id: string, status: PrismaLoanStatus, userStoreId: string | null): Promise<Loan> {
+    // Validate store access
+    const loan = await this.findOne(id, userStoreId);
+    if (!loan) {
+      throw new NotFoundException(`Loan with id ${id} not found`);
+    }
+
+    // Update the loan status
+    return this.prisma.loan.update({
+      where: { id },
+      data: { status },
     });
   }
 

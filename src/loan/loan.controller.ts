@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { LoanService } from './loan.service';
-import { CreateLoanDto, UpdateLoanDto, UpdateLoanDatesDto } from './loan.dto';
+import { CreateLoanDto, UpdateLoanDto, UpdateLoanDatesDto, UpdateLoanStatusDto } from './loan.dto';
 import { LogAction, ActionType } from '../lib/decorators/log-action.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { StoreAccessGuard } from '../auth/guards/store-access.guard';
@@ -96,6 +96,17 @@ export class LoanController {
   async unarchiveLoan(@Param('id') id: string): Promise<{ ok: boolean }> {
     await this.loanService.unarchive(id);
     return { ok: true };
+  }
+
+  @Patch(':id/status')
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE)
+  @LogAction(ActionType.UPDATE, 'Loan', 'Update loan status')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateLoanStatusDto,
+    @UserStoreId() userStoreId: string | null
+  ) {
+    return this.loanService.updateStatus(id, dto.status, userStoreId);
   }
 
   @Delete(':id')

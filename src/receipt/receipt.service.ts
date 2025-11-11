@@ -91,10 +91,23 @@ export class ReceiptService {
     // Calculate days since last payment or days in advance
     let daysSinceLastPayment: number | null = null;
     let daysInAdvance: number | null = null;
+    let installmentsInAdvance: number = 0;
     
     if (paymentType === 'advance' && dto.advancePaymentDate) {
       // For advance payments, calculate how many days ahead this payment is
       daysInAdvance = this.calculateDaysInAdvance(new Date(), new Date(dto.advancePaymentDate));
+      
+      // Calculate installments covered by advance payment
+      // For daily frequency: 1 day = 1 installment
+      if (dto.paymentFrequency === 'DAILY') {
+        installmentsInAdvance = daysInAdvance;
+      } else if (dto.paymentFrequency === 'WEEKLY') {
+        installmentsInAdvance = Math.floor(daysInAdvance / 7 * 10) / 10; // One decimal
+      } else if (dto.paymentFrequency === 'BIWEEKLY') {
+        installmentsInAdvance = Math.floor(daysInAdvance / 14 * 10) / 10; // One decimal
+      } else if (dto.paymentFrequency === 'MONTHLY') {
+        installmentsInAdvance = Math.floor(daysInAdvance / 30 * 10) / 10; // One decimal
+      }
     } else if (dto.lastPaymentDate) {
       // For late/on-time payments, calculate days since last payment
       daysSinceLastPayment = this.calculateDaysSinceLastPayment(dto.lastPaymentDate);
@@ -105,26 +118,33 @@ export class ReceiptService {
     // Format payment status information with fractional installments
     let paymentStatus = "";
     let cuotasRestanteInfo = "";
+    let saldoRestanteMoto = "";
+    let saldoRestanteGps = "";
+    
     if (dto.remainingInstallments !== undefined && dto.paidInstallments !== undefined) {
       const totalInstallments = dto.totalInstallments || (dto.paidInstallments + dto.remainingInstallments);
-      const paidFormatted = dto.paidInstallments % 1 === 0 
-        ? dto.paidInstallments.toString() 
-        : dto.paidInstallments.toFixed(2);
       const remainingFormatted = dto.remainingInstallments % 1 === 0 
         ? dto.remainingInstallments.toString() 
         : dto.remainingInstallments.toFixed(2);
-      const totalFormatted = totalInstallments % 1 === 0 
-        ? totalInstallments.toString() 
-        : totalInstallments.toFixed(2);
       
-      paymentStatus = `Cuotas pagadas: ${paidFormatted} de ${totalFormatted}`;
-      cuotasRestanteInfo = `Cuotas pendientes: ${remainingFormatted}`;
+      cuotasRestanteInfo = `CUOTAS RESTANTE: ${remainingFormatted}`;
       
-      // Add debt breakdown if there's a partial installment
-      if (dto.remainingInstallments < 1 && dto.remainingInstallments > 0) {
-        const installmentAmount = dto.amount / (1 - dto.remainingInstallments); // Estimate installment amount
-        const partialDebt = installmentAmount * dto.remainingInstallments;
-        cuotasRestanteInfo += ` | Deuda parcial: ${this.formatCurrency(partialDebt)}`;
+      // Calculate remaining debt (if loan data is available)
+      if (dto.debtRemaining !== undefined) {
+        // Separate motorcycle payment from GPS
+        const remainingGpsDebt = dto.remainingInstallments * (dto.gps || 0);
+        const remainingMotoDebt = dto.debtRemaining - remainingGpsDebt;
+        
+        saldoRestanteMoto = `SALDO RESTANTE MOTO: ${this.formatCurrency(remainingMotoDebt)}`;
+        saldoRestanteGps = `SALDO RESTANTE GPS: ${this.formatCurrency(remainingGpsDebt)}`;
+        
+        // Check for overpayment (saldo a favor)
+        if (dto.remainingInstallments < 0) {
+          const overpaymentAmount = Math.abs(dto.remainingInstallments) * (dto.amount / Math.max(1, Math.abs(dto.paidInstallments - dto.remainingInstallments)));
+          saldoRestanteMoto = `SALDO RESTANTE MOTO: ${this.formatCurrency(remainingMotoDebt)}`;
+          saldoRestanteGps = `SALDO RESTANTE GPS: ${this.formatCurrency(remainingGpsDebt)}`;
+          cuotasRestanteInfo = `CUOTAS RESTANTE: ${remainingFormatted}`;
+        }
       }
     }
 
@@ -132,6 +152,7 @@ export class ReceiptService {
     let paymentDaysStatus = "";
     let paymentTypeLabel = "";
     let messageBottom = "";
+    let advanceInfo = "";
     
     if (paymentType === 'late' && daysSinceLastPayment !== null) {
       paymentTypeLabel = "PAGO ATRASADO";
@@ -146,6 +167,15 @@ export class ReceiptService {
     } else if (paymentType === 'advance' && daysInAdvance !== null) {
       paymentTypeLabel = "PAGO ADELANTADO";
       paymentDaysStatus = `Pago anticipado por ${daysInAdvance} día${daysInAdvance !== 1 ? 's' : ''}`;
+      
+      // Show installments covered if calculated
+      if (installmentsInAdvance > 0) {
+        const installmentsFormatted = installmentsInAdvance % 1 === 0 
+          ? installmentsInAdvance.toString() 
+          : installmentsInAdvance.toFixed(1);
+        advanceInfo = `Cuotas adelantadas: ${installmentsFormatted}`;
+      }
+      
       messageBottom = "¡Felicidades! Estás adelantado en tus pagos. Continúa así para estar cada vez más cerca de tu meta.";
     } else {
       paymentTypeLabel = "PAGO AL DÍA";
@@ -177,11 +207,15 @@ export class ReceiptService {
       paymentMethod: paymentMethodLabel,
       paymentStatus,
       cuotasRestanteInfo,
+      saldoRestanteMoto,
+      saldoRestanteGps,
       paymentDaysStatus,
       paymentTypeLabel,
       messageBottom,
+      advanceInfo,
       daysSinceLastPayment: daysSinceLastPayment ?? 0,
       daysInAdvance: daysInAdvance ?? 0,
+      installmentsInAdvance,
       isLate: paymentType === 'late',
       isAdvance: paymentType === 'advance',
       isOnTime: paymentType === 'ontime',
@@ -203,11 +237,15 @@ export class ReceiptService {
       .replace(/{{notes}}/g, data.notes)
       .replace(/{{paymentStatus}}/g, data.paymentStatus)
       .replace(/{{cuotasRestanteInfo}}/g, data.cuotasRestanteInfo)
+      .replace(/{{saldoRestanteMoto}}/g, data.saldoRestanteMoto)
+      .replace(/{{saldoRestanteGps}}/g, data.saldoRestanteGps)
       .replace(/{{paymentDaysStatus}}/g, data.paymentDaysStatus)
       .replace(/{{paymentTypeLabel}}/g, data.paymentTypeLabel)
       .replace(/{{messageBottom}}/g, data.messageBottom)
+      .replace(/{{advanceInfo}}/g, data.advanceInfo)
       .replace(/{{daysSinceLastPayment}}/g, String(data.daysSinceLastPayment))
       .replace(/{{daysInAdvance}}/g, String(data.daysInAdvance))
+      .replace(/{{installmentsInAdvance}}/g, String(data.installmentsInAdvance))
       .replace(/{{isLate}}/g, data.isLate ? 'true' : 'false')
       .replace(/{{isAdvance}}/g, data.isAdvance ? 'true' : 'false')
       .replace(/{{isOnTime}}/g, data.isOnTime ? 'true' : 'false')
@@ -265,19 +303,11 @@ export class ReceiptService {
     const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate())
     const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate())
     
-    let count = 0
-    const cursor = new Date(startDay)
+    // Calculate difference in days (including all days Monday-Sunday)
+    const diffTime = Math.abs(endDay.getTime() - startDay.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     
-    while (cursor <= endDay) {
-      // getDay(): 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-      if (cursor.getDay() !== 0) {
-        count++
-      }
-      cursor.setDate(cursor.getDate() + 1)
-    }
-    
-    // Convert inclusive day count into a non-inclusive difference
-    return Math.max(0, count - 1)
+    return Math.max(0, diffDays)
   }
 
   private calculateDaysInAdvance(fromDate: Date, toDate: Date): number {

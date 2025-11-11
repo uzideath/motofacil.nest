@@ -79,6 +79,14 @@ export class CreateReceiptDto {
   @IsString()
   @IsOptional()
   contractCode?: string;
+
+  @IsString()
+  @IsOptional()
+  paymentFrequency?: string;
+
+  @IsNumber()
+  @IsOptional()
+  debtRemaining?: number;
 }
 
 export class SendReceiptWhatsappDto {

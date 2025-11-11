@@ -116,38 +116,44 @@ export const templateHtml = `
       <div><span class="label">MEDIO DE PAGO:</span> {{paymentMethod}}</div>
     </div>
 
-    <div class="section" style="margin-top: 12px; padding: 10px; background-color: #f8f9fa; border: 2px solid #dee2e6; border-radius: 6px;">
-      <div style="text-align: center; font-size: 19px; font-weight: bold; margin-bottom: 8px; padding: 6px; border-radius: 4px; background-color: #fff;">
+    <table class="table" style="margin-top: 8px; margin-bottom: 0;">
+      <tr>
+        <td style="border: none; padding: 4px 0;">VALOR PAGADO:</td>
+        <td class="right" style="border: none; padding: 4px 0;">{{formattedAmount}}</td>
+      </tr>
+      <tr>
+        <td style="border: none; padding: 4px 0;">VALOR GPS:</td>
+        <td class="right" style="border: none; padding: 4px 0;">{{formattedGps}}</td>
+      </tr>
+      <tr style="border-top: 2px solid #000;">
+        <td style="font-weight: bold; padding: 6px 0;">TOTAL:</td>
+        <td class="right" style="font-weight: bold; padding: 6px 0;">{{formattedTotal}}</td>
+      </tr>
+    </table>
+
+    <div style="margin-top: 12px; padding-top: 8px; border-top: 2px solid #000;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 4px 0; font-size: 17px;">{{cuotasRestanteInfo}}</td>
+          <td style="padding: 4px 0; text-align: right; font-size: 17px;"></td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; font-size: 17px;">{{saldoRestanteMoto}}</td>
+          <td style="padding: 4px 0; text-align: right; font-size: 17px;"></td>
+        </tr>
+        <tr>
+          <td style="padding: 4px 0; font-size: 17px;">{{saldoRestanteGps}}</td>
+          <td style="padding: 4px 0; text-align: right; font-size: 17px;"></td>
+        </tr>
+      </table>
+      <div style="text-align: center; font-size: 16px; margin-top: 8px; margin-bottom: 4px;">
         ::{{paymentTypeLabel}}::
       </div>
-      
-      <div style="border-top: 1px dashed #000; padding-top: 8px; margin-top: 8px;">
-        <div style="font-size: 17px; margin-bottom: 4px;">
-          <span class="label">VALOR PAGADO:</span>
-          <span style="float: right; font-weight: bold;">{{formattedAmount}}</span>
-        </div>
-        <div style="font-size: 17px; margin-bottom: 4px;">
-          <span class="label">VALOR GPS:</span>
-          <span style="float: right; font-weight: bold;">{{formattedGps}}</span>
-        </div>
-        <div style="font-size: 18px; margin-bottom: 8px; padding-top: 4px; border-top: 1px solid #000;">
-          <span class="label">TOTAL:</span>
-          <span style="float: right; font-weight: bold;">{{formattedTotal}}</span>
-        </div>
-      </div>
+      <div style="font-size: 17px; font-weight: bold; margin-top: 6px; color: #0066cc; text-align: center;">{{advanceInfo}}</div>
+    </div>
 
-      <div style="border-top: 1px dashed #000; padding-top: 8px; margin-top: 8px;">
-        <div style="font-size: 17px; margin-bottom: 4px;">{{paymentStatus}}</div>
-        <div style="font-size: 17px; font-weight: bold; margin-bottom: 4px;">{{cuotasRestanteInfo}}</div>
-      </div>
-
-      <div style="border-top: 1px dashed #000; padding-top: 8px; margin-top: 8px;">
-        <div style="font-size: 17px; font-weight: bold; margin-bottom: 4px;">{{paymentDaysStatus}}</div>
-      </div>
-
-      <div style="margin-top: 10px; padding: 8px; background-color: #e9ecef; border-radius: 4px; text-align: center;">
-        <div style="font-size: 16px; line-height: 1.4;">{{messageBottom}}</div>
-      </div>
+    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #000; text-align: center;">
+      <div style="font-size: 16px; line-height: 1.4; font-style: italic;">{{messageBottom}}</div>
     </div>
 
     <div class="footer">

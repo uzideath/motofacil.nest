@@ -10,6 +10,7 @@ import {
   IsDateString,
   ValidateIf,
 } from 'class-validator';
+import { LoanStatus } from 'src/prisma/generated/client';
 
 export enum InterestType {
   FIXED = 'FIXED',
@@ -95,4 +96,9 @@ export class UpdateLoanDatesDto {
   @IsDateString()
   @IsOptional()
   endDate?: string;
+}
+
+export class UpdateLoanStatusDto {
+  @IsEnum(LoanStatus)
+  status: LoanStatus;
 }

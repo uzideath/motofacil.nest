@@ -552,14 +552,17 @@ enum PaymentMethod {
 }
 
 enum LoanStatus {
-  PENDING
-  ACTIVE
-  COMPLETED
-  DEFAULTED
-  ARCHIVED
-  ARCHIVED_BY_DEFAULT      // Archivado por mora
-  ARCHIVED_BY_THEFT        // Finalizado por robo
-  ARCHIVED_BY_PROSECUTOR   // Archivado por fiscalía
+  PENDING                     // Pendiente
+  ACTIVE                      // Activo
+  COMPLETED                   // Finalizado (completado normalmente)
+  DEFAULTED                   // Incumplido
+  ARCHIVED                    // Archivado (mantener por compatibilidad)
+  ARCHIVED_BY_DEFAULT         // Archivado por mora (antiguo)
+  ARCHIVED_BY_THEFT           // Finalizado por robo (antiguo)
+  ARCHIVED_BY_PROSECUTOR      // Archivado por fiscalía (antiguo)
+  RESTARTED_BY_DEFAULT        // Reiniciado por mora
+  COMPLETED_BY_THEFT          // Finalizado por Robo de vehículo
+  COMPLETED_BY_PROSECUTOR     // Contrato finalizado por fiscalía
 }
 
 enum Role {
