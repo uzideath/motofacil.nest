@@ -312,10 +312,49 @@ export class InstallmentService extends BaseStoreService {
   }
 
   async remove(id: string, userStoreId: string | null) {
-    await this.findOne(id, userStoreId);
+    const installment = await this.findOne(id, userStoreId);
 
-    return this.prisma.installment.delete({
+    // Get the loan to update its totals
+    const loan = await this.prisma.loan.findUnique({
+      where: { id: installment.loanId },
+    });
+
+    if (!loan) {
+      throw new NotFoundException(`Loan not found for installment ${id}`);
+    }
+
+    // Delete the installment
+    await this.prisma.installment.delete({
       where: { id },
     });
+
+    // Calculate fractional installments to subtract
+    const installmentAmount = loan.installmentPaymentAmmount || (loan.debtRemaining / loan.remainingInstallments);
+    const fractionalInstallmentsPaid = installment.amount / installmentAmount;
+    
+    // Update loan totals by reversing the installment payment
+    const updatedPaid = Math.max(0, loan.paidInstallments - fractionalInstallmentsPaid);
+    const updatedRemaining = loan.installments - updatedPaid;
+    const updatedTotalPaid = Math.max(0, loan.totalPaid - installment.amount);
+    const updatedDebt = loan.debtRemaining + installment.amount;
+
+    // Recalculate status - if debt is restored, loan should be ACTIVE again
+    const newStatus =
+      updatedDebt <= 0 || updatedRemaining <= 0
+        ? LoanStatus.COMPLETED
+        : LoanStatus.ACTIVE;
+
+    await this.prisma.loan.update({
+      where: { id: loan.id },
+      data: {
+        paidInstallments: updatedPaid,
+        remainingInstallments: updatedRemaining,
+        totalPaid: updatedTotalPaid,
+        debtRemaining: updatedDebt,
+        status: newStatus,
+      },
+    });
+
+    return installment;
   }
 }

@@ -478,20 +478,15 @@ export class ReportsService {
     };
   }
 
-  // Helper method to calculate business days (excluding Sundays)
-  // Returns the non-inclusive difference in business days between two dates
+  // Helper method to calculate all days (including Sundays)
+  // Returns the non-inclusive difference in days between two dates
   private calculateBusinessDays(startDate: Date, endDate: Date): number {
     let count = 0;
     const currentDate = new Date(startDate);
     
     while (currentDate <= endDate) {
-      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-      const dayOfWeek = currentDate.getDay();
-      
-      // Only count if it's not Sunday (0)
-      if (dayOfWeek !== 0) {
-        count++;
-      }
+      // Count all days (no exclusions)
+      count++;
       
       // Move to next day
       currentDate.setDate(currentDate.getDate() + 1);
