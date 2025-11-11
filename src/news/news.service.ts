@@ -78,13 +78,17 @@ export class NewsService {
             totalAmount: true, 
             debtRemaining: true,
             remainingInstallments: true,
+            installments: true,
           },
         });
 
         if (loan) {
           const newTotalAmount = loan.totalAmount - amountToSubtract;
           const newDebtRemaining = Math.max(0, loan.debtRemaining - amountToSubtract);
-          const newRemainingInstallments = Math.max(0, loan.remainingInstallments - installmentsToSubtract);
+          // Round installmentsToSubtract to nearest integer for remaining installments
+          const installmentsToSubtractInt = Math.round(installmentsToSubtract);
+          const newRemainingInstallments = Math.max(0, loan.remainingInstallments - installmentsToSubtractInt);
+          const newTotalInstallments = Math.max(0, loan.installments - installmentsToSubtractInt);
           
           await this.prisma.loan.update({
             where: { id: dto.loanId },
@@ -92,6 +96,7 @@ export class NewsService {
               totalAmount: newTotalAmount,
               debtRemaining: newDebtRemaining,
               remainingInstallments: newRemainingInstallments,
+              installments: newTotalInstallments,
             },
           });
           affectedLoansCount = 1;
@@ -118,6 +123,7 @@ export class NewsService {
             totalAmount: true,
             debtRemaining: true,
             remainingInstallments: true,
+            installments: true,
             paymentFrequency: true,
             installmentPaymentAmmount: true,
             gpsInstallmentPayment: true,
@@ -133,7 +139,10 @@ export class NewsService {
           
           const newTotalAmount = loan.totalAmount - result.amount;
           const newDebtRemaining = Math.max(0, loan.debtRemaining - result.amount);
-          const newRemainingInstallments = Math.max(0, loan.remainingInstallments - result.installments);
+          // Round installmentsToSubtract to nearest integer for remaining installments
+          const installmentsToSubtractInt = Math.round(result.installments);
+          const newRemainingInstallments = Math.max(0, loan.remainingInstallments - installmentsToSubtractInt);
+          const newTotalInstallments = Math.max(0, loan.installments - installmentsToSubtractInt);
           
           await this.prisma.loan.update({
             where: { id: loan.id },
@@ -141,6 +150,7 @@ export class NewsService {
               totalAmount: newTotalAmount,
               debtRemaining: newDebtRemaining,
               remainingInstallments: newRemainingInstallments,
+              installments: newTotalInstallments,
             },
           });
         }
@@ -451,6 +461,7 @@ export class NewsService {
               totalAmount: true, 
               debtRemaining: true,
               remainingInstallments: true,
+              installments: true,
             },
           });
 
@@ -458,10 +469,13 @@ export class NewsService {
             // Net change (new - old)
             const netAmountChange = amountToSubtract - oldResult.amount;
             const netInstallmentsChange = installmentsToSubtract - oldResult.installments;
+            // Round to nearest integer for installments
+            const netInstallmentsChangeInt = Math.round(netInstallmentsChange);
             
             const newTotalAmount = loan.totalAmount - netAmountChange;
             const newDebtRemaining = Math.max(0, loan.debtRemaining - netAmountChange);
-            const newRemainingInstallments = Math.max(0, loan.remainingInstallments - netInstallmentsChange);
+            const newRemainingInstallments = Math.max(0, loan.remainingInstallments - netInstallmentsChangeInt);
+            const newTotalInstallments = Math.max(0, loan.installments - netInstallmentsChangeInt);
             
             await this.prisma.loan.update({
               where: { id: existingNews.loanId },
@@ -469,6 +483,7 @@ export class NewsService {
                 totalAmount: newTotalAmount,
                 debtRemaining: newDebtRemaining,
                 remainingInstallments: newRemainingInstallments,
+                installments: newTotalInstallments,
               },
             });
           }
@@ -480,13 +495,17 @@ export class NewsService {
               totalAmount: true, 
               debtRemaining: true,
               remainingInstallments: true,
+              installments: true,
             },
           });
 
           if (loan) {
             const newTotalAmount = loan.totalAmount - amountToSubtract;
             const newDebtRemaining = Math.max(0, loan.debtRemaining - amountToSubtract);
-            const newRemainingInstallments = Math.max(0, loan.remainingInstallments - installmentsToSubtract);
+            // Round to nearest integer for installments
+            const installmentsToSubtractInt = Math.round(installmentsToSubtract);
+            const newRemainingInstallments = Math.max(0, loan.remainingInstallments - installmentsToSubtractInt);
+            const newTotalInstallments = Math.max(0, loan.installments - installmentsToSubtractInt);
             
             await this.prisma.loan.update({
               where: { id: existingNews.loanId },
@@ -494,23 +513,35 @@ export class NewsService {
                 totalAmount: newTotalAmount,
                 debtRemaining: newDebtRemaining,
                 remainingInstallments: newRemainingInstallments,
+                installments: newTotalInstallments,
               },
             });
           }
         }
       } else if (existingNews.type === NewsType.STORE_WIDE) {
-        // Handle all active loans in store
+        // Handle all active loans in store, optionally filtered by vehicle type
+        const whereClause: any = {
+          storeId: existingNews.storeId,
+          archived: false,
+          status: { in: ['ACTIVE', 'PENDING'] },
+        };
+
+        // If vehicleType is specified, filter by it
+        if (dto.vehicleType || existingNews.vehicleType) {
+          const vehicleType = dto.vehicleType || existingNews.vehicleType;
+          whereClause.vehicle = {
+            vehicleType: vehicleType,
+          };
+        }
+
         const loans = await this.prisma.loan.findMany({
-          where: {
-            storeId: existingNews.storeId,
-            archived: false,
-            status: { in: ['ACTIVE', 'PENDING'] },
-          },
+          where: whereClause,
           select: {
             id: true,
             totalAmount: true,
             debtRemaining: true,
             remainingInstallments: true,
+            installments: true,
           },
         });
 
@@ -535,7 +566,10 @@ export class NewsService {
           
           const newTotalAmount = loan.totalAmount - netAmountChange;
           const newDebtRemaining = Math.max(0, loan.debtRemaining - netAmountChange);
-          const newRemainingInstallments = Math.max(0, loan.remainingInstallments - netInstallmentsChange);
+          // Round to nearest integer for installments
+          const netInstallmentsChangeInt = Math.round(netInstallmentsChange);
+          const newRemainingInstallments = Math.max(0, loan.remainingInstallments - netInstallmentsChangeInt);
+          const newTotalInstallments = Math.max(0, loan.installments - netInstallmentsChangeInt);
           
           await this.prisma.loan.update({
             where: { id: loan.id },
@@ -543,6 +577,7 @@ export class NewsService {
               totalAmount: newTotalAmount,
               debtRemaining: newDebtRemaining,
               remainingInstallments: newRemainingInstallments,
+              installments: newTotalInstallments,
             },
           });
         }
@@ -610,6 +645,7 @@ export class NewsService {
             totalAmount: true, 
             debtRemaining: true,
             remainingInstallments: true,
+            installments: true,
           },
         });
 
@@ -617,7 +653,10 @@ export class NewsService {
           // Add back the amount that was subtracted
           const newTotalAmount = loan.totalAmount + result.amount;
           const newDebtRemaining = loan.debtRemaining + result.amount;
-          const newRemainingInstallments = loan.remainingInstallments + result.installments;
+          // Round to nearest integer for installments
+          const installmentsToRestoreInt = Math.round(result.installments);
+          const newRemainingInstallments = loan.remainingInstallments + installmentsToRestoreInt;
+          const newTotalInstallments = loan.installments + installmentsToRestoreInt;
           
           await this.prisma.loan.update({
             where: { id: news.loanId },
@@ -625,25 +664,36 @@ export class NewsService {
               totalAmount: newTotalAmount,
               debtRemaining: newDebtRemaining,
               remainingInstallments: newRemainingInstallments,
+              installments: newTotalInstallments,
             },
           });
         }
       }
       // Handle STORE_WIDE news - restore for all affected loans
       else if (news.type === 'STORE_WIDE' && news.storeId) {
-        const loans = await this.prisma.loan.findMany({
-          where: {
-            storeId: news.storeId,
-            archived: false,
-            status: {
-              in: ['ACTIVE', 'PENDING'],
-            },
+        const whereClause: any = {
+          storeId: news.storeId,
+          archived: false,
+          status: {
+            in: ['ACTIVE', 'PENDING'],
           },
+        };
+
+        // If vehicleType was specified, filter by it
+        if (news.vehicleType) {
+          whereClause.vehicle = {
+            vehicleType: news.vehicleType,
+          };
+        }
+
+        const loans = await this.prisma.loan.findMany({
+          where: whereClause,
           select: {
             id: true,
             totalAmount: true,
             debtRemaining: true,
             remainingInstallments: true,
+            installments: true,
           },
         });
 
@@ -656,7 +706,10 @@ export class NewsService {
 
           const newTotalAmount = loan.totalAmount + result.amount;
           const newDebtRemaining = loan.debtRemaining + result.amount;
-          const newRemainingInstallments = loan.remainingInstallments + result.installments;
+          // Round to nearest integer for installments
+          const installmentsToRestoreInt = Math.round(result.installments);
+          const newRemainingInstallments = loan.remainingInstallments + installmentsToRestoreInt;
+          const newTotalInstallments = loan.installments + installmentsToRestoreInt;
 
           await this.prisma.loan.update({
             where: { id: loan.id },
@@ -664,6 +717,7 @@ export class NewsService {
               totalAmount: newTotalAmount,
               debtRemaining: newDebtRemaining,
               remainingInstallments: newRemainingInstallments,
+              installments: newTotalInstallments,
             },
           });
         }
