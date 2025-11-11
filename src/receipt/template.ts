@@ -101,8 +101,6 @@ export const templateHtml = `
 <body>
   <div class="receipt">
     <div class="header">
-      <div class="title">{{storeName}}</div>
-      <div class="info">NIT: {{storeNit}}</div>
       <div class="title">RECIBO DE PAGO</div>
       <div class="info">Recibo #: MC-{{receiptNumber}}</div>
       <div><span class="label">Generado:</span> {{generatedDate}}</div>
