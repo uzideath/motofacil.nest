@@ -204,7 +204,8 @@ export class ReceiptService {
       formattedTotal: this.formatCurrency((dto.amount || 0) + (dto.gps || 0)),
       formattedDate: this.formatDate(dto.date),
       receiptNumber: this.generateReceiptNumber(dto.receiptNumber),
-      concept: dto.contractCode || dto.concept || "N/A",
+      concept: dto.concept || "Monto",
+      contractCode: dto.contractCode || "N/A",
       formattedPaymentDate: this.formatDateOnly(displayDate),
       formattedGeneratedDate: this.formatDate(new Date()),
       notes: dto.notes || "Administrador",
@@ -231,6 +232,7 @@ export class ReceiptService {
       .replace(/{{name}}/g, data.name)
       .replace(/{{identification}}/g, data.identification)
       .replace(/{{concept}}/g, data.concept)
+      .replace(/{{contractCode}}/g, data.contractCode)
       .replace(/{{formattedAmount}}/g, data.formattedAmount)
       .replace(/{{formattedGps}}/g, data.formattedGps)
       .replace(/{{formattedTotal}}/g, data.formattedTotal)

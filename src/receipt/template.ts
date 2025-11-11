@@ -110,7 +110,7 @@ export const templateHtml = `
       <div>PLACA: <strong>{{identification}}</strong></div>
       <div><span class="label">FECHA:</span> {{paymentDate}}</div>
       <div><span class="label">CLIENTE:</span> {{name}}</div>
-      <div><span class="label">COD CONTRATO:</span> {{concept}}</div>
+      <div><span class="label">COD CONTRATO:</span> {{contractCode}}</div>
       <div><span class="label">MEDIO DE PAGO:</span> {{paymentMethod}}</div>
     </div>
 
@@ -147,6 +147,7 @@ export const templateHtml = `
       <div style="text-align: center; font-size: 16px; margin-top: 8px; margin-bottom: 4px;">
         ::{{paymentTypeLabel}}::
       </div>
+      <div style="font-size: 18px; font-weight: bold; margin-top: 6px; text-align: center;">{{paymentDaysStatus}}</div>
       <div style="font-size: 17px; font-weight: bold; margin-top: 6px; color: #0066cc; text-align: center;">{{advanceInfo}}</div>
     </div>
 
