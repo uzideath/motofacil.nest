@@ -23,7 +23,11 @@ export class ReceiptService {
     const page = await browser.newPage()
     const html = await this.fillTemplate(dto)
 
-    await page.setContent(html, { waitUntil: "networkidle0" })
+    // Use 'load' instead of 'networkidle0' to avoid timeout issues with inline content
+    await page.setContent(html, { 
+      waitUntil: "load",
+      timeout: 10000 
+    })
 
     const pdfBuffer = await page.pdf({
       width: "80mm",
@@ -31,7 +35,6 @@ export class ReceiptService {
       margin: { top: "5mm", bottom: "5mm", left: "5mm", right: "5mm" },
       preferCSSPageSize: true,
     })
-
 
     await browser.close()
     return Buffer.from(pdfBuffer)
@@ -166,7 +169,8 @@ export class ReceiptService {
       messageBottom = "Recuerda mantener tus pagos al día para evitar cargos adicionales.";
     } else if (paymentType === 'advance' && daysInAdvance !== null) {
       paymentTypeLabel = "PAGO ADELANTADO";
-      paymentDaysStatus = `Pago anticipado por ${daysInAdvance} día${daysInAdvance !== 1 ? 's' : ''}`;
+      // Show negative days to indicate advance payment
+      paymentDaysStatus = `Estado: ${-daysInAdvance} día${daysInAdvance !== 1 ? 's' : ''} (adelantado)`;
       
       // Show installments covered if calculated
       if (installmentsInAdvance > 0) {
