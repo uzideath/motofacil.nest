@@ -334,6 +334,8 @@ export class ClosingService {
     installments: InstallmentWithLoan[]
     expenses: Expense[]
   }> {
+    console.log('🔍 Backend - Fetching unassigned payments with filter:', filter)
+    
     const whereInstallments: Prisma.InstallmentWhereInput = {
       cashRegisterId: null,
     }
@@ -342,23 +344,21 @@ export class ClosingService {
       whereInstallments.paymentMethod = filter.paymentMethod
     }
 
-    // Date filtering logic
+    // Date filtering logic - only apply if dates are explicitly provided
     if (filter.startDate || filter.endDate) {
       whereInstallments.paymentDate = {}
       if (filter.startDate) {
-        whereInstallments.paymentDate.gte = new Date(filter.startDate)
+        // Parse the date string and set to start of day in Colombia timezone
+        const startDate = new Date(filter.startDate + 'T00:00:00.000-05:00')
+        whereInstallments.paymentDate.gte = startDate
       }
       if (filter.endDate) {
-        whereInstallments.paymentDate.lte = new Date(filter.endDate)
-      }
-    } else {
-      // Default to today's date range using Colombia timezone
-      const { startUtc, endUtc } = getColombiaDayRange(new Date())
-      whereInstallments.paymentDate = {
-        gte: startUtc,
-        lte: endUtc,
+        // Parse the date string and set to end of day in Colombia timezone
+        const endDate = new Date(filter.endDate + 'T23:59:59.999-05:00')
+        whereInstallments.paymentDate.lte = endDate
       }
     }
+    // If no dates provided, return ALL unassigned payments (no date filter)
 
     const installments = await this.prisma.installment.findMany({
       where: whereInstallments,
@@ -378,6 +378,7 @@ export class ClosingService {
     }) as InstallmentWithLoan[]
 
     console.log('✅ Backend - Found installments:', installments.length)
+    console.log('   Date filter applied:', filter.startDate || filter.endDate ? `${filter.startDate || 'any'} to ${filter.endDate || 'any'}` : 'NONE - showing all')
     if (installments.length > 0) {
       console.log('   Sample payment dates:', installments.slice(0, 3).map(i => i.paymentDate))
     }
@@ -386,23 +387,21 @@ export class ClosingService {
       cashRegisterId: null,
     }
 
-    // Apply the same date logic for expenses
+    // Apply the same date logic for expenses - only apply if dates are explicitly provided
     if (filter.startDate || filter.endDate) {
       whereExpenses.date = {}
       if (filter.startDate) {
-        whereExpenses.date.gte = new Date(filter.startDate)
+        // Parse the date string and set to start of day in Colombia timezone
+        const startDate = new Date(filter.startDate + 'T00:00:00.000-05:00')
+        whereExpenses.date.gte = startDate
       }
       if (filter.endDate) {
-        whereExpenses.date.lte = new Date(filter.endDate)
-      }
-    } else {
-      // Default to today's date range using Colombia timezone
-      const { startUtc, endUtc } = getColombiaDayRange(new Date())
-      whereExpenses.date = {
-        gte: startUtc,
-        lte: endUtc,
+        // Parse the date string and set to end of day in Colombia timezone
+        const endDate = new Date(filter.endDate + 'T23:59:59.999-05:00')
+        whereExpenses.date.lte = endDate
       }
     }
+    // If no dates provided, return ALL unassigned expenses (no date filter)
 
     const expenses = await this.prisma.expense.findMany({
       where: whereExpenses,
