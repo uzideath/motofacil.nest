@@ -40,10 +40,12 @@ export class InstallmentService {
         amount: dto.amount,
         gps: dto.gps,
         paymentDate: dto.paymentDate ? toColombiaUtc(dto.paymentDate) : toColombiaUtc(new Date()), // Actual payment date from form, or now if not provided
-        latePaymentDate: dto.latePaymentDate ? toColombiaUtc(dto.latePaymentDate) : null, // Original due date (if late)
+        latePaymentDate: dto.latePaymentDate ? toColombiaUtc(dto.latePaymentDate) : null, // Original due date (if late/past)
+        advancePaymentDate: dto.advancePaymentDate ? toColombiaUtc(dto.advancePaymentDate) : null, // Future due date (if advance)
         notes: dto.notes,
         paymentMethod: dto.paymentMethod,
         isLate: dto.isLate ?? false,
+        isAdvance: dto.isAdvance ?? false,
         attachmentUrl: dto.attachmentUrl,
         createdAt: toColombiaUtc(new Date()),
         updatedAt: toColombiaUtc(new Date()),
@@ -248,12 +250,15 @@ export class InstallmentService {
       id,
       paymentDate: dto.paymentDate,
       latePaymentDate: dto.latePaymentDate,
+      advancePaymentDate: dto.advancePaymentDate,
+      isLate: dto.isLate,
+      isAdvance: dto.isAdvance,
       fullDto: dto
     });
 
     await this.findOne(id);
 
-    const { loanId, createdById, paymentDate, latePaymentDate, ...rest } = dto;
+    const { loanId, createdById, paymentDate, latePaymentDate, advancePaymentDate, ...rest } = dto;
 
     const updateData: any = {
       ...rest,
@@ -272,6 +277,11 @@ export class InstallmentService {
     // Handle latePaymentDate - convert to Colombia UTC if provided, null if explicitly null
     if (latePaymentDate !== undefined) {
       updateData.latePaymentDate = latePaymentDate ? toColombiaUtc(latePaymentDate) : null;
+    }
+
+    // Handle advancePaymentDate - convert to Colombia UTC if provided, null if explicitly null
+    if (advancePaymentDate !== undefined) {
+      updateData.advancePaymentDate = advancePaymentDate ? toColombiaUtc(advancePaymentDate) : null;
     }
 
     // Handle createdBy relationship if provided
