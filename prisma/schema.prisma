@@ -110,21 +110,23 @@ model Loan {
 }
 
 model Installment {
-  id              String        @id @default(uuid())
-  loan            Loan          @relation(fields: [loanId], references: [id])
-  loanId          String
-  paymentMethod   PaymentMethod
-  amount          Float
-  gps             Float
-  paymentDate     DateTime      @default(now())
-  isLate          Boolean       @default(false)
-  latePaymentDate DateTime?
-  notes           String?       @db.Text()
-  attachmentUrl   String?
-  createdById     String?
-  archived        Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                 String        @id @default(uuid())
+  loan               Loan          @relation(fields: [loanId], references: [id])
+  loanId             String
+  paymentMethod      PaymentMethod
+  amount             Float
+  gps                Float
+  paymentDate        DateTime      @default(now())
+  isLate             Boolean       @default(false)
+  latePaymentDate    DateTime?
+  isAdvance          Boolean       @default(false)
+  advancePaymentDate DateTime?
+  notes              String?       @db.Text()
+  attachmentUrl      String?
+  createdById        String?
+  archived           Boolean       @default(false)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   // Relaciones
   createdBy      Owners?       @relation(fields: [createdById], references: [id])
