@@ -124,30 +124,40 @@ export class ReceiptService {
     let saldoRestanteMoto = "";
     let saldoRestanteGps = "";
     
-    if (dto.remainingInstallments !== undefined && dto.paidInstallments !== undefined) {
-      const totalInstallments = dto.totalInstallments || (dto.paidInstallments + dto.remainingInstallments);
-      const remainingFormatted = dto.remainingInstallments % 1 === 0 
-        ? dto.remainingInstallments.toString() 
-        : dto.remainingInstallments.toFixed(2);
+    // Only show "cuotas restante" for late payments, showing days owed until today
+    if (paymentType === 'late' && daysSinceLastPayment !== null && daysSinceLastPayment > 0) {
+      // Calculate how many installments are owed based on days late and payment frequency
+      let installmentsOwed = 0;
       
-      cuotasRestanteInfo = `CUOTAS RESTANTE: ${remainingFormatted}`;
+      if (dto.paymentFrequency === 'DAILY') {
+        installmentsOwed = daysSinceLastPayment;
+      } else if (dto.paymentFrequency === 'WEEKLY') {
+        installmentsOwed = Math.floor(daysSinceLastPayment / 7 * 10) / 10; // One decimal
+      } else if (dto.paymentFrequency === 'BIWEEKLY') {
+        installmentsOwed = Math.floor(daysSinceLastPayment / 14 * 10) / 10; // One decimal
+      } else if (dto.paymentFrequency === 'MONTHLY') {
+        installmentsOwed = Math.floor(daysSinceLastPayment / 30 * 10) / 10; // One decimal
+      } else {
+        // Default to daily if frequency is not specified
+        installmentsOwed = daysSinceLastPayment;
+      }
       
-      // Calculate remaining debt (if loan data is available)
-      if (dto.debtRemaining !== undefined) {
-        // Separate motorcycle payment from GPS
-        const remainingGpsDebt = dto.remainingInstallments * (dto.gps || 0);
-        const remainingMotoDebt = dto.debtRemaining - remainingGpsDebt;
+      const installmentsOwedFormatted = installmentsOwed % 1 === 0 
+        ? installmentsOwed.toString() 
+        : installmentsOwed.toFixed(1);
+      
+      cuotasRestanteInfo = `CUOTAS ATRASADAS: ${installmentsOwedFormatted}`;
+      
+      // Calculate debt for the days owed (not total remaining debt)
+      if (dto.debtRemaining !== undefined && installmentsOwed > 0) {
+        const amountPerInstallment = (dto.amount || 0);
+        const gpsPerInstallment = (dto.gps || 0);
         
-        saldoRestanteMoto = `SALDO RESTANTE MOTO: ${this.formatCurrency(remainingMotoDebt)}`;
-        saldoRestanteGps = `SALDO RESTANTE GPS: ${this.formatCurrency(remainingGpsDebt)}`;
+        const owedMotoDebt = installmentsOwed * amountPerInstallment;
+        const owedGpsDebt = installmentsOwed * gpsPerInstallment;
         
-        // Check for overpayment (saldo a favor)
-        if (dto.remainingInstallments < 0) {
-          const overpaymentAmount = Math.abs(dto.remainingInstallments) * (dto.amount / Math.max(1, Math.abs(dto.paidInstallments - dto.remainingInstallments)));
-          saldoRestanteMoto = `SALDO RESTANTE MOTO: ${this.formatCurrency(remainingMotoDebt)}`;
-          saldoRestanteGps = `SALDO RESTANTE GPS: ${this.formatCurrency(remainingGpsDebt)}`;
-          cuotasRestanteInfo = `CUOTAS RESTANTE: ${remainingFormatted}`;
-        }
+        saldoRestanteMoto = `MOTO ATRASADO: ${this.formatCurrency(owedMotoDebt)}`;
+        saldoRestanteGps = `GPS ATRASADO: ${this.formatCurrency(owedGpsDebt)}`;
       }
     }
 
