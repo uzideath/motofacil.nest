@@ -744,7 +744,7 @@ export class ReportsService {
         const clientReport = await this.getClientReport(filters);
         data = clientReport.items;
         filename = `clients-report-${new Date().toISOString().split('T')[0]}`;
-        headers = ['ID', 'Nombre', 'Documento', 'Teléfono', 'Dirección', 'Préstamos Activos', 'Total Préstamos', 'Monto Total', 'Estado'];
+        headers = ['ID', 'Nombre', 'Documento', 'Teléfono', 'Dirección', 'arrendamientos Activos', 'Total arrendamientos', 'Monto Total', 'Estado'];
         rows = data.map((item: any) => [
           item.id,
           item.name,
@@ -792,7 +792,7 @@ export class ReportsService {
           'Precio',
           'Estado Vehículo',
           'Proveedor',
-          'Estado Préstamo',
+          'Estado contrato',
           'Cliente',
           'Teléfono',
           'Documento',
@@ -812,7 +812,7 @@ export class ReportsService {
           item.price,
           item.vehicleStatus,
           item.providerName,
-          item.loanStatus || 'Sin préstamo',
+          item.loanStatus || 'Sin contrato',
           item.clientName || 'N/A',
           item.clientPhone || 'N/A',
           item.clientDocument || 'N/A',
@@ -845,7 +845,7 @@ export class ReportsService {
           'Total Cuotas',
           'Progreso %',
           'Frecuencia',
-          'Estado Préstamo',
+          'Estado contrato',
         ];
         rows = data.map((item: any) => [
           item.userName,
