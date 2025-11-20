@@ -58,11 +58,6 @@ export class ClosingService {
       closingDate,
     } = dto;
 
-    // Normalize to just the date part (YYYY-MM-DD) for comparison
-    const normalizeDate = (date: Date): string => {
-      return date.toISOString().split('T')[0];
-    };
-
     // Fetch and validate installments
     const installments = await this.prisma.installment.findMany({
       where: { id: { in: installmentIds } },
@@ -72,11 +67,15 @@ export class ClosingService {
       throw new NotFoundException('Algunos pagos no fueron encontrados');
     }
 
-    // Use the provided closing date or current date
-    const targetClosingDate = closingDate ? new Date(closingDate) : new Date();
-    
-    // Normalize to midnight UTC to avoid timezone issues
-    targetClosingDate.setUTCHours(0, 0, 0, 0);
+    // Use the provided closing date or current date in Colombian timezone
+    let targetClosingDate: Date;
+    if (closingDate) {
+      // Convert the provided date string to Colombian midnight UTC
+      targetClosingDate = getColombiaDayRange(new Date(closingDate)).startUtc;
+    } else {
+      // Use current date in Colombian timezone
+      targetClosingDate = getColombiaDayRange(new Date()).startUtc;
+    }
 
     // Validate expenses if provided
     if (expenseIds.length) {
@@ -285,49 +284,19 @@ export class ClosingService {
     installments: InstallmentWithLoan[]
     expenses: Expense[]
   }> {
+    console.log('🔍 getUnassignedPayments called with filter:', filter);
+    
     const whereInstallments: Prisma.InstallmentWhereInput = {
       cashRegisterId: null,
     }
 
     if (filter.paymentMethod) {
-      whereInstallments.paymentMethod = filter.paymentMethod
+      whereInstallments.paymentMethod = filter.paymentMethod;
     }
 
-    // If specificDate is provided, filter by exact date (ignoring time)
-    if (filter.specificDate) {
-      const targetDate = new Date(filter.specificDate)
-      // Use UTC to avoid timezone issues
-      const startOfDay = new Date(Date.UTC(
-        targetDate.getUTCFullYear(),
-        targetDate.getUTCMonth(),
-        targetDate.getUTCDate(),
-        0, 0, 0, 0
-      ))
-      const endOfDay = new Date(Date.UTC(
-        targetDate.getUTCFullYear(),
-        targetDate.getUTCMonth(),
-        targetDate.getUTCDate(),
-        23, 59, 59, 999
-      ))
-
-      console.log('🔍 Backend - Filtering installments by date:')
-      console.log('   Input specificDate:', filter.specificDate)
-      console.log('   Parsed targetDate:', targetDate)
-      console.log('   Query range:', { startOfDay, endOfDay })
-
-      whereInstallments.paymentDate = {
-        gte: startOfDay,
-        lte: endOfDay,
-      }
-    } else if (filter.startDate || filter.endDate) {
-      whereInstallments.paymentDate = {}
-      if (filter.startDate) {
-        whereInstallments.paymentDate.gte = new Date(filter.startDate)
-      }
-      if (filter.endDate) {
-        whereInstallments.paymentDate.lte = new Date(filter.endDate)
-      }
-    }
+    // Date filtering removed - show all unassigned transactions regardless of date
+    
+    console.log('📋 Query whereInstallments:', JSON.stringify(whereInstallments, null, 2));
 
     const installments = await this.prisma.installment.findMany({
       where: whereInstallments,
@@ -348,43 +317,18 @@ export class ClosingService {
 
     console.log('✅ Backend - Found installments:', installments.length)
     if (installments.length > 0) {
-      console.log('   Sample payment dates:', installments.slice(0, 3).map(i => i.paymentDate))
+      console.log('   Sample payment dates:', installments.slice(0, 5).map(i => ({ 
+        id: i.id.substring(0, 8), 
+        paymentDate: i.paymentDate,
+        plate: i.loan.vehicle.plate 
+      })))
     }
 
     const whereExpenses: Prisma.ExpenseWhereInput = {
       cashRegisterId: null,
     }
 
-    // If specificDate is provided, filter expenses by exact date too
-    if (filter.specificDate) {
-      const targetDate = new Date(filter.specificDate)
-      // Use UTC to avoid timezone issues
-      const startOfDay = new Date(Date.UTC(
-        targetDate.getUTCFullYear(),
-        targetDate.getUTCMonth(),
-        targetDate.getUTCDate(),
-        0, 0, 0, 0
-      ))
-      const endOfDay = new Date(Date.UTC(
-        targetDate.getUTCFullYear(),
-        targetDate.getUTCMonth(),
-        targetDate.getUTCDate(),
-        23, 59, 59, 999
-      ))
-
-      whereExpenses.date = {
-        gte: startOfDay,
-        lte: endOfDay,
-      }
-    } else if (filter.startDate || filter.endDate) {
-      whereExpenses.date = {}
-      if (filter.startDate) {
-        whereExpenses.date.gte = new Date(filter.startDate)
-      }
-      if (filter.endDate) {
-        whereExpenses.date.lte = new Date(filter.endDate)
-      }
-    }
+    // Date filtering removed - show all unassigned expenses regardless of date
 
     const expenses = await this.prisma.expense.findMany({
       where: whereExpenses,
