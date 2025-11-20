@@ -563,6 +563,7 @@ enum LoanStatus {
   RESTARTED_BY_DEFAULT        // Reiniciado por mora
   COMPLETED_BY_THEFT          // Finalizado por Robo de vehículo
   COMPLETED_BY_PROSECUTOR     // Contrato finalizado por fiscalía
+  IMMOBILIZED_BY_TRAFFIC      // Inmovilizado por tránsito
 }
 
 enum Role {
