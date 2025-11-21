@@ -63,6 +63,7 @@ type InstallmentWithLoan = Installment & {
       provider: Provider | null
     })
   }
+  createdBy: Pick<Employee, "id" | "username"> | null
 }
 
 @Injectable()
@@ -439,6 +440,7 @@ export class ClosingService extends BaseStoreService {
             },
           },
         },
+        createdBy: { select: { id: true, username: true } },
       },
       orderBy: { paymentDate: "asc" },
     }) as InstallmentWithLoan[]
@@ -446,6 +448,8 @@ export class ClosingService extends BaseStoreService {
     console.log('✅ Backend - Found installments:', installments.length)
     if (installments.length > 0) {
       console.log('   Sample payment dates:', installments.slice(0, 3).map(i => i.paymentDate))
+      console.log('   Sample installment provider:', installments[0]?.loan?.vehicle?.provider)
+      console.log('   Sample installment createdBy:', installments[0]?.createdBy)
     }
 
     const whereExpenses: Prisma.ExpenseWhereInput = {
@@ -486,6 +490,15 @@ export class ClosingService extends BaseStoreService {
 
     const expenses = await this.prisma.expense.findMany({
       where: whereExpenses,
+      include: {
+        provider: true,
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
       orderBy: { date: "asc" },
     })
 
