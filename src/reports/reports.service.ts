@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { BaseStoreService } from '../lib/base-store.service';
 import * as ExcelJS from 'exceljs';
 import { stringify } from 'csv-stringify/sync';
 import * as puppeteer from 'puppeteer';
@@ -13,12 +14,16 @@ export interface ReportFilters {
 }
 
 @Injectable()
-export class ReportsService {
-  constructor(private prisma: PrismaService) {}
+export class ReportsService extends BaseStoreService {
+  constructor(protected readonly prisma: PrismaService) {
+    super(prisma);
+  }
 
   // Loan Reports
-  async getLoanReport(filters: ReportFilters) {
-    const where: any = {};
+  async getLoanReport(filters: ReportFilters, userStoreId: string | null = null) {
+    const where: any = {
+      ...this.storeFilter(userStoreId),
+    };
 
     // Date filtering
     if (filters.startDate || filters.endDate) {
@@ -136,8 +141,12 @@ export class ReportsService {
   }
 
   // Payment Reports
-  async getPaymentReport(filters: ReportFilters) {
-    const where: any = {};
+  async getPaymentReport(filters: ReportFilters, userStoreId: string | null = null) {
+    const where: any = {
+      loan: {
+        ...this.storeFilter(userStoreId),
+      },
+    };
 
     // Date filtering
     if (filters.startDate || filters.endDate) {
@@ -199,8 +208,10 @@ export class ReportsService {
   }
 
   // Client Reports
-  async getClientReport(filters: ReportFilters) {
-    const where: any = {};
+  async getClientReport(filters: ReportFilters, userStoreId: string | null = null) {
+    const where: any = {
+      ...this.storeFilter(userStoreId),
+    };
 
     // Date filtering
     if (filters.startDate || filters.endDate) {
@@ -270,9 +281,10 @@ export class ReportsService {
   }
 
   // Missing Installments Report (Clientes con pagos pendientes/atrasados)
-  async getMissingInstallmentsReport(filters: ReportFilters) {
+  async getMissingInstallmentsReport(filters: ReportFilters, userStoreId: string | null = null) {
     // Build where clause for filtering
     const where: any = {
+      ...this.storeFilter(userStoreId),
       status: { in: ['ACTIVE', 'DEFAULTED'] },
     };
 
@@ -514,8 +526,10 @@ export class ReportsService {
   }
 
   // Vehicle Reports
-  async getVehicleReport(filters: ReportFilters) {
-    const where: any = {};
+  async getVehicleReport(filters: ReportFilters, userStoreId: string | null = null) {
+    const where: any = {
+      ...this.storeFilter(userStoreId),
+    };
 
     // Date filtering
     if (filters.startDate || filters.endDate) {
@@ -593,8 +607,10 @@ export class ReportsService {
   }
 
   // Vehicle Status Report
-  async getVehicleStatusReport(filters: ReportFilters) {
-    const where: any = {};
+  async getVehicleStatusReport(filters: ReportFilters, userStoreId: string | null = null) {
+    const where: any = {
+      ...this.storeFilter(userStoreId),
+    };
 
     // Vehicle status filtering
     if (filters.status && filters.status !== 'all') {
@@ -696,7 +712,7 @@ export class ReportsService {
   }
 
   // Export functionality
-  async exportReport(type: string, format: string, filters: ReportFilters) {
+  async exportReport(type: string, format: string, filters: ReportFilters, userStoreId: string | null = null) {
     // Get data based on type
     let data: any;
     let filename: string;
@@ -705,7 +721,7 @@ export class ReportsService {
 
     switch (type) {
       case 'loans':
-        const loanReport = await this.getLoanReport(filters);
+        const loanReport = await this.getLoanReport(filters, userStoreId);
         data = loanReport.items;
         filename = `loans-report-${new Date().toISOString().split('T')[0]}`;
         headers = ['ID', 'Cliente', 'Vehículo', 'Placa', 'Monto', 'Tasa', 'Cuotas', 'Pagadas', 'Fecha Inicio', 'Estado'];
@@ -724,7 +740,7 @@ export class ReportsService {
         break;
 
       case 'payments':
-        const paymentReport = await this.getPaymentReport(filters);
+        const paymentReport = await this.getPaymentReport(filters, userStoreId);
         data = paymentReport.items;
         filename = `payments-report-${new Date().toISOString().split('T')[0]}`;
         headers = ['ID', 'Cliente', 'Vehículo', 'Monto', 'Fecha Vencimiento', 'Fecha Pago', 'Estado', 'Cuota #'];
@@ -741,7 +757,7 @@ export class ReportsService {
         break;
 
       case 'clients':
-        const clientReport = await this.getClientReport(filters);
+        const clientReport = await this.getClientReport(filters, userStoreId);
         data = clientReport.items;
         filename = `clients-report-${new Date().toISOString().split('T')[0]}`;
         headers = ['ID', 'Nombre', 'Documento', 'Teléfono', 'Dirección', 'arrendamientos Activos', 'Total arrendamientos', 'Monto Total', 'Estado'];
@@ -759,7 +775,7 @@ export class ReportsService {
         break;
 
       case 'vehicles':
-        const vehicleReport = await this.getVehicleReport(filters);
+        const vehicleReport = await this.getVehicleReport(filters, userStoreId);
         data = vehicleReport.items;
         filename = `vehicles-report-${new Date().toISOString().split('T')[0]}`;
         headers = ['ID', 'Marca', 'Modelo', 'Placa', 'Color', 'Precio', 'Fecha Compra', 'Estado', 'Cliente'];
@@ -777,7 +793,7 @@ export class ReportsService {
         break;
 
       case 'vehicle-status':
-        const vehicleStatusReport = await this.getVehicleStatusReport(filters);
+        const vehicleStatusReport = await this.getVehicleStatusReport(filters, userStoreId);
         data = vehicleStatusReport.items;
         filename = `vehicle-status-report-${new Date().toISOString().split('T')[0]}`;
         headers = [
@@ -823,7 +839,7 @@ export class ReportsService {
         break;
 
       case 'missing-installments':
-        const missingInstallmentsReport = await this.getMissingInstallmentsReport(filters);
+        const missingInstallmentsReport = await this.getMissingInstallmentsReport(filters, userStoreId);
         data = missingInstallmentsReport.items;
         filename = `missing-installments-report-${new Date().toISOString().split('T')[0]}`;
         headers = [
