@@ -44,11 +44,13 @@ export class StoreAccessGuard implements CanActivate {
       
       if (selectedStoreId) {
         // Admin is viewing as a specific store
+        console.log('🔐 StoreAccessGuard - ADMIN viewing specific store:', selectedStoreId);
         request.userStoreId = selectedStoreId;
         request.isAdmin = true;
         request.isAdminViewingAsStore = true;
       } else {
         // Admin viewing all stores
+        console.log('🔐 StoreAccessGuard - ADMIN viewing all stores (userStoreId: null)');
         request.userStoreId = null; // null means access to all stores
         request.isAdmin = true;
         request.isAdminViewingAsStore = false;
@@ -62,6 +64,7 @@ export class StoreAccessGuard implements CanActivate {
         throw new ForbiddenException('Employee must be assigned to a store');
       }
       
+      console.log('🔐 StoreAccessGuard - EMPLOYEE detected, setting userStoreId:', user.storeId);
       request.userStoreId = user.storeId;
       request.isAdmin = false;
       return true;

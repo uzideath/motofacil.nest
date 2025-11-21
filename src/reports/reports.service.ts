@@ -21,6 +21,9 @@ export class ReportsService extends BaseStoreService {
 
   // Loan Reports
   async getLoanReport(filters: ReportFilters, userStoreId: string | null = null) {
+    console.log('📊 getLoanReport - userStoreId:', userStoreId);
+    console.log('📊 getLoanReport - storeFilter result:', this.storeFilter(userStoreId));
+    
     const where: any = {
       ...this.storeFilter(userStoreId),
     };

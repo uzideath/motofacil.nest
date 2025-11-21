@@ -1,18 +1,21 @@
 import { Controller, Get, Query, UseGuards, Param, Res, StreamableFile } from '@nestjs/common';
 import { ReportsService, ReportFilters } from './reports.service';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
+import { StoreAccessGuard } from '../auth/guards/store-access.guard';
 import { UserStoreId } from '../auth/decorators/store.decorator';
 import { Response } from 'express';
 import { LogAction, ActionType } from '../lib/decorators/log-action.decorator';
 
 @Controller('reports')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, StoreAccessGuard)
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('loans')
   @LogAction(ActionType.QUERY, 'Report', 'Loan report')
   async getLoanReport(@Query() filters: ReportFilters, @UserStoreId() userStoreId: string | null) {
+    console.log('🎯 ReportsController.getLoanReport - userStoreId:', userStoreId);
+    console.log('🎯 ReportsController.getLoanReport - filters:', filters);
     return this.reportsService.getLoanReport(filters, userStoreId);
   }
 
