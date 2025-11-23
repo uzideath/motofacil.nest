@@ -763,7 +763,7 @@ export class ReportsService extends BaseStoreService {
         const clientReport = await this.getClientReport(filters, userStoreId);
         data = clientReport.items;
         filename = `clients-report-${new Date().toISOString().split('T')[0]}`;
-        headers = ['ID', 'Nombre', 'Documento', 'Teléfono', 'Dirección', 'arrendamientos Activos', 'Total arrendamientos', 'Monto Total', 'Estado'];
+        headers = ['ID', 'Nombre', 'Documento', 'Teléfono', 'Dirección', 'contratos Activos', 'Total contratos', 'Monto Total', 'Estado'];
         rows = data.map((item: any) => [
           item.id,
           item.name,
